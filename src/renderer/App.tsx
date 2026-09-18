@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { AudioLayer, AiSettingsStatus, TimelinePlan, TranscriptResult } from "../shared/types";
 import AudioLayersPanel from "./AudioLayersPanel";
+import EditingBrainPanel from "./EditingBrainPanel";
 
 function fileName(filePath: string) {
   return filePath.split(/[\\/]/).pop() ?? filePath;
@@ -129,6 +130,18 @@ export default function App() {
     }
   };
 
+  const applyAutomaticSfx = (layers: AudioLayer[]) => {
+    setAudioLayers((current) => [
+      ...current.filter((layer) => layer.origin !== "auto-sfx"),
+      ...layers
+    ]);
+    setNotice(
+      layers.length > 0
+        ? `Editing Brain placed ${layers.length} automatic SFX layer${layers.length === 1 ? "" : "s"}.`
+        : "Editing Brain found scene cues, but no imported SFX files matched them yet."
+    );
+  };
+
   const exportVideo = async () => {
     if (!timeline) return;
 
@@ -160,16 +173,16 @@ export default function App() {
         </div>
         <div className="status">
           <span className="statusDot" />
-          Phase 1 · Audio Brain foundation
+          Phase 1 · Editing Brain foundation
         </div>
       </header>
 
       <section className="hero">
         <div>
           <p className="kicker">Automatic story editing</p>
-          <h2>Let the editor listen before it cuts.</h2>
+          <h2>Let the editor listen, group scenes, and place sound.</h2>
           <p className="lede">
-            Long narration can now be split into manageable audio chunks, transcribed, and rebuilt as one timestamped story map.
+            Long narration becomes a timestamped story map, grouped scenes, and an automatic sound-effects plan before the final cut is rendered.
           </p>
         </div>
         <div className="heroBadge">🎧</div>
@@ -310,6 +323,11 @@ export default function App() {
           )}
         </section>
       )}
+
+      <EditingBrainPanel
+        transcript={transcript}
+        onApplyAutoLayers={applyAutomaticSfx}
+      />
 
       <AudioLayersPanel layers={audioLayers} onChange={setAudioLayers} />
 
