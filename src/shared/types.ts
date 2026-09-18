@@ -18,6 +18,26 @@ export type TimelineClip = {
   motion: "slow-zoom-in";
 };
 
+export type AudioLayerKind = "sfx" | "music" | "ambience";
+
+export type AudioAsset = {
+  id: string;
+  filePath: string;
+  duration: number;
+};
+
+export type AudioLayer = {
+  id: string;
+  filePath: string;
+  kind: AudioLayerKind;
+  start: number;
+  duration: number;
+  volume: number;
+  loop: boolean;
+  fadeIn: number;
+  fadeOut: number;
+};
+
 export type TimelinePlan = {
   duration: number;
   narration: string;
@@ -25,6 +45,7 @@ export type TimelinePlan = {
   height: number;
   fps: number;
   clips: TimelineClip[];
+  audioLayers: AudioLayer[];
 };
 
 export type TranscriptSegment = {
@@ -54,6 +75,7 @@ export type RenderResult = {
 export type DesktopApi = {
   selectImages: () => Promise<string[]>;
   selectNarration: () => Promise<string | null>;
+  selectAudioLayers: () => Promise<AudioAsset[]>;
   buildTimeline: (images: string[], narration: string) => Promise<TimelinePlan>;
   getAiSettingsStatus: () => Promise<AiSettingsStatus>;
   saveOpenAiApiKey: (apiKey: string) => Promise<AiSettingsStatus>;
