@@ -14,6 +14,10 @@ const api: DesktopApi = {
     ipcRenderer.invoke("project:autosave", project),
   loadAutosaveProject: () =>
     ipcRenderer.invoke("project:load-autosave"),
+  relinkMissingMediaFromFolder: (project, missingMedia) =>
+    ipcRenderer.invoke("project:relink-folder", project, missingMedia),
+  relinkSingleMedia: (project, missingPath) =>
+    ipcRenderer.invoke("project:relink-single", project, missingPath),
   buildTimeline: (images, narration, transcript) =>
     ipcRenderer.invoke("timeline:build", images, narration, transcript),
   getAiSettingsStatus: () => ipcRenderer.invoke("ai:settings-status"),
