@@ -17,6 +17,7 @@ import { buildTimelineFromVisualPlan } from "./visual/timelineAdapter";
 import { buildVisualBrainPlan } from "./visual/visualBrain";
 import { probeDuration } from "./video/probe";
 import { renderTimeline } from "./video/render";
+import { analyzeRenderPlan } from "./video/renderDiagnostics";
 import { buildAutomaticTimeline } from "./video/timeline";
 
 const isDev = !app.isPackaged;
@@ -212,6 +213,13 @@ ipcMain.handle(
     transcript?: TranscriptResult | null
   ) => {
     return buildAutomaticTimeline(images, narration, transcript);
+  }
+);
+
+ipcMain.handle(
+  "render:analyze-plan",
+  async (_event, plan: TimelinePlan) => {
+    return analyzeRenderPlan(plan);
   }
 );
 
