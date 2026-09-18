@@ -797,3 +797,132 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+.visualBrainPanel {
+  margin-top: 20px;
+  padding: 26px;
+  border: 1px solid rgba(236, 72, 153, 0.22);
+  border-radius: 22px;
+  background: rgba(15, 23, 42, 0.8);
+}
+
+.visualBrainPanel h3 {
+  margin: 0;
+}
+
+.visualBrainHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.visualBrainHeader .muted {
+  max-width: 790px;
+  margin-bottom: 0;
+  line-height: 1.55;
+}
+
+.visualStats {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+.visualStats span {
+  padding: 7px 10px;
+  border-radius: 999px;
+  color: #fbcfe8;
+  background: rgba(131, 24, 67, 0.22);
+  font-size: 11px;
+}
+
+.visualWaiting {
+  margin-top: 18px;
+  padding: 15px;
+  border-radius: 13px;
+  color: #cbd5e1;
+  background: rgba(30, 41, 59, 0.58);
+  font-size: 12px;
+}
+
+.visualResults {
+  display: grid;
+  grid-template-columns: 0.95fr 1.05fr;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.descriptorPreview,
+.shotPreview {
+  min-width: 0;
+  max-height: 560px;
+  overflow-y: auto;
+  padding: 14px;
+  border-radius: 16px;
+  background: #080d18;
+}
+
+.descriptorRow,
+.plannedShotRow {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 12px;
+  border: 1px solid rgba(244, 114, 182, 0.14);
+  border-radius: 12px;
+  background: rgba(30, 41, 59, 0.6);
+}
+
+.descriptorRow > strong,
+.plannedShotRow > strong {
+  overflow: hidden;
+  color: #fce7f3;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.descriptorRow p,
+.plannedShotRow p {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.descriptorTags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.descriptorTags span,
+.plannedShotRow small {
+  padding: 4px 7px;
+  border-radius: 999px;
+  color: #f9a8d4;
+  background: rgba(157, 23, 77, 0.18);
+  font-size: 9px;
+}
+
+.plannedShotRow > span {
+  color: #60a5fa;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.plannedShotRow small {
+  width: fit-content;
+}
+
+@media (max-width: 980px) {
+  .visualBrainHeader {
+    flex-direction: column;
+  }
+
+  .visualResults {
+    grid-template-columns: 1fr;
+  }
+}
