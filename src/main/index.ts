@@ -1,9 +1,15 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeImage } from "electron";
 import path from "node:path";
-import type { AudioAsset, SceneBlock, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
+import type { AudioAsset, ProjectDocument, SceneBlock, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
 import { transcribeLongNarration } from "./ai/transcription";
 import { buildEditingBrainPlan } from "./editing/editingBrain";
 import { getAiSettingsStatus, saveOpenAiApiKey } from "./settings";
+import {
+  autosaveProject,
+  loadAutosaveProject,
+  openProject,
+  saveProject
+} from "./projectStore";
 import { buildTimelineFromVisualPlan } from "./visual/timelineAdapter";
 import { buildVisualBrainPlan } from "./visual/visualBrain";
 import { probeDuration } from "./video/probe";
@@ -99,6 +105,32 @@ ipcMain.handle("media:select-audio-layers", async () => {
   }
 
   return assets;
+});
+
+ipcMain.handle("project:open", async () => {
+  return openProject();
+});
+
+ipcMain.handle(
+  "project:save",
+  async (
+    _event,
+    project: ProjectDocument,
+    filePath?: string | null
+  ) => {
+    return saveProject(project, filePath);
+  }
+);
+
+ipcMain.handle(
+  "project:autosave",
+  async (_event, project: ProjectDocument) => {
+    await autosaveProject(project);
+  }
+);
+
+ipcMain.handle("project:load-autosave", async () => {
+  return loadAutosaveProject();
 });
 
 ipcMain.handle("ai:settings-status", async () => {
