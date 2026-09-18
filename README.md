@@ -55,7 +55,10 @@ The desktop app currently includes:
 - Draft / Standard / High encoder-quality presets
 - Resolution-aware subtitle sizing
 - Aspect-preserving scale + center crop so artwork is not stretched
-- CI runtime smoke render covering images, narration, overlapping SFX, subtitles, motion, transitions, portrait export, custom FPS, and quality presets
+- Long-render FFmpeg filter graphs are written to a temporary filter script instead of passed inline on the command line
+- Live render progress streamed from FFmpeg back to the Electron UI
+- Timeline validation before rendering catches invalid dimensions, FPS, duration, or clip timing
+- CI runtime smoke render covering images, narration, overlapping SFX, subtitles, motion, transitions, portrait export, custom FPS, quality presets, and render-progress completion
 
 ## Audio Brain
 
@@ -89,7 +92,7 @@ Pauses between spoken scenes extend the current visual shot until the next plann
 
 - Scene-to-image ranking is currently heuristic over AI-generated descriptors rather than a full semantic reranker.
 - Character identity can only use visually supported information or helpful fictional labels present in filenames.
-- The CI smoke render now verifies the real FFmpeg pipeline with synthetic media, but a representative long real-world episode still needs end-to-end verification.
+- The CI smoke render now verifies the real FFmpeg pipeline with synthetic media and progress reporting, but a representative long real-world episode still needs end-to-end verification.
 - Manual finishing controls and project persistence are now present; richer playback/scrubbing can be added after the core MVP is proven.
 - Export can upscale to 4K or custom dimensions, but true source detail still depends on the original image resolution.
 - Thai subtitle appearance depends on suitable Thai fonts being available on the target operating system.
