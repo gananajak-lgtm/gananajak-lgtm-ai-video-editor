@@ -188,6 +188,12 @@ export type AiSettingsStatus = {
   persistedSecurely: boolean;
 };
 
+export type RenderProgress = {
+  progress: number;
+  elapsed: number;
+  duration: number;
+};
+
 export type RenderResult = {
   outputPath: string;
 };
@@ -236,4 +242,7 @@ export type DesktopApi = {
   ) => Promise<TimelinePlan>;
   chooseOutput: () => Promise<string | null>;
   renderTimeline: (plan: TimelinePlan, outputPath: string) => Promise<RenderResult>;
+  onRenderProgress: (
+    listener: (progress: RenderProgress) => void
+  ) => () => void;
 };
