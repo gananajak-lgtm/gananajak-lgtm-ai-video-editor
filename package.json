@@ -4,7 +4,6 @@
   "private": true,
   "description": "AI-assisted automatic video editor for story-driven videos",
   "main": "dist-electron/main/index.js",
-  "type": "module",
   "scripts": {
     "dev": "concurrently -k \"vite\" \"npm:dev:electron\"",
     "dev:electron": "wait-on tcp:5173 && tsc -p tsconfig.electron.json && electron .",
@@ -14,8 +13,6 @@
     "typecheck": "tsc --noEmit && tsc -p tsconfig.electron.json --noEmit"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "^4.3.4",
-    "electron": "^35.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
@@ -23,7 +20,9 @@
     "@types/node": "^22.10.0",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
+    "@vitejs/plugin-react": "^4.3.4",
     "concurrently": "^9.1.2",
+    "electron": "^35.0.0",
     "typescript": "^5.7.2",
     "vite": "^6.0.7",
     "wait-on": "^8.0.1"
