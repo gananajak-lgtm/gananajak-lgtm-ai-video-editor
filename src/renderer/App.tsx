@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import type { AudioLayer, AiSettingsStatus, TimelinePlan, TranscriptResult } from "../shared/types";
+import type { AudioLayer, AiSettingsStatus, EditingBrainPlan, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
 import AudioLayersPanel from "./AudioLayersPanel";
 import EditingBrainPanel from "./EditingBrainPanel";
+import VisualBrainPanel from "./VisualBrainPanel";
 
 function fileName(filePath: string) {
   return filePath.split(/[\\/]/).pop() ?? filePath;
@@ -19,6 +20,7 @@ export default function App() {
   const [narration, setNarration] = useState<string | null>(null);
   const [timeline, setTimeline] = useState<TimelinePlan | null>(null);
   const [transcript, setTranscript] = useState<TranscriptResult | null>(null);
+  const [editingPlan, setEditingPlan] = useState<EditingBrainPlan | null>(null);
   const [audioLayers, setAudioLayers] = useState<AudioLayer[]>([]);
   const [aiStatus, setAiStatus] = useState<AiSettingsStatus>({
     configured: false,
@@ -57,6 +59,7 @@ export default function App() {
     if (picked) {
       setNarration(picked);
       setTranscript(null);
+      setEditingPlan(null);
       setTimeline(null);
       setNotice(null);
       setError(null);
@@ -95,6 +98,8 @@ export default function App() {
     try {
       const result = await window.videoEditor.transcribeNarration(narration);
       setTranscript(result);
+      setEditingPlan(null);
+      setTimeline(null);
       setNotice(
         `Narration analyzed: ${result.segments.length} timestamped speech segments across ${formatTime(result.duration)}.`
       );
@@ -142,6 +147,17 @@ export default function App() {
     );
   };
 
+  const applyVisualTimeline = (
+    nextTimeline: TimelinePlan,
+    visualPlan: VisualBrainPlan
+  ) => {
+    setTimeline(nextTimeline);
+    setNotice(
+      `Visual Brain created ${visualPlan.shots.length} planned shots from ${visualPlan.descriptors.length} analyzed images.`
+    );
+    setError(null);
+  };
+
   const exportVideo = async () => {
     if (!timeline) return;
 
@@ -173,16 +189,16 @@ export default function App() {
         </div>
         <div className="status">
           <span className="statusDot" />
-          Phase 1 · Editing Brain foundation
+          Phase 1 · Visual Brain foundation
         </div>
       </header>
 
       <section className="hero">
         <div>
           <p className="kicker">Automatic story editing</p>
-          <h2>Let the editor listen, group scenes, and place sound.</h2>
+          <h2>Let the editor listen, see, plan shots, and place sound.</h2>
           <p className="lede">
-            Long narration becomes a timestamped story map, grouped scenes, and an automatic sound-effects plan before the final cut is rendered.
+            Long narration becomes a timestamped story map, grouped scenes, matched visuals, deliberate shot timing, and layered sound before the final cut is rendered.
           </p>
         </div>
         <div className="heroBadge">🎧</div>
@@ -327,6 +343,14 @@ export default function App() {
       <EditingBrainPanel
         transcript={transcript}
         onApplyAutoLayers={applyAutomaticSfx}
+        onPlanChange={setEditingPlan}
+      />
+
+      <VisualBrainPanel
+        images={images}
+        narration={narration}
+        editingPlan={editingPlan}
+        onTimelineReady={applyVisualTimeline}
       />
 
       <AudioLayersPanel layers={audioLayers} onChange={setAudioLayers} />
@@ -334,7 +358,7 @@ export default function App() {
       <section className="pipeline">
         <div>
           <p className="eyebrow">EDITING PIPELINE</p>
-          <h3>Story map → image matching → timeline → MP4</h3>
+          <h3>Story map → Visual Brain → timeline → multitrack MP4</h3>
         </div>
         <div className="pipelineActions">
           <button className="primary" disabled={!ready || building || rendering || transcribing} onClick={buildTimeline}>
@@ -376,7 +400,7 @@ export default function App() {
           </div>
 
           <p className="timelineHint">
-            The current baseline still places images sequentially. The new timestamped story map is the foundation for the next Visual Brain step that will choose images by scene meaning.
+            Visual Brain can now replace the fallback sequential edit with a timestamp-aligned shot plan. The baseline button remains available as a safe fallback.
           </p>
         </section>
       )}
