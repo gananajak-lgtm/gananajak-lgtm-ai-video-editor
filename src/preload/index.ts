@@ -4,6 +4,8 @@ import type { DesktopApi, TimelinePlan } from "../shared/types";
 const api: DesktopApi = {
   selectImages: () => ipcRenderer.invoke("media:select-images"),
   selectNarration: () => ipcRenderer.invoke("media:select-narration"),
+  readImagePreview: (filePath) =>
+    ipcRenderer.invoke("media:image-preview", filePath),
   selectAudioLayers: () => ipcRenderer.invoke("media:select-audio-layers"),
   buildTimeline: (images, narration, transcript) =>
     ipcRenderer.invoke("timeline:build", images, narration, transcript),
