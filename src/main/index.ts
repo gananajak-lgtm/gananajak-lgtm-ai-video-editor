@@ -1,9 +1,11 @@
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import path from "node:path";
-import type { AudioAsset, TimelinePlan, TranscriptResult } from "../shared/types";
+import type { AudioAsset, SceneBlock, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
 import { transcribeLongNarration } from "./ai/transcription";
 import { buildEditingBrainPlan } from "./editing/editingBrain";
 import { getAiSettingsStatus, saveOpenAiApiKey } from "./settings";
+import { buildTimelineFromVisualPlan } from "./visual/timelineAdapter";
+import { buildVisualBrainPlan } from "./visual/visualBrain";
 import { probeDuration } from "./video/probe";
 import { renderTimeline } from "./video/render";
 import { buildAutomaticTimeline } from "./video/timeline";
@@ -106,6 +108,20 @@ ipcMain.handle(
   "editing:build-brain-plan",
   async (_event, transcript: TranscriptResult, sfxLibrary: AudioAsset[]) => {
     return buildEditingBrainPlan(transcript, sfxLibrary);
+  }
+);
+
+ipcMain.handle(
+  "visual:build-plan",
+  async (_event, scenes: SceneBlock[], imagePaths: string[]) => {
+    return buildVisualBrainPlan(scenes, imagePaths);
+  }
+);
+
+ipcMain.handle(
+  "visual:build-timeline",
+  async (_event, narrationPath: string, plan: VisualBrainPlan) => {
+    return buildTimelineFromVisualPlan(narrationPath, plan);
   }
 );
 
