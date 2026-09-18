@@ -82,7 +82,7 @@ function mediaPaths(project: ProjectDocument) {
   return [...paths];
 }
 
-async function findMissingMedia(project: ProjectDocument) {
+export async function findMissingMedia(project: ProjectDocument) {
   const missing: string[] = [];
 
   await Promise.all(
