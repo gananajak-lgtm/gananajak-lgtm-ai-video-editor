@@ -5,6 +5,7 @@ import path from "node:path";
 import ffmpegPath from "ffmpeg-static";
 import type {
   AudioLayer,
+  RenderProgress,
   RenderQuality,
   ShotMotion,
   SubtitleCue,
@@ -24,6 +25,39 @@ function qualitySettings(quality: RenderQuality | undefined) {
     case "standard":
     default:
       return { preset: "medium", crf: "20", audioBitrate: "192k" };
+  }
+}
+
+function validateTimelinePlan(plan: TimelinePlan) {
+  if (plan.clips.length === 0) {
+    throw new Error("Timeline has no clips.");
+  }
+
+  if (!Number.isFinite(plan.duration) || plan.duration <= 0) {
+    throw new Error("Timeline duration is invalid.");
+  }
+
+  if (
+    !Number.isInteger(plan.width) ||
+    !Number.isInteger(plan.height) ||
+    plan.width < 240 ||
+    plan.height < 240 ||
+    plan.width % 2 !== 0 ||
+    plan.height % 2 !== 0
+  ) {
+    throw new Error(
+      "Export dimensions must be even whole numbers of at least 240 pixels."
+    );
+  }
+
+  if (![24, 25, 30, 60].includes(plan.fps)) {
+    throw new Error("Unsupported export frame rate.");
+  }
+
+  for (const clip of plan.clips) {
+    if (!clip.imagePath || !Number.isFinite(clip.duration) || clip.duration <= 0) {
+      throw new Error(`Invalid timeline clip: ${clip.id}`);
+    }
   }
 }
 
@@ -170,6 +204,7 @@ function createVideoFilter(
       42,
       Math.round(plan.height * 0.04)
     );
+
     filters.push(
       `${videoMap}subtitles=filename='${escaped}':force_style='FontSize=${subtitleFontSize},Outline=${subtitleOutline},Shadow=0,Alignment=2,MarginV=${subtitleMargin}'[vsub]`
     );
@@ -270,21 +305,29 @@ function subtitleFileContents(cues: SubtitleCue[]) {
     .join("\n");
 }
 
-async function createSubtitleFile(cues: SubtitleCue[]) {
-  if (!cues.length) {
-    return { directory: null, filePath: null };
-  }
+async function writeSubtitleFile(
+  directory: string,
+  cues: SubtitleCue[]
+) {
+  if (!cues.length) return null;
 
-  const directory = await fs.mkdtemp(
-    path.join(os.tmpdir(), "ai-video-editor-subtitles-")
-  );
   const filePath = path.join(directory, "captions.srt");
   await fs.writeFile(filePath, subtitleFileContents(cues), "utf8");
-
-  return { directory, filePath };
+  return filePath;
 }
 
-function runFfmpeg(args: string[], outputPath: string) {
+function parseProgressSeconds(line: string) {
+  const match = line.match(/^out_time_ms=(\d+)$/);
+  if (!match) return null;
+  return Number(match[1]) / 1_000_000;
+}
+
+function runFfmpeg(
+  args: string[],
+  outputPath: string,
+  duration: number,
+  onProgress?: (progress: RenderProgress) => void
+) {
   return new Promise<string>((resolve, reject) => {
     if (!ffmpegPath) {
       reject(new Error("Bundled FFmpeg binary is unavailable."));
@@ -293,11 +336,45 @@ function runFfmpeg(args: string[], outputPath: string) {
 
     const process = spawn(ffmpegPath, args);
     let stderr = "";
+    let progressBuffer = "";
+    let lastPercent = -1;
+
+    onProgress?.({
+      progress: 0,
+      elapsed: 0,
+      duration
+    });
 
     process.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
-      if (stderr.length > 20000) {
-        stderr = stderr.slice(-20000);
+      const text = chunk.toString();
+      stderr += text;
+      progressBuffer += text;
+
+      if (stderr.length > 24000) {
+        stderr = stderr.slice(-24000);
+      }
+
+      const lines = progressBuffer.split(/\r?\n/);
+      progressBuffer = lines.pop() ?? "";
+
+      for (const line of lines) {
+        const elapsed = parseProgressSeconds(line.trim());
+        if (elapsed === null) continue;
+
+        const fraction = Math.max(
+          0,
+          Math.min(1, elapsed / Math.max(duration, 0.001))
+        );
+        const percent = Math.floor(fraction * 100);
+
+        if (percent !== lastPercent) {
+          lastPercent = percent;
+          onProgress?.({
+            progress: fraction,
+            elapsed: Math.min(elapsed, duration),
+            duration
+          });
+        }
       }
     });
 
@@ -305,6 +382,11 @@ function runFfmpeg(args: string[], outputPath: string) {
 
     process.on("close", (code) => {
       if (code === 0) {
+        onProgress?.({
+          progress: 1,
+          elapsed: duration,
+          duration
+        });
         resolve(outputPath);
       } else {
         reject(new Error(stderr.trim() || `FFmpeg exited with code ${code}.`));
@@ -315,19 +397,24 @@ function runFfmpeg(args: string[], outputPath: string) {
 
 export async function renderTimeline(
   plan: TimelinePlan,
-  outputPath: string
+  outputPath: string,
+  onProgress?: (progress: RenderProgress) => void
 ): Promise<string> {
   if (!ffmpegPath) {
     throw new Error("Bundled FFmpeg binary is unavailable.");
   }
 
-  if (plan.clips.length === 0) {
-    throw new Error("Timeline has no clips.");
-  }
+  validateTimelinePlan(plan);
 
-  const subtitleTemp = await createSubtitleFile(plan.subtitles ?? []);
+  const workDirectory = await fs.mkdtemp(
+    path.join(os.tmpdir(), "ai-video-editor-render-")
+  );
 
   try {
+    const subtitlePath = await writeSubtitleFile(
+      workDirectory,
+      plan.subtitles ?? []
+    );
     const args: string[] = ["-y"];
     const transitions = transitionDurations(plan);
 
@@ -361,15 +448,21 @@ export async function renderTimeline(
       args.push("-i", layer.filePath);
     }
 
-    const video = createVideoFilter(plan, subtitleTemp.filePath);
+    const video = createVideoFilter(plan, subtitlePath);
     const audio = createAudioFilter(plan, narrationInput, activeLayers);
-    const filter = [...video.filters, ...audio.filters].join(";");
+    const filterScriptPath = path.join(workDirectory, "filter.ffgraph");
+
+    await fs.writeFile(
+      filterScriptPath,
+      [...video.filters, ...audio.filters].join(";"),
+      "utf8"
+    );
 
     const quality = qualitySettings(plan.quality);
 
     args.push(
-      "-filter_complex",
-      filter,
+      "-filter_complex_script",
+      filterScriptPath,
       "-map",
       video.videoMap,
       "-map",
@@ -392,15 +485,21 @@ export async function renderTimeline(
       fixed(plan.duration),
       "-movflags",
       "+faststart",
+      "-progress",
+      "pipe:2",
+      "-nostats",
       outputPath
     );
 
-    return await runFfmpeg(args, outputPath);
+    return await runFfmpeg(
+      args,
+      outputPath,
+      plan.duration,
+      onProgress
+    );
   } finally {
-    if (subtitleTemp.directory) {
-      await fs
-        .rm(subtitleTemp.directory, { recursive: true, force: true })
-        .catch(() => undefined);
-    }
+    await fs
+      .rm(workDirectory, { recursive: true, force: true })
+      .catch(() => undefined);
   }
 }
