@@ -1,6 +1,7 @@
 import { app, safeStorage } from "electron";
 import fs from "node:fs/promises";
 import path from "node:path";
+import type { AiSettingsStatus } from "../shared/types";
 
 type PersistedSettings = {
   openAiApiKeyEncrypted?: string;
@@ -46,11 +47,29 @@ export async function getOpenAiApiKey(): Promise<string | null> {
   }
 }
 
-export async function hasOpenAiApiKey() {
-  return Boolean(await getOpenAiApiKey());
+export async function getAiSettingsStatus(): Promise<AiSettingsStatus> {
+  const configured = Boolean(await getOpenAiApiKey());
+
+  if (!configured) {
+    return { configured: false, persistedSecurely: false };
+  }
+
+  if (process.env.OPENAI_API_KEY?.trim()) {
+    return { configured: true, persistedSecurely: false };
+  }
+
+  const settings = await readSettings();
+  return {
+    configured: true,
+    persistedSecurely:
+      safeStorage.isEncryptionAvailable() &&
+      Boolean(settings.openAiApiKeyEncrypted)
+  };
 }
 
-export async function saveOpenAiApiKey(apiKey: string) {
+export async function saveOpenAiApiKey(
+  apiKey: string
+): Promise<AiSettingsStatus> {
   const normalized = apiKey.trim();
 
   if (!normalized) {
