@@ -57,7 +57,9 @@ The desktop app currently includes:
 - Aspect-preserving scale + center crop so artwork is not stretched
 - Long-render FFmpeg filter graphs are written to a temporary filter script instead of passed inline on the command line
 - Live render progress streamed from FFmpeg back to the Electron UI
-- Timeline validation before rendering catches invalid dimensions, FPS, duration, or clip timing
+- Full Episode Readiness diagnostics for shot count, subtitle count, audio-layer load, runtime, estimated frame count, and pixels per frame
+- Timeline validation before rendering catches invalid dimensions, FPS, duration, clip timing, subtitle bounds, and visual/narration runtime mismatch
+- Export is blocked when readiness diagnostics contain structural errors
 - CI runtime smoke render covering images, narration, overlapping SFX, subtitles, motion, transitions, portrait export, custom FPS, quality presets, and render-progress completion
 
 ## Audio Brain
