@@ -394,7 +394,7 @@ export default function App() {
               >
                 <span>{String(index + 1).padStart(2, "0")}</span>
                 <strong>{fileName(clip.imagePath)}</strong>
-                <small>{clip.duration.toFixed(1)}s · slow zoom</small>
+                <small>{clip.duration.toFixed(1)}s · {clip.motion}</small>
               </div>
             ))}
           </div>
