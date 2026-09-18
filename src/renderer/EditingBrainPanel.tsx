@@ -9,6 +9,7 @@ import type {
 type Props = {
   transcript: TranscriptResult | null;
   onApplyAutoLayers: (layers: AudioLayer[]) => void;
+  onPlanChange: (plan: EditingBrainPlan | null) => void;
 };
 
 function fileName(filePath: string) {
@@ -24,7 +25,8 @@ function formatTime(seconds: number) {
 
 export default function EditingBrainPanel({
   transcript,
-  onApplyAutoLayers
+  onApplyAutoLayers,
+  onPlanChange
 }: Props) {
   const [sfxLibrary, setSfxLibrary] = useState<AudioAsset[]>([]);
   const [plan, setPlan] = useState<EditingBrainPlan | null>(null);
@@ -43,6 +45,7 @@ export default function EditingBrainPanel({
       ];
     });
     setPlan(null);
+    onPlanChange(null);
     setError(null);
   };
 
@@ -58,6 +61,7 @@ export default function EditingBrainPanel({
         sfxLibrary
       );
       setPlan(next);
+      onPlanChange(next);
       onApplyAutoLayers(next.automaticAudioLayers);
     } catch (buildError) {
       setError(buildError instanceof Error ? buildError.message : String(buildError));
