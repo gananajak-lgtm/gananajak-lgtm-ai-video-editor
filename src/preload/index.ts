@@ -18,6 +18,8 @@ const api: DesktopApi = {
     ipcRenderer.invoke("project:relink-folder", project, missingMedia),
   relinkSingleMedia: (project, missingPath) =>
     ipcRenderer.invoke("project:relink-single", project, missingPath),
+  checkProjectMedia: (project) =>
+    ipcRenderer.invoke("project:check-media", project),
   buildTimeline: (images, narration, transcript) =>
     ipcRenderer.invoke("timeline:build", images, narration, transcript),
   getAiSettingsStatus: () => ipcRenderer.invoke("ai:settings-status"),
