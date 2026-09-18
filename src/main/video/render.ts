@@ -1,9 +1,31 @@
 import { spawn } from "node:child_process";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import ffmpegPath from "ffmpeg-static";
-import type { AudioLayer, ShotMotion, TimelinePlan } from "../../shared/types";
+import type {
+  AudioLayer,
+  ShotMotion,
+  SubtitleCue,
+  TimelinePlan
+} from "../../shared/types";
 
 function fixed(value: number) {
   return Math.max(0.04, value).toFixed(3);
+}
+
+function transitionDurations(plan: TimelinePlan) {
+  return plan.clips.slice(0, -1).map((clip, index) => {
+    const next = plan.clips[index + 1];
+    return Math.max(
+      0,
+      Math.min(
+        plan.transitionDuration,
+        clip.duration * 0.25,
+        next.duration * 0.25
+      )
+    );
+  });
 }
 
 function motionFilter(
@@ -55,9 +77,25 @@ function motionFilter(
   }
 }
 
-function createVideoFilter(plan: TimelinePlan) {
+function escapeFilterPath(filePath: string) {
+  return filePath
+    .replace(/\\/g, "/")
+    .replace(/:/g, "\\:")
+    .replace(/'/g, "\\'")
+    .replace(/,/g, "\\,")
+    .replace(/\[/g, "\\[")
+    .replace(/\]/g, "\\]");
+}
+
+function createVideoFilter(
+  plan: TimelinePlan,
+  subtitlePath: string | null
+) {
+  const transitions = transitionDurations(plan);
+
   const filters = plan.clips.map((clip, index) => {
-    const duration = fixed(clip.duration);
+    const extra = transitions[index] ?? 0;
+    const renderDuration = clip.duration + extra;
 
     return [
       `[${index}:v]`,
@@ -66,25 +104,57 @@ function createVideoFilter(plan: TimelinePlan) {
       "setsar=1,",
       motionFilter(
         clip.motion,
-        clip.duration,
+        renderDuration,
         plan.width,
         plan.height,
         plan.fps
       ),
       ",",
-      `trim=duration=${duration},setpts=PTS-STARTPTS[v${index}]`
+      `trim=duration=${fixed(renderDuration)},setpts=PTS-STARTPTS[v${index}]`
     ].join("");
   });
 
-  const labels = plan.clips.map((_, index) => `[v${index}]`).join("");
-  const concat =
-    plan.clips.length === 1
-      ? ""
-      : `${labels}concat=n=${plan.clips.length}:v=1:a=0[vout]`;
+  let videoMap = "[v0]";
+
+  if (plan.clips.length > 1) {
+    let current = "[v0]";
+    let offset = plan.clips[0].duration;
+
+    for (let index = 1; index < plan.clips.length; index += 1) {
+      const transition = transitions[index - 1];
+      const output = `[vx${index}]`;
+
+      if (transition > 0) {
+        filters.push(
+          `${current}[v${index}]xfade=transition=fade:duration=${fixed(
+            transition
+          )}:offset=${fixed(offset)}${output}`
+        );
+      } else {
+        filters.push(
+          `${current}[v${index}]concat=n=2:v=1:a=0${output}`
+        );
+      }
+
+      current = output;
+      offset += plan.clips[index].duration;
+    }
+
+    videoMap = current;
+  }
+
+  if (subtitlePath) {
+    const escaped = escapeFilterPath(subtitlePath);
+    filters.push(
+      `${videoMap}subtitles=filename='${escaped}':force_style='FontSize=22,Outline=2,Shadow=0,Alignment=2,MarginV=42'[vsub]`
+    );
+    videoMap = "[vsub]";
+  }
 
   return {
-    filters: [...filters, concat].filter(Boolean),
-    videoMap: plan.clips.length === 1 ? "[v0]" : "[vout]"
+    filters,
+    videoMap,
+    transitions
   };
 }
 
@@ -99,7 +169,9 @@ function createAudioFilter(
   activeLayers: AudioLayer[]
 ) {
   const filters: string[] = [
-    `[${narrationInput}:a]atrim=duration=${fixed(plan.duration)},asetpts=PTS-STARTPTS,volume=1[narr]`
+    `[${narrationInput}:a]atrim=duration=${fixed(
+      plan.duration
+    )},asetpts=PTS-STARTPTS,volume=1[narr]`
   ];
 
   const labels = ["[narr]"];
@@ -132,7 +204,9 @@ function createAudioFilter(
     filters.push("[narr]anull[aout]");
   } else {
     filters.push(
-      `${labels.join("")}amix=inputs=${labels.length}:duration=first:normalize=0,alimiter=limit=0.95,atrim=duration=${fixed(plan.duration)}[aout]`
+      `${labels.join("")}amix=inputs=${labels.length}:duration=first:normalize=0,alimiter=limit=0.95,atrim=duration=${fixed(
+        plan.duration
+      )}[aout]`
     );
   }
 
@@ -142,31 +216,105 @@ function createAudioFilter(
   };
 }
 
-export function renderTimeline(
-  plan: TimelinePlan,
-  outputPath: string
-): Promise<string> {
-  return new Promise((resolve, reject) => {
+function formatSrtTime(seconds: number) {
+  const milliseconds = Math.max(0, Math.round(seconds * 1000));
+  const hours = Math.floor(milliseconds / 3_600_000);
+  const minutes = Math.floor((milliseconds % 3_600_000) / 60_000);
+  const secs = Math.floor((milliseconds % 60_000) / 1000);
+  const millis = milliseconds % 1000;
+
+  return [
+    String(hours).padStart(2, "0"),
+    String(minutes).padStart(2, "0"),
+    String(secs).padStart(2, "0")
+  ].join(":") + `,${String(millis).padStart(3, "0")}`;
+}
+
+function subtitleFileContents(cues: SubtitleCue[]) {
+  return cues
+    .filter((cue) => cue.text.trim() && cue.end > cue.start)
+    .map((cue, index) => {
+      const text = cue.text.replace(/\r/g, "").trim();
+      return [
+        String(index + 1),
+        `${formatSrtTime(cue.start)} --> ${formatSrtTime(cue.end)}`,
+        text,
+        ""
+      ].join("\n");
+    })
+    .join("\n");
+}
+
+async function createSubtitleFile(cues: SubtitleCue[]) {
+  if (!cues.length) {
+    return { directory: null, filePath: null };
+  }
+
+  const directory = await fs.mkdtemp(
+    path.join(os.tmpdir(), "ai-video-editor-subtitles-")
+  );
+  const filePath = path.join(directory, "captions.srt");
+  await fs.writeFile(filePath, subtitleFileContents(cues), "utf8");
+
+  return { directory, filePath };
+}
+
+function runFfmpeg(args: string[], outputPath: string) {
+  return new Promise<string>((resolve, reject) => {
     if (!ffmpegPath) {
       reject(new Error("Bundled FFmpeg binary is unavailable."));
       return;
     }
 
-    if (plan.clips.length === 0) {
-      reject(new Error("Timeline has no clips."));
-      return;
-    }
+    const process = spawn(ffmpegPath, args);
+    let stderr = "";
 
+    process.stderr.on("data", (chunk) => {
+      stderr += chunk.toString();
+      if (stderr.length > 20000) {
+        stderr = stderr.slice(-20000);
+      }
+    });
+
+    process.on("error", reject);
+
+    process.on("close", (code) => {
+      if (code === 0) {
+        resolve(outputPath);
+      } else {
+        reject(new Error(stderr.trim() || `FFmpeg exited with code ${code}.`));
+      }
+    });
+  });
+}
+
+export async function renderTimeline(
+  plan: TimelinePlan,
+  outputPath: string
+): Promise<string> {
+  if (!ffmpegPath) {
+    throw new Error("Bundled FFmpeg binary is unavailable.");
+  }
+
+  if (plan.clips.length === 0) {
+    throw new Error("Timeline has no clips.");
+  }
+
+  const subtitleTemp = await createSubtitleFile(plan.subtitles ?? []);
+
+  try {
     const args: string[] = ["-y"];
+    const transitions = transitionDurations(plan);
 
-    for (const clip of plan.clips) {
+    for (const [index, clip] of plan.clips.entries()) {
+      const renderDuration = clip.duration + (transitions[index] ?? 0);
       args.push(
         "-loop",
         "1",
         "-framerate",
         String(plan.fps),
         "-t",
-        fixed(clip.duration),
+        fixed(renderDuration),
         "-i",
         clip.imagePath
       );
@@ -188,7 +336,7 @@ export function renderTimeline(
       args.push("-i", layer.filePath);
     }
 
-    const video = createVideoFilter(plan);
+    const video = createVideoFilter(plan, subtitleTemp.filePath);
     const audio = createAudioFilter(plan, narrationInput, activeLayers);
     const filter = [...video.filters, ...audio.filters].join(";");
 
@@ -213,30 +361,19 @@ export function renderTimeline(
       "aac",
       "-b:a",
       "192k",
-      "-shortest",
+      "-t",
+      fixed(plan.duration),
       "-movflags",
       "+faststart",
       outputPath
     );
 
-    const process = spawn(ffmpegPath, args);
-    let stderr = "";
-
-    process.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
-      if (stderr.length > 16000) {
-        stderr = stderr.slice(-16000);
-      }
-    });
-
-    process.on("error", reject);
-
-    process.on("close", (code) => {
-      if (code === 0) {
-        resolve(outputPath);
-      } else {
-        reject(new Error(stderr.trim() || `FFmpeg exited with code ${code}.`));
-      }
-    });
-  });
+    return await runFfmpeg(args, outputPath);
+  } finally {
+    if (subtitleTemp.directory) {
+      await fs
+        .rm(subtitleTemp.directory, { recursive: true, force: true })
+        .catch(() => undefined);
+    }
+  }
 }
