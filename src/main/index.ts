@@ -1,5 +1,8 @@
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import path from "node:path";
+import type { TimelinePlan } from "../shared/types";
+import { renderTimeline } from "./video/render";
+import { buildAutomaticTimeline } from "./video/timeline";
 
 const isDev = !app.isPackaged;
 
@@ -55,6 +58,31 @@ ipcMain.handle("media:select-narration", async () => {
 
   return result.canceled ? null : result.filePaths[0] ?? null;
 });
+
+ipcMain.handle(
+  "timeline:build",
+  async (_event, images: string[], narration: string) => {
+    return buildAutomaticTimeline(images, narration);
+  }
+);
+
+ipcMain.handle("render:choose-output", async () => {
+  const result = await dialog.showSaveDialog({
+    title: "Export video",
+    defaultPath: "story-video.mp4",
+    filters: [{ name: "MP4 Video", extensions: ["mp4"] }]
+  });
+
+  return result.canceled ? null : result.filePath ?? null;
+});
+
+ipcMain.handle(
+  "render:timeline",
+  async (_event, plan: TimelinePlan, outputPath: string) => {
+    const renderedPath = await renderTimeline(plan, outputPath);
+    return { outputPath: renderedPath };
+  }
+);
 
 app.whenReady().then(() => {
   createWindow();
