@@ -5,6 +5,7 @@ import path from "node:path";
 import ffmpegPath from "ffmpeg-static";
 import type {
   AudioLayer,
+  RenderQuality,
   ShotMotion,
   SubtitleCue,
   TimelinePlan
@@ -12,6 +13,18 @@ import type {
 
 function fixed(value: number) {
   return Math.max(0.04, value).toFixed(3);
+}
+
+function qualitySettings(quality: RenderQuality | undefined) {
+  switch (quality ?? "standard") {
+    case "draft":
+      return { preset: "veryfast", crf: "25", audioBitrate: "160k" };
+    case "high":
+      return { preset: "slow", crf: "17", audioBitrate: "256k" };
+    case "standard":
+    default:
+      return { preset: "medium", crf: "20", audioBitrate: "192k" };
+  }
 }
 
 function transitionDurations(plan: TimelinePlan) {
@@ -145,8 +158,20 @@ function createVideoFilter(
 
   if (subtitlePath) {
     const escaped = escapeFilterPath(subtitlePath);
+    const subtitleFontSize = Math.max(
+      22,
+      Math.round(plan.height * 0.028)
+    );
+    const subtitleOutline = Math.max(
+      2,
+      Math.round(plan.height / 720)
+    );
+    const subtitleMargin = Math.max(
+      42,
+      Math.round(plan.height * 0.04)
+    );
     filters.push(
-      `${videoMap}subtitles=filename='${escaped}':force_style='FontSize=22,Outline=2,Shadow=0,Alignment=2,MarginV=42'[vsub]`
+      `${videoMap}subtitles=filename='${escaped}':force_style='FontSize=${subtitleFontSize},Outline=${subtitleOutline},Shadow=0,Alignment=2,MarginV=${subtitleMargin}'[vsub]`
     );
     videoMap = "[vsub]";
   }
@@ -340,6 +365,8 @@ export async function renderTimeline(
     const audio = createAudioFilter(plan, narrationInput, activeLayers);
     const filter = [...video.filters, ...audio.filters].join(";");
 
+    const quality = qualitySettings(plan.quality);
+
     args.push(
       "-filter_complex",
       filter,
@@ -352,15 +379,15 @@ export async function renderTimeline(
       "-c:v",
       "libx264",
       "-preset",
-      "medium",
+      quality.preset,
       "-crf",
-      "20",
+      quality.crf,
       "-pix_fmt",
       "yuv420p",
       "-c:a",
       "aac",
       "-b:a",
-      "192k",
+      quality.audioBitrate,
       "-t",
       fixed(plan.duration),
       "-movflags",
