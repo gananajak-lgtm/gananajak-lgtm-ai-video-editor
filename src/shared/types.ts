@@ -10,12 +10,21 @@ export type VideoProject = {
   media: ProjectMedia;
 };
 
+export type ShotMotion =
+  | "hold"
+  | "slow-zoom-in"
+  | "slow-zoom-out"
+  | "pan-left"
+  | "pan-right";
+
+export type ShotType = "close" | "medium" | "wide" | "unknown";
+
 export type TimelineClip = {
   id: string;
   imagePath: string;
   start: number;
   duration: number;
-  motion: "slow-zoom-in";
+  motion: ShotMotion;
 };
 
 export type AudioLayerKind = "sfx" | "music" | "ambience";
@@ -92,6 +101,41 @@ export type EditingBrainPlan = {
   automaticAudioLayers: AudioLayer[];
 };
 
+export type ImageDescriptor = {
+  id: string;
+  filePath: string;
+  summary: string;
+  characters: string[];
+  actions: string[];
+  setting: string[];
+  mood: string[];
+  shotType: ShotType;
+};
+
+export type SceneImageMatch = {
+  sceneId: string;
+  imageId: string;
+  score: number;
+  reason: string;
+};
+
+export type PlannedShot = {
+  id: string;
+  sceneId: string;
+  imageId: string;
+  imagePath: string;
+  start: number;
+  duration: number;
+  motion: ShotMotion;
+  reason: string;
+};
+
+export type VisualBrainPlan = {
+  descriptors: ImageDescriptor[];
+  matches: SceneImageMatch[];
+  shots: PlannedShot[];
+};
+
 export type AiSettingsStatus = {
   configured: boolean;
   persistedSecurely: boolean;
@@ -113,6 +157,14 @@ export type DesktopApi = {
     transcript: TranscriptResult,
     sfxLibrary: AudioAsset[]
   ) => Promise<EditingBrainPlan>;
+  buildVisualBrainPlan: (
+    scenes: SceneBlock[],
+    imagePaths: string[]
+  ) => Promise<VisualBrainPlan>;
+  buildTimelineFromVisualPlan: (
+    narrationPath: string,
+    plan: VisualBrainPlan
+  ) => Promise<TimelinePlan>;
   chooseOutput: () => Promise<string | null>;
   renderTimeline: (plan: TimelinePlan, outputPath: string) => Promise<RenderResult>;
 };
