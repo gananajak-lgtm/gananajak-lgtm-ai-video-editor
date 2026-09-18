@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type {
   EditingBrainPlan,
   TimelinePlan,
+  TranscriptResult,
   VisualBrainPlan
 } from "../shared/types";
 
@@ -9,6 +10,7 @@ type Props = {
   images: string[];
   narration: string | null;
   editingPlan: EditingBrainPlan | null;
+  transcript: TranscriptResult | null;
   onTimelineReady: (
     timeline: TimelinePlan,
     visualPlan: VisualBrainPlan
@@ -32,6 +34,7 @@ export default function VisualBrainPanel({
   images,
   narration,
   editingPlan,
+  transcript,
   onTimelineReady
 }: Props) {
   const [plan, setPlan] = useState<VisualBrainPlan | null>(null);
@@ -44,7 +47,7 @@ export default function VisualBrainPanel({
   }, [images, editingPlan]);
 
   const buildVisualPlan = async () => {
-    if (!editingPlan || !narration || images.length === 0) return;
+    if (!editingPlan || !narration || !transcript || images.length === 0) return;
 
     setBuilding(true);
     setError(null);
@@ -57,7 +60,8 @@ export default function VisualBrainPanel({
       const timeline =
         await window.videoEditor.buildTimelineFromVisualPlan(
           narration,
-          visualPlan
+          visualPlan,
+          transcript
         );
 
       setPlan(visualPlan);
@@ -74,7 +78,10 @@ export default function VisualBrainPanel({
   };
 
   const ready =
-    Boolean(editingPlan) && Boolean(narration) && images.length > 0;
+    Boolean(editingPlan) &&
+    Boolean(narration) &&
+    Boolean(transcript) &&
+    images.length > 0;
 
   return (
     <section className="visualBrainPanel">
@@ -107,6 +114,7 @@ export default function VisualBrainPanel({
         <span>{editingPlan?.scenes.length ?? 0} grouped scenes</span>
         <span>{plan?.descriptors.length ?? 0} analyzed images</span>
         <span>{plan?.shots.length ?? 0} planned shots</span>
+        <span>{transcript?.segments.length ?? 0} subtitle cues</span>
       </div>
 
       {!editingPlan && (
