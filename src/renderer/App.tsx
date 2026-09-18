@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import type { TimelinePlan } from "../shared/types";
+import { useEffect, useMemo, useState } from "react";
+import type { AiSettingsStatus, TimelinePlan, TranscriptResult } from "../shared/types";
 
 function fileName(filePath: string) {
   return filePath.split(/[\\/]/).pop() ?? filePath;
@@ -16,10 +16,22 @@ export default function App() {
   const [images, setImages] = useState<string[]>([]);
   const [narration, setNarration] = useState<string | null>(null);
   const [timeline, setTimeline] = useState<TimelinePlan | null>(null);
+  const [transcript, setTranscript] = useState<TranscriptResult | null>(null);
+  const [aiStatus, setAiStatus] = useState<AiSettingsStatus>({
+    configured: false,
+    persistedSecurely: false
+  });
+  const [apiKeyDraft, setApiKeyDraft] = useState("");
+  const [savingKey, setSavingKey] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
   const [building, setBuilding] = useState(false);
   const [rendering, setRendering] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    void window.videoEditor.getAiSettingsStatus().then(setAiStatus);
+  }, []);
 
   const ready = images.length > 0 && narration !== null;
   const summary = useMemo(() => {
@@ -41,9 +53,57 @@ export default function App() {
     const picked = await window.videoEditor.selectNarration();
     if (picked) {
       setNarration(picked);
+      setTranscript(null);
       setTimeline(null);
       setNotice(null);
       setError(null);
+    }
+  };
+
+  const saveApiKey = async () => {
+    if (!apiKeyDraft.trim()) return;
+
+    setSavingKey(true);
+    setError(null);
+
+    try {
+      const status = await window.videoEditor.saveOpenAiApiKey(apiKeyDraft);
+      setAiStatus(status);
+      setApiKeyDraft("");
+      setNotice(
+        status.persistedSecurely
+          ? "AI key saved securely on this computer."
+          : "AI key is active for this session."
+      );
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : String(saveError));
+    } finally {
+      setSavingKey(false);
+    }
+  };
+
+  const transcribeNarration = async () => {
+    if (!narration) return;
+
+    setTranscribing(true);
+    setError(null);
+    setNotice("Listening to the full narration and creating timestamped speech segments...");
+
+    try {
+      const result = await window.videoEditor.transcribeNarration(narration);
+      setTranscript(result);
+      setNotice(
+        `Narration analyzed: ${result.segments.length} timestamped speech segments across ${formatTime(result.duration)}.`
+      );
+    } catch (transcribeError) {
+      setError(
+        transcribeError instanceof Error
+          ? transcribeError.message
+          : String(transcribeError)
+      );
+      setNotice(null);
+    } finally {
+      setTranscribing(false);
     }
   };
 
@@ -97,19 +157,19 @@ export default function App() {
         </div>
         <div className="status">
           <span className="statusDot" />
-          Phase 1 · First-cut engine
+          Phase 1 · Audio Brain foundation
         </div>
       </header>
 
       <section className="hero">
         <div>
           <p className="kicker">Automatic story editing</p>
-          <h2>Turn narration and still images into a first-cut video.</h2>
+          <h2>Let the editor listen before it cuts.</h2>
           <p className="lede">
-            Add the story ingredients, generate a narration-length timeline, then export a cinematic MP4 with subtle motion.
+            Long narration can now be split into manageable audio chunks, transcribed, and rebuilt as one timestamped story map.
           </p>
         </div>
-        <div className="heroBadge">🎬</div>
+        <div className="heroBadge">🎧</div>
       </section>
 
       <section className="grid">
@@ -148,24 +208,65 @@ export default function App() {
           </p>
           <div className="audioCard">
             <div className="wave">▂▅▇▃▆▂▇▅▃▆▇▂▅▃▇▆▂▅</div>
-            <span>{narration ? "Ready for timeline analysis" : "Waiting for audio"}</span>
+            <span>
+              {transcript
+                ? `${transcript.segments.length} timestamped segments ready`
+                : narration
+                  ? "Ready for AI listening"
+                  : "Waiting for audio"}
+            </span>
           </div>
         </article>
       </section>
 
-      <section className="pipeline">
-        <div>
-          <p className="eyebrow">AUTOMATIC PIPELINE</p>
-          <h3>Images → narration sync → timeline → MP4</h3>
+      <section className="aiPanel">
+        <div className="aiPanelHeader">
+          <div>
+            <p className="eyebrow">AI AUDIO BRAIN</p>
+            <h3>Listen to a full episode and keep exact timing</h3>
+            <p className="muted">
+              The audio is processed in 10-minute chunks, then every speech segment is restored to its original episode timestamp.
+            </p>
+          </div>
+          <span className={aiStatus.configured ? "aiBadge readyBadge" : "aiBadge"}>
+            {aiStatus.configured ? "AI connected" : "API key required"}
+          </span>
         </div>
-        <div className="pipelineActions">
-          <button className="primary" disabled={!ready || building || rendering} onClick={buildTimeline}>
-            {building ? "Analyzing narration..." : timeline ? "Rebuild timeline" : ready ? "Build automatic timeline" : "Add images + narration"}
-          </button>
-          <button className="exportButton" disabled={!timeline || rendering || building} onClick={exportVideo}>
-            {rendering ? "Rendering..." : "Export MP4"}
-          </button>
-        </div>
+
+        {!aiStatus.configured && (
+          <div className="keyRow">
+            <input
+              type="password"
+              value={apiKeyDraft}
+              onChange={(event) => setApiKeyDraft(event.target.value)}
+              placeholder="OpenAI API key"
+              autoComplete="off"
+            />
+            <button disabled={!apiKeyDraft.trim() || savingKey} onClick={saveApiKey}>
+              {savingKey ? "Saving..." : "Save key"}
+            </button>
+          </div>
+        )}
+
+        {aiStatus.configured && (
+          <div className="aiControls">
+            <div>
+              <strong>Timestamp transcription</strong>
+              <small>
+                {aiStatus.persistedSecurely
+                  ? "Key is stored using operating-system encryption."
+                  : "Key is available for this session or environment."}
+              </small>
+            </div>
+            <button
+              className="primary"
+              disabled={!narration || transcribing || rendering || building}
+              onClick={transcribeNarration}
+            >
+              {transcribing ? "Listening to narration..." : transcript ? "Analyze again" : "Analyze long narration"}
+            </button>
+          </div>
+        )}
       </section>
 
       {(notice || error) && (
@@ -173,6 +274,54 @@ export default function App() {
           {error ?? notice}
         </section>
       )}
+
+      {transcript && (
+        <section className="transcriptPanel">
+          <div className="timelineHeader">
+            <div>
+              <p className="eyebrow">STORY MAP</p>
+              <h3>Timestamped narration</h3>
+            </div>
+            <div className="timelineMeta">
+              <span>{transcript.language ?? "auto language"}</span>
+              <span>{transcript.segments.length} segments</span>
+              <span>{formatTime(transcript.duration)}</span>
+            </div>
+          </div>
+
+          <div className="transcriptList">
+            {transcript.segments.slice(0, 24).map((segment) => (
+              <div className="transcriptRow" key={segment.id}>
+                <span>
+                  {formatTime(segment.start)} → {formatTime(segment.end)}
+                </span>
+                <p>{segment.text}</p>
+              </div>
+            ))}
+          </div>
+
+          {transcript.segments.length > 24 && (
+            <p className="timelineHint">
+              Showing the first 24 segments. The complete transcript remains available to the editing engine.
+            </p>
+          )}
+        </section>
+      )}
+
+      <section className="pipeline">
+        <div>
+          <p className="eyebrow">EDITING PIPELINE</p>
+          <h3>Story map → image matching → timeline → MP4</h3>
+        </div>
+        <div className="pipelineActions">
+          <button className="primary" disabled={!ready || building || rendering || transcribing} onClick={buildTimeline}>
+            {building ? "Building timeline..." : timeline ? "Rebuild baseline timeline" : ready ? "Build baseline timeline" : "Add images + narration"}
+          </button>
+          <button className="exportButton" disabled={!timeline || rendering || building || transcribing} onClick={exportVideo}>
+            {rendering ? "Rendering..." : "Export MP4"}
+          </button>
+        </div>
+      </section>
 
       {timeline && (
         <section className="timelinePanel">
@@ -204,7 +353,7 @@ export default function App() {
           </div>
 
           <p className="timelineHint">
-            This first version distributes narration time evenly across the selected images. AI scene-to-script matching comes next.
+            The current baseline still places images sequentially. The new timestamped story map is the foundation for the next Visual Brain step that will choose images by scene meaning.
           </p>
         </section>
       )}
