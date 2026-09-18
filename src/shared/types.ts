@@ -10,6 +10,30 @@ export type VideoProject = {
   media: ProjectMedia;
 };
 
+export type ProjectDocument = {
+  schemaVersion: 1;
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  images: string[];
+  narration: string | null;
+  transcript: TranscriptResult | null;
+  editingPlan: EditingBrainPlan | null;
+  timeline: TimelinePlan | null;
+  audioLayers: AudioLayer[];
+};
+
+export type ProjectLoadResult = {
+  project: ProjectDocument;
+  filePath: string | null;
+  missingMedia: string[];
+};
+
+export type ProjectSaveResult = {
+  filePath: string;
+};
+
 export type ShotMotion =
   | "hold"
   | "slow-zoom-in"
@@ -159,6 +183,13 @@ export type DesktopApi = {
   selectNarration: () => Promise<string | null>;
   readImagePreview: (filePath: string) => Promise<string | null>;
   selectAudioLayers: () => Promise<AudioAsset[]>;
+  openProject: () => Promise<ProjectLoadResult | null>;
+  saveProject: (
+    project: ProjectDocument,
+    filePath?: string | null
+  ) => Promise<ProjectSaveResult | null>;
+  autosaveProject: (project: ProjectDocument) => Promise<void>;
+  loadAutosaveProject: () => Promise<ProjectLoadResult | null>;
   buildTimeline: (
     images: string[],
     narration: string,
