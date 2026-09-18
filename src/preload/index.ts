@@ -1,5 +1,10 @@
 import { contextBridge, ipcRenderer } from "electron";
-import type { DesktopApi, TimelinePlan } from "../shared/types";
+import type { IpcRendererEvent } from "electron";
+import type {
+  DesktopApi,
+  RenderProgress,
+  TimelinePlan
+} from "../shared/types";
 
 const api: DesktopApi = {
   selectImages: () => ipcRenderer.invoke("media:select-images"),
@@ -35,7 +40,16 @@ const api: DesktopApi = {
     ipcRenderer.invoke("visual:build-timeline", narrationPath, plan, transcript),
   chooseOutput: () => ipcRenderer.invoke("render:choose-output"),
   renderTimeline: (plan: TimelinePlan, outputPath: string) =>
-    ipcRenderer.invoke("render:timeline", plan, outputPath)
+    ipcRenderer.invoke("render:timeline", plan, outputPath),
+  onRenderProgress: (listener) => {
+    const handler = (
+      _event: IpcRendererEvent,
+      progress: RenderProgress
+    ) => listener(progress);
+
+    ipcRenderer.on("render:progress", handler);
+    return () => ipcRenderer.removeListener("render:progress", handler);
+  }
 };
 
 contextBridge.exposeInMainWorld("videoEditor", api);
