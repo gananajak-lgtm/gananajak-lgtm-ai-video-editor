@@ -1,7 +1,8 @@
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import path from "node:path";
-import type { AudioAsset, TimelinePlan } from "../shared/types";
+import type { AudioAsset, TimelinePlan, TranscriptResult } from "../shared/types";
 import { transcribeLongNarration } from "./ai/transcription";
+import { buildEditingBrainPlan } from "./editing/editingBrain";
 import { getAiSettingsStatus, saveOpenAiApiKey } from "./settings";
 import { probeDuration } from "./video/probe";
 import { renderTimeline } from "./video/render";
@@ -100,6 +101,13 @@ ipcMain.handle("ai:save-openai-key", async (_event, apiKey: string) => {
 ipcMain.handle("ai:transcribe-narration", async (_event, narrationPath: string) => {
   return transcribeLongNarration(narrationPath);
 });
+
+ipcMain.handle(
+  "editing:build-brain-plan",
+  async (_event, transcript: TranscriptResult, sfxLibrary: AudioAsset[]) => {
+    return buildEditingBrainPlan(transcript, sfxLibrary);
+  }
+);
 
 ipcMain.handle(
   "timeline:build",
