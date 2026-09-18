@@ -1,13 +1,16 @@
 import type {
   TimelineClip,
   TimelinePlan,
+  TranscriptResult,
   VisualBrainPlan
 } from "../../shared/types";
+import { buildSubtitleCues } from "../editing/subtitlePlanner";
 import { probeDuration } from "../video/probe";
 
 export async function buildTimelineFromVisualPlan(
   narrationPath: string,
-  plan: VisualBrainPlan
+  plan: VisualBrainPlan,
+  transcript: TranscriptResult
 ): Promise<TimelinePlan> {
   const totalDuration = await probeDuration(narrationPath);
   const shots = [...plan.shots]
@@ -39,6 +42,8 @@ export async function buildTimelineFromVisualPlan(
     height: 1080,
     fps: 30,
     clips,
-    audioLayers: []
+    audioLayers: [],
+    subtitles: buildSubtitleCues(transcript),
+    transitionDuration: 0.35
   };
 }
