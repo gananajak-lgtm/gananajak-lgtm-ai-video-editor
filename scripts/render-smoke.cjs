@@ -61,9 +61,9 @@ async function main() {
       {
         duration: 3,
         narration,
-        width: 640,
-        height: 360,
-        fps: 30,
+        width: 360,
+        height: 640,
+        fps: 24,
         clips: [
           {
             id: "clip-1",
@@ -108,7 +108,8 @@ async function main() {
             text: "Second subtitle"
           }
         ],
-        transitionDuration: 0.25
+        transitionDuration: 0.25,
+        quality: "draft"
       },
       output
     );
