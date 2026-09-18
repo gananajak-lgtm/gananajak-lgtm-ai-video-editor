@@ -50,6 +50,13 @@ export type AudioLayer = {
   label?: string;
 };
 
+export type SubtitleCue = {
+  id: string;
+  start: number;
+  end: number;
+  text: string;
+};
+
 export type TimelinePlan = {
   duration: number;
   narration: string;
@@ -58,6 +65,8 @@ export type TimelinePlan = {
   fps: number;
   clips: TimelineClip[];
   audioLayers: AudioLayer[];
+  subtitles: SubtitleCue[];
+  transitionDuration: number;
 };
 
 export type TranscriptSegment = {
@@ -163,7 +172,8 @@ export type DesktopApi = {
   ) => Promise<VisualBrainPlan>;
   buildTimelineFromVisualPlan: (
     narrationPath: string,
-    plan: VisualBrainPlan
+    plan: VisualBrainPlan,
+    transcript: TranscriptResult
   ) => Promise<TimelinePlan>;
   chooseOutput: () => Promise<string | null>;
   renderTimeline: (plan: TimelinePlan, outputPath: string) => Promise<RenderResult>;
