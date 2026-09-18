@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type {
   AudioAsset,
   AudioLayer,
@@ -32,6 +32,12 @@ export default function EditingBrainPanel({
   const [plan, setPlan] = useState<EditingBrainPlan | null>(null);
   const [building, setBuilding] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPlan(null);
+    onPlanChange(null);
+    setError(null);
+  }, [transcript, onPlanChange]);
 
   const importSfxLibrary = async () => {
     const assets = await window.videoEditor.selectAudioLayers();
