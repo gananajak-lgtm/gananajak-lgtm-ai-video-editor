@@ -37,6 +37,7 @@ export async function buildAutomaticTimeline(
     clips,
     audioLayers: [],
     subtitles: transcript ? buildSubtitleCues(transcript) : [],
-    transitionDuration: 0.35
+    transitionDuration: 0.35,
+    quality: "standard"
   };
 }
