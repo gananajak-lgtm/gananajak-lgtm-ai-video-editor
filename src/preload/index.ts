@@ -12,6 +12,8 @@ const api: DesktopApi = {
     ipcRenderer.invoke("ai:save-openai-key", apiKey),
   transcribeNarration: (narrationPath) =>
     ipcRenderer.invoke("ai:transcribe-narration", narrationPath),
+  buildEditingBrainPlan: (transcript, sfxLibrary) =>
+    ipcRenderer.invoke("editing:build-brain-plan", transcript, sfxLibrary),
   chooseOutput: () => ipcRenderer.invoke("render:choose-output"),
   renderTimeline: (plan: TimelinePlan, outputPath: string) =>
     ipcRenderer.invoke("render:timeline", plan, outputPath)
