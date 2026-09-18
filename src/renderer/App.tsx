@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import type { AudioLayer, AiSettingsStatus, EditingBrainPlan, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
+import type { AudioLayer, AiSettingsStatus, EditingBrainPlan, ProjectDocument, ProjectLoadResult, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
 import AudioLayersPanel from "./AudioLayersPanel";
 import EditingBrainPanel from "./EditingBrainPanel";
 import VisualBrainPanel from "./VisualBrainPanel";
 import TimelineEditor from "./TimelineEditor";
+import ProjectToolbar from "./ProjectToolbar";
 
 function fileName(filePath: string) {
   return filePath.split(/[\\/]/).pop() ?? filePath;
@@ -17,6 +18,16 @@ function formatTime(seconds: number) {
 }
 
 export default function App() {
+  const [projectId, setProjectId] = useState(() => `project-${Date.now()}`);
+  const [projectTitle, setProjectTitle] = useState("Untitled story");
+  const [projectCreatedAt, setProjectCreatedAt] = useState(
+    () => new Date().toISOString()
+  );
+  const [projectPath, setProjectPath] = useState<string | null>(null);
+  const [autosaveState, setAutosaveState] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
+  const [sessionReady, setSessionReady] = useState(false);
   const [images, setImages] = useState<string[]>([]);
   const [narration, setNarration] = useState<string | null>(null);
   const [timeline, setTimeline] = useState<TimelinePlan | null>(null);
@@ -35,9 +46,141 @@ export default function App() {
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const applyLoadedProject = (loaded: ProjectLoadResult) => {
+    const project = loaded.project;
+    setProjectId(project.id);
+    setProjectTitle(project.title);
+    setProjectCreatedAt(project.createdAt);
+    setProjectPath(loaded.filePath);
+    setImages(project.images);
+    setNarration(project.narration);
+    setTranscript(project.transcript);
+    setEditingPlan(project.editingPlan);
+    setTimeline(project.timeline);
+    setAudioLayers(project.audioLayers);
+
+    if (loaded.missingMedia.length > 0) {
+      setNotice(
+        `Project restored with ${loaded.missingMedia.length} missing media file${loaded.missingMedia.length === 1 ? "" : "s"}. Replace those files before export.`
+      );
+    } else {
+      setNotice(
+        loaded.filePath
+          ? "Project opened."
+          : "Recovered the latest autosaved project."
+      );
+    }
+    setError(null);
+  };
+
   useEffect(() => {
-    void window.videoEditor.getAiSettingsStatus().then(setAiStatus);
+    let cancelled = false;
+
+    void Promise.all([
+      window.videoEditor.getAiSettingsStatus(),
+      window.videoEditor.loadAutosaveProject()
+    ])
+      .then(([status, autosave]) => {
+        if (cancelled) return;
+        setAiStatus(status);
+        if (autosave) applyLoadedProject(autosave);
+      })
+      .catch((startupError) => {
+        if (cancelled) return;
+        setError(
+          startupError instanceof Error
+            ? startupError.message
+            : String(startupError)
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setSessionReady(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  const projectDocument = useMemo<ProjectDocument>(
+    () => ({
+      schemaVersion: 1,
+      id: projectId,
+      title: projectTitle.trim() || "Untitled story",
+      createdAt: projectCreatedAt,
+      updatedAt: new Date().toISOString(),
+      images,
+      narration,
+      transcript,
+      editingPlan,
+      timeline,
+      audioLayers
+    }),
+    [
+      projectId,
+      projectTitle,
+      projectCreatedAt,
+      images,
+      narration,
+      transcript,
+      editingPlan,
+      timeline,
+      audioLayers
+    ]
+  );
+
+  const hasProjectContent =
+    images.length > 0 ||
+    narration !== null ||
+    transcript !== null ||
+    timeline !== null ||
+    audioLayers.length > 0;
+
+  useEffect(() => {
+    if (!sessionReady || !hasProjectContent) return;
+
+    setAutosaveState("saving");
+    const timer = window.setTimeout(() => {
+      void window.videoEditor
+        .autosaveProject(projectDocument)
+        .then(() => setAutosaveState("saved"))
+        .catch(() => setAutosaveState("error"));
+    }, 800);
+
+    return () => window.clearTimeout(timer);
+  }, [sessionReady, hasProjectContent, projectDocument]);
+
+  const openProjectFile = async () => {
+    setError(null);
+
+    try {
+      const loaded = await window.videoEditor.openProject();
+      if (loaded) {
+        applyLoadedProject(loaded);
+        setAutosaveState("saved");
+      }
+    } catch (openError) {
+      setError(openError instanceof Error ? openError.message : String(openError));
+    }
+  };
+
+  const saveProjectFile = async () => {
+    setError(null);
+
+    try {
+      const saved = await window.videoEditor.saveProject(
+        projectDocument,
+        projectPath
+      );
+      if (!saved) return;
+
+      setProjectPath(saved.filePath);
+      setAutosaveState("saved");
+      setNotice(`Project saved: ${saved.filePath}`);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : String(saveError));
+    }
+  };
 
   const ready = images.length > 0 && narration !== null;
   const summary = useMemo(() => {
@@ -194,9 +337,18 @@ export default function App() {
         </div>
         <div className="status">
           <span className="statusDot" />
-          Phase 1 · Manual finishing foundation
+          Phase 1 · Persistent project foundation
         </div>
       </header>
+
+      <ProjectToolbar
+        title={projectTitle}
+        projectPath={projectPath}
+        autosaveState={autosaveState}
+        onTitleChange={setProjectTitle}
+        onOpen={openProjectFile}
+        onSave={saveProjectFile}
+      />
 
       <section className="hero">
         <div>
