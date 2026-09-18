@@ -39,6 +39,8 @@ The desktop app currently includes:
 - Automatic burned subtitles generated from transcript timestamps
 - Duration-preserving crossfade transitions between planned shots
 - Baseline sequential timeline retained as a fallback
+- Manual finishing controls for image replacement, shot motion, cut nudging, crossfade timing, and subtitle corrections
+- Safe local still-image preview in the Electron renderer
 - CI runtime smoke render covering images, narration, overlapping SFX, subtitles, motion, and transitions
 
 ## Audio Brain
@@ -74,7 +76,7 @@ Pauses between spoken scenes extend the current visual shot until the next plann
 - Scene-to-image ranking is currently heuristic over AI-generated descriptors rather than a full semantic reranker.
 - Character identity can only use visually supported information or helpful fictional labels present in filenames.
 - The CI smoke render now verifies the real FFmpeg pipeline with synthetic media, but a representative long real-world episode still needs end-to-end verification.
-- Richer manual preview/edit controls are still required before the MVP is considered complete.
+- Manual finishing controls are now present; richer playback/scrubbing can be added after the core MVP is proven.
 - Thai subtitle appearance depends on suitable Thai fonts being available on the target operating system.
 
 ## Product direction
