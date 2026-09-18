@@ -7,6 +7,13 @@ const api: DesktopApi = {
   readImagePreview: (filePath) =>
     ipcRenderer.invoke("media:image-preview", filePath),
   selectAudioLayers: () => ipcRenderer.invoke("media:select-audio-layers"),
+  openProject: () => ipcRenderer.invoke("project:open"),
+  saveProject: (project, filePath) =>
+    ipcRenderer.invoke("project:save", project, filePath),
+  autosaveProject: (project) =>
+    ipcRenderer.invoke("project:autosave", project),
+  loadAutosaveProject: () =>
+    ipcRenderer.invoke("project:load-autosave"),
   buildTimeline: (images, narration, transcript) =>
     ipcRenderer.invoke("timeline:build", images, narration, transcript),
   getAiSettingsStatus: () => ipcRenderer.invoke("ai:settings-status"),
