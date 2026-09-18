@@ -14,6 +14,10 @@ const api: DesktopApi = {
     ipcRenderer.invoke("ai:transcribe-narration", narrationPath),
   buildEditingBrainPlan: (transcript, sfxLibrary) =>
     ipcRenderer.invoke("editing:build-brain-plan", transcript, sfxLibrary),
+  buildVisualBrainPlan: (scenes, imagePaths) =>
+    ipcRenderer.invoke("visual:build-plan", scenes, imagePaths),
+  buildTimelineFromVisualPlan: (narrationPath, plan) =>
+    ipcRenderer.invoke("visual:build-timeline", narrationPath, plan),
   chooseOutput: () => ipcRenderer.invoke("render:choose-output"),
   renderTimeline: (plan: TimelinePlan, outputPath: string) =>
     ipcRenderer.invoke("render:timeline", plan, outputPath)
