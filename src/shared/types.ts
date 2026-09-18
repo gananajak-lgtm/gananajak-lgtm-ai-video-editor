@@ -212,6 +212,7 @@ export type DesktopApi = {
     project: ProjectDocument,
     missingPath: string
   ) => Promise<ProjectRelinkResult | null>;
+  checkProjectMedia: (project: ProjectDocument) => Promise<string[]>;
   buildTimeline: (
     images: string[],
     narration: string,
