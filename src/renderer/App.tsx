@@ -123,7 +123,11 @@ export default function App() {
     setNotice(null);
 
     try {
-      const nextTimeline = await window.videoEditor.buildTimeline(images, narration);
+      const nextTimeline = await window.videoEditor.buildTimeline(
+        images,
+        narration,
+        transcript
+      );
       setTimeline(nextTimeline);
       setNotice(
         `Automatic timeline created: ${nextTimeline.clips.length} clips across ${formatTime(nextTimeline.duration)}.`
@@ -350,6 +354,7 @@ export default function App() {
         images={images}
         narration={narration}
         editingPlan={editingPlan}
+        transcript={transcript}
         onTimelineReady={applyVisualTimeline}
       />
 
@@ -381,6 +386,8 @@ export default function App() {
               <span>{timeline.width}×{timeline.height}</span>
               <span>{timeline.fps} fps</span>
               <span>{formatTime(timeline.duration)}</span>
+              <span>{timeline.subtitles.length} subtitles</span>
+              <span>{timeline.transitionDuration.toFixed(2)}s transition</span>
             </div>
           </div>
 
