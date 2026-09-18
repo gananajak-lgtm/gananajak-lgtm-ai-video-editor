@@ -6,6 +6,7 @@ import { buildEditingBrainPlan } from "./editing/editingBrain";
 import { getAiSettingsStatus, saveOpenAiApiKey } from "./settings";
 import {
   autosaveProject,
+  findMissingMedia,
   loadAutosaveProject,
   openProject,
   relinkMissingMediaFromFolder,
@@ -134,6 +135,13 @@ ipcMain.handle(
 ipcMain.handle("project:load-autosave", async () => {
   return loadAutosaveProject();
 });
+
+ipcMain.handle(
+  "project:check-media",
+  async (_event, project: ProjectDocument) => {
+    return findMissingMedia(project);
+  }
+);
 
 ipcMain.handle(
   "project:relink-folder",
