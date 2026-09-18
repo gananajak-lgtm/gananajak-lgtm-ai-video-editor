@@ -227,8 +227,16 @@ ipcMain.handle("render:choose-output", async () => {
 
 ipcMain.handle(
   "render:timeline",
-  async (_event, plan: TimelinePlan, outputPath: string) => {
-    const renderedPath = await renderTimeline(plan, outputPath);
+  async (event, plan: TimelinePlan, outputPath: string) => {
+    const renderedPath = await renderTimeline(
+      plan,
+      outputPath,
+      (progress) => {
+        if (!event.sender.isDestroyed()) {
+          event.sender.send("render:progress", progress);
+        }
+      }
+    );
     return { outputPath: renderedPath };
   }
 );
