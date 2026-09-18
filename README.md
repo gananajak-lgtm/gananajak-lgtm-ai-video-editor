@@ -24,7 +24,7 @@ The desktop app currently includes:
 - Electron + React + TypeScript shell
 - Multi-image and narration import
 - FFprobe media-duration analysis
-- FFmpeg 1080p / 30 fps MP4 rendering
+- FFmpeg MP4 rendering with selectable resolution, aspect ratio, frame rate, and quality
 - Long-audio transcription in 10-minute chunks
 - Restoration of transcript segments to the original episode timestamps
 - Secure local API-key storage when operating-system encryption is available
@@ -45,7 +45,12 @@ The desktop app currently includes:
 - Recovery autosave stored in the Electron user-data directory
 - Full project persistence for narration, images, transcript, Editing Brain plan, timeline edits, subtitles, transitions, and audio layers
 - Missing-media detection when a project is reopened
-- CI runtime smoke render covering images, narration, overlapping SFX, subtitles, motion, and transitions
+- Export presets for 1080p, 1440p, 4K, 9:16 vertical, 1:1 square, 4:5 portrait, and custom dimensions
+- 24 / 25 / 30 / 60 fps export options
+- Draft / Standard / High encoder-quality presets
+- Resolution-aware subtitle sizing
+- Aspect-preserving scale + center crop so artwork is not stretched
+- CI runtime smoke render covering images, narration, overlapping SFX, subtitles, motion, transitions, portrait export, custom FPS, and quality presets
 
 ## Audio Brain
 
@@ -81,6 +86,7 @@ Pauses between spoken scenes extend the current visual shot until the next plann
 - Character identity can only use visually supported information or helpful fictional labels present in filenames.
 - The CI smoke render now verifies the real FFmpeg pipeline with synthetic media, but a representative long real-world episode still needs end-to-end verification.
 - Manual finishing controls and project persistence are now present; richer playback/scrubbing can be added after the core MVP is proven.
+- Export can upscale to 4K or custom dimensions, but true source detail still depends on the original image resolution.
 - Thai subtitle appearance depends on suitable Thai fonts being available on the target operating system.
 
 ## Product direction
