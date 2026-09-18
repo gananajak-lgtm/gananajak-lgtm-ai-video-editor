@@ -194,6 +194,25 @@ export type RenderProgress = {
   duration: number;
 };
 
+export type RenderDiagnosticLevel = "info" | "warning" | "error";
+
+export type RenderDiagnostic = {
+  id: string;
+  level: RenderDiagnosticLevel;
+  message: string;
+};
+
+export type RenderDiagnostics = {
+  ready: boolean;
+  clipCount: number;
+  subtitleCount: number;
+  audioLayerCount: number;
+  duration: number;
+  estimatedFrames: number;
+  megapixelsPerFrame: number;
+  diagnostics: RenderDiagnostic[];
+};
+
 export type RenderResult = {
   outputPath: string;
 };
@@ -240,6 +259,7 @@ export type DesktopApi = {
     plan: VisualBrainPlan,
     transcript: TranscriptResult
   ) => Promise<TimelinePlan>;
+  analyzeRenderPlan: (plan: TimelinePlan) => Promise<RenderDiagnostics>;
   chooseOutput: () => Promise<string | null>;
   renderTimeline: (plan: TimelinePlan, outputPath: string) => Promise<RenderResult>;
   onRenderProgress: (
