@@ -36,7 +36,10 @@ The desktop app currently includes:
 - Automatic shot planning
 - Timestamp-aligned Visual Brain timeline generation
 - Motion-aware rendering: hold, zoom in, zoom out, pan left, pan right
+- Automatic burned subtitles generated from transcript timestamps
+- Duration-preserving crossfade transitions between planned shots
 - Baseline sequential timeline retained as a fallback
+- CI runtime smoke render covering images, narration, overlapping SFX, subtitles, motion, and transitions
 
 ## Audio Brain
 
@@ -70,8 +73,9 @@ Pauses between spoken scenes extend the current visual shot until the next plann
 
 - Scene-to-image ranking is currently heuristic over AI-generated descriptors rather than a full semantic reranker.
 - Character identity can only use visually supported information or helpful fictional labels present in filenames.
-- Automatic subtitles and transitions are still pending.
-- Runtime render verification with a representative full episode is still required before the MVP is considered complete.
+- The CI smoke render now verifies the real FFmpeg pipeline with synthetic media, but a representative long real-world episode still needs end-to-end verification.
+- Richer manual preview/edit controls are still required before the MVP is considered complete.
+- Thai subtitle appearance depends on suitable Thai fonts being available on the target operating system.
 
 ## Product direction
 
