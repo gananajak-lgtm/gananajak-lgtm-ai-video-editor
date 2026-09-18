@@ -8,6 +8,8 @@ import {
   autosaveProject,
   loadAutosaveProject,
   openProject,
+  relinkMissingMediaFromFolder,
+  relinkSingleMedia,
   saveProject
 } from "./projectStore";
 import { buildTimelineFromVisualPlan } from "./visual/timelineAdapter";
@@ -132,6 +134,28 @@ ipcMain.handle(
 ipcMain.handle("project:load-autosave", async () => {
   return loadAutosaveProject();
 });
+
+ipcMain.handle(
+  "project:relink-folder",
+  async (
+    _event,
+    project: ProjectDocument,
+    missingMedia: string[]
+  ) => {
+    return relinkMissingMediaFromFolder(project, missingMedia);
+  }
+);
+
+ipcMain.handle(
+  "project:relink-single",
+  async (
+    _event,
+    project: ProjectDocument,
+    missingPath: string
+  ) => {
+    return relinkSingleMedia(project, missingPath);
+  }
+);
 
 ipcMain.handle("ai:settings-status", async () => {
   return getAiSettingsStatus();
