@@ -1493,3 +1493,63 @@ button:disabled {
     flex-direction: column;
   }
 }
+
+.renderProgressPanel {
+  margin-top: 18px;
+  padding: 18px 20px;
+  border: 1px solid rgba(34, 197, 94, 0.22);
+  border-radius: 16px;
+  background: rgba(20, 83, 45, 0.12);
+}
+
+.renderProgressHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.renderProgressHeader > div {
+  display: grid;
+  gap: 3px;
+}
+
+.renderProgressHeader strong {
+  color: #dcfce7;
+  font-size: 15px;
+}
+
+.renderProgressHeader > span {
+  color: #86efac;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.renderProgressTrack {
+  height: 10px;
+  margin-top: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.88);
+}
+
+.renderProgressFill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #22c55e, #86efac);
+  transition: width 160ms linear;
+}
+
+.renderProgressPanel p {
+  margin: 10px 0 0;
+  color: #94a3b8;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+@media (max-width: 720px) {
+  .renderProgressHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
