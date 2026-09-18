@@ -157,6 +157,7 @@ export type RenderResult = {
 export type DesktopApi = {
   selectImages: () => Promise<string[]>;
   selectNarration: () => Promise<string | null>;
+  readImagePreview: (filePath: string) => Promise<string | null>;
   selectAudioLayers: () => Promise<AudioAsset[]>;
   buildTimeline: (
     images: string[],
