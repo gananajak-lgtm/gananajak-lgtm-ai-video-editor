@@ -19,6 +19,7 @@ export type TimelineClip = {
 };
 
 export type AudioLayerKind = "sfx" | "music" | "ambience";
+export type AudioLayerOrigin = "manual" | "auto-sfx";
 
 export type AudioAsset = {
   id: string;
@@ -36,6 +37,8 @@ export type AudioLayer = {
   loop: boolean;
   fadeIn: number;
   fadeOut: number;
+  origin?: AudioLayerOrigin;
+  label?: string;
 };
 
 export type TimelinePlan = {
@@ -63,6 +66,32 @@ export type TranscriptResult = {
   segments: TranscriptSegment[];
 };
 
+export type SceneBlock = {
+  id: string;
+  start: number;
+  end: number;
+  duration: number;
+  text: string;
+  segmentIds: string[];
+  recommendedShotCount: number;
+  minShotDuration: number;
+};
+
+export type SfxCue = {
+  id: string;
+  label: string;
+  start: number;
+  triggerText: string;
+  matchedAssetId: string | null;
+  matchedFilePath: string | null;
+};
+
+export type EditingBrainPlan = {
+  scenes: SceneBlock[];
+  sfxCues: SfxCue[];
+  automaticAudioLayers: AudioLayer[];
+};
+
 export type AiSettingsStatus = {
   configured: boolean;
   persistedSecurely: boolean;
@@ -80,6 +109,10 @@ export type DesktopApi = {
   getAiSettingsStatus: () => Promise<AiSettingsStatus>;
   saveOpenAiApiKey: (apiKey: string) => Promise<AiSettingsStatus>;
   transcribeNarration: (narrationPath: string) => Promise<TranscriptResult>;
+  buildEditingBrainPlan: (
+    transcript: TranscriptResult,
+    sfxLibrary: AudioAsset[]
+  ) => Promise<EditingBrainPlan>;
   chooseOutput: () => Promise<string | null>;
   renderTimeline: (plan: TimelinePlan, outputPath: string) => Promise<RenderResult>;
 };
