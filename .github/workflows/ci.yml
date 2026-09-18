@@ -27,3 +27,6 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Render smoke test
+        run: npm run smoke:render
