@@ -158,7 +158,11 @@ export type DesktopApi = {
   selectImages: () => Promise<string[]>;
   selectNarration: () => Promise<string | null>;
   selectAudioLayers: () => Promise<AudioAsset[]>;
-  buildTimeline: (images: string[], narration: string) => Promise<TimelinePlan>;
+  buildTimeline: (
+    images: string[],
+    narration: string,
+    transcript?: TranscriptResult | null
+  ) => Promise<TimelinePlan>;
   getAiSettingsStatus: () => Promise<AiSettingsStatus>;
   saveOpenAiApiKey: (apiKey: string) => Promise<AiSettingsStatus>;
   transcribeNarration: (narrationPath: string) => Promise<TranscriptResult>;
