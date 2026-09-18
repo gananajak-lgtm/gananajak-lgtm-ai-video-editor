@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import type { AiSettingsStatus, TimelinePlan, TranscriptResult } from "../shared/types";
+import type { AudioLayer, AiSettingsStatus, TimelinePlan, TranscriptResult } from "../shared/types";
+import AudioLayersPanel from "./AudioLayersPanel";
 
 function fileName(filePath: string) {
   return filePath.split(/[\\/]/).pop() ?? filePath;
@@ -17,6 +18,7 @@ export default function App() {
   const [narration, setNarration] = useState<string | null>(null);
   const [timeline, setTimeline] = useState<TimelinePlan | null>(null);
   const [transcript, setTranscript] = useState<TranscriptResult | null>(null);
+  const [audioLayers, setAudioLayers] = useState<AudioLayer[]>([]);
   const [aiStatus, setAiStatus] = useState<AiSettingsStatus>({
     configured: false,
     persistedSecurely: false
@@ -138,7 +140,8 @@ export default function App() {
     setNotice("Rendering MP4 with FFmpeg...");
 
     try {
-      const result = await window.videoEditor.renderTimeline(timeline, outputPath);
+      const renderPlan = { ...timeline, audioLayers };
+      const result = await window.videoEditor.renderTimeline(renderPlan, outputPath);
       setNotice(`Export complete: ${result.outputPath}`);
     } catch (renderError) {
       setError(renderError instanceof Error ? renderError.message : String(renderError));
@@ -307,6 +310,8 @@ export default function App() {
           )}
         </section>
       )}
+
+      <AudioLayersPanel layers={audioLayers} onChange={setAudioLayers} />
 
       <section className="pipeline">
         <div>
