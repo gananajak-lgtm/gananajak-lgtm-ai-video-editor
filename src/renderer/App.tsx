@@ -7,6 +7,7 @@ import TimelineEditor from "./TimelineEditor";
 import ProjectToolbar from "./ProjectToolbar";
 import ExportSettingsPanel from "./ExportSettingsPanel";
 import MediaRelinkPanel from "./MediaRelinkPanel";
+import EpisodeReadinessPanel from "./EpisodeReadinessPanel";
 
 function fileName(filePath: string) {
   return filePath.split(/[\\/]/).pop() ?? filePath;
@@ -388,6 +389,18 @@ export default function App() {
   const exportVideo = async () => {
     if (!timeline) return;
 
+    const renderPlan = { ...timeline, audioLayers };
+    const diagnostics = await window.videoEditor.analyzeRenderPlan(renderPlan);
+    if (!diagnostics.ready) {
+      const blocking = diagnostics.diagnostics
+        .filter((item) => item.level === "error")
+        .map((item) => item.message)
+        .join(" ");
+      setError(`Export blocked: ${blocking}`);
+      setNotice(null);
+      return;
+    }
+
     const missing = await window.videoEditor.checkProjectMedia(projectDocument);
     setMissingMedia(missing);
     if (missing.length > 0) {
@@ -411,7 +424,6 @@ export default function App() {
     setNotice("Rendering MP4 with FFmpeg...");
 
     try {
-      const renderPlan = { ...timeline, audioLayers };
       const result = await window.videoEditor.renderTimeline(renderPlan, outputPath);
       setNotice(`Export complete: ${result.outputPath}`);
     } catch (renderError) {
@@ -613,6 +625,10 @@ export default function App() {
       />
 
       <AudioLayersPanel layers={audioLayers} onChange={setAudioLayers} />
+
+      <EpisodeReadinessPanel
+        plan={timeline ? { ...timeline, audioLayers } : null}
+      />
 
       <section className="pipeline">
         <div>
