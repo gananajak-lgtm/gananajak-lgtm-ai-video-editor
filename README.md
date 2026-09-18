@@ -45,6 +45,11 @@ The desktop app currently includes:
 - Recovery autosave stored in the Electron user-data directory
 - Full project persistence for narration, images, transcript, Editing Brain plan, timeline edits, subtitles, transitions, and audio layers
 - Missing-media detection when a project is reopened
+- Media Relink panel for moved assets
+- Batch relink by selecting a folder and matching exact filenames
+- One-by-one relink for ambiguous or renamed media
+- Relinking updates story images, narration, timeline clips, SFX cues, and audio layers together
+- Export preflight blocks rendering while required media is still missing
 - Export presets for 1080p, 1440p, 4K, 9:16 vertical, 1:1 square, 4:5 portrait, and custom dimensions
 - 24 / 25 / 30 / 60 fps export options
 - Draft / Standard / High encoder-quality presets
