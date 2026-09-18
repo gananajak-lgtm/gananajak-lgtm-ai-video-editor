@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import type { AudioLayer, AiSettingsStatus, EditingBrainPlan, ProjectDocument, ProjectLoadResult, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
+import type { AudioLayer, AiSettingsStatus, EditingBrainPlan, ProjectDocument, ProjectLoadResult, ProjectRelinkResult, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
 import AudioLayersPanel from "./AudioLayersPanel";
 import EditingBrainPanel from "./EditingBrainPanel";
 import VisualBrainPanel from "./VisualBrainPanel";
 import TimelineEditor from "./TimelineEditor";
 import ProjectToolbar from "./ProjectToolbar";
 import ExportSettingsPanel from "./ExportSettingsPanel";
+import MediaRelinkPanel from "./MediaRelinkPanel";
 
 function fileName(filePath: string) {
   return filePath.split(/[\\/]/).pop() ?? filePath;
@@ -29,6 +30,8 @@ export default function App() {
     "idle" | "saving" | "saved" | "error"
   >("idle");
   const [sessionReady, setSessionReady] = useState(false);
+  const [missingMedia, setMissingMedia] = useState<string[]>([]);
+  const [relinking, setRelinking] = useState(false);
   const [images, setImages] = useState<string[]>([]);
   const [narration, setNarration] = useState<string | null>(null);
   const [timeline, setTimeline] = useState<TimelinePlan | null>(null);
@@ -57,8 +60,16 @@ export default function App() {
     setNarration(project.narration);
     setTranscript(project.transcript);
     setEditingPlan(project.editingPlan);
-    setTimeline(project.timeline);
+    setTimeline(
+      project.timeline
+        ? {
+            ...project.timeline,
+            quality: project.timeline.quality ?? "standard"
+          }
+        : null
+    );
     setAudioLayers(project.audioLayers);
+    setMissingMedia(loaded.missingMedia);
 
     if (loaded.missingMedia.length > 0) {
       setNotice(
@@ -162,6 +173,68 @@ export default function App() {
       }
     } catch (openError) {
       setError(openError instanceof Error ? openError.message : String(openError));
+    }
+  };
+
+  const applyRelinkResult = (result: ProjectRelinkResult) => {
+    const project = result.project;
+    setImages(project.images);
+    setNarration(project.narration);
+    setTranscript(project.transcript);
+    setEditingPlan(project.editingPlan);
+    setTimeline(
+      project.timeline
+        ? {
+            ...project.timeline,
+            quality: project.timeline.quality ?? "standard"
+          }
+        : null
+    );
+    setAudioLayers(project.audioLayers);
+    setMissingMedia(result.missingMedia);
+    setNotice(
+      result.relinked.length > 0
+        ? `Relinked ${result.relinked.length} media file${result.relinked.length === 1 ? "" : "s"}. ${result.missingMedia.length} still missing.`
+        : "No uniquely matching media files were found in that location."
+    );
+    setError(null);
+  };
+
+  const relinkFromFolder = async () => {
+    if (!missingMedia.length) return;
+
+    setRelinking(true);
+    setError(null);
+    try {
+      const result = await window.videoEditor.relinkMissingMediaFromFolder(
+        projectDocument,
+        missingMedia
+      );
+      if (result) applyRelinkResult(result);
+    } catch (relinkError) {
+      setError(
+        relinkError instanceof Error ? relinkError.message : String(relinkError)
+      );
+    } finally {
+      setRelinking(false);
+    }
+  };
+
+  const relinkSingle = async (missingPath: string) => {
+    setRelinking(true);
+    setError(null);
+    try {
+      const result = await window.videoEditor.relinkSingleMedia(
+        projectDocument,
+        missingPath
+      );
+      if (result) applyRelinkResult(result);
+    } catch (relinkError) {
+      setError(
+        relinkError instanceof Error ? relinkError.message : String(relinkError)
+      );
+    } finally {
+      setRelinking(false);
     }
   };
 
@@ -310,6 +383,16 @@ export default function App() {
   const exportVideo = async () => {
     if (!timeline) return;
 
+    const missing = await window.videoEditor.checkProjectMedia(projectDocument);
+    setMissingMedia(missing);
+    if (missing.length > 0) {
+      setError(
+        `Export blocked: ${missing.length} media file${missing.length === 1 ? "" : "s"} must be relinked first.`
+      );
+      setNotice(null);
+      return;
+    }
+
     const outputPath = await window.videoEditor.chooseOutput();
     if (!outputPath) return;
 
@@ -338,7 +421,7 @@ export default function App() {
         </div>
         <div className="status">
           <span className="statusDot" />
-          Phase 1 · Export preset foundation
+          Phase 1 · Media relink foundation
         </div>
       </header>
 
@@ -349,6 +432,13 @@ export default function App() {
         onTitleChange={setProjectTitle}
         onOpen={openProjectFile}
         onSave={saveProjectFile}
+      />
+
+      <MediaRelinkPanel
+        missingMedia={missingMedia}
+        relinking={relinking}
+        onRelinkFolder={relinkFromFolder}
+        onRelinkSingle={relinkSingle}
       />
 
       <section className="hero">
@@ -523,7 +613,7 @@ export default function App() {
           <button className="primary" disabled={!ready || building || rendering || transcribing} onClick={buildTimeline}>
             {building ? "Building timeline..." : timeline ? "Rebuild baseline timeline" : ready ? "Build baseline timeline" : "Add images + narration"}
           </button>
-          <button className="exportButton" disabled={!timeline || rendering || building || transcribing} onClick={exportVideo}>
+          <button className="exportButton" disabled={!timeline || rendering || building || transcribing || missingMedia.length > 0} onClick={exportVideo}>
             {rendering ? "Rendering..." : "Export MP4"}
           </button>
         </div>
