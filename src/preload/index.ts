@@ -6,6 +6,11 @@ const api: DesktopApi = {
   selectNarration: () => ipcRenderer.invoke("media:select-narration"),
   buildTimeline: (images, narration) =>
     ipcRenderer.invoke("timeline:build", images, narration),
+  getAiSettingsStatus: () => ipcRenderer.invoke("ai:settings-status"),
+  saveOpenAiApiKey: (apiKey) =>
+    ipcRenderer.invoke("ai:save-openai-key", apiKey),
+  transcribeNarration: (narrationPath) =>
+    ipcRenderer.invoke("ai:transcribe-narration", narrationPath),
   chooseOutput: () => ipcRenderer.invoke("render:choose-output"),
   renderTimeline: (plan: TimelinePlan, outputPath: string) =>
     ipcRenderer.invoke("render:timeline", plan, outputPath)
