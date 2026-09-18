@@ -1419,3 +1419,77 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+.mediaRelinkPanel {
+  margin-top: 18px;
+  padding: 20px;
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  border-radius: 18px;
+  background: rgba(120, 53, 15, 0.12);
+}
+
+.mediaRelinkPanel h3 {
+  margin: 0;
+}
+
+.mediaRelinkHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.mediaRelinkHeader .muted {
+  max-width: 760px;
+  margin-bottom: 0;
+  line-height: 1.55;
+}
+
+.missingMediaList {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.missingMediaRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  border-radius: 12px;
+  background: rgba(30, 41, 59, 0.66);
+}
+
+.missingMediaRow > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.missingMediaRow strong,
+.missingMediaRow small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.missingMediaRow strong {
+  color: #fde68a;
+  font-size: 12px;
+}
+
+.missingMediaRow small {
+  color: #94a3b8;
+  font-size: 9px;
+}
+
+@media (max-width: 760px) {
+  .mediaRelinkHeader,
+  .missingMediaRow {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
