@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { AudioLayer, AiSettingsStatus, EditingBrainPlan, ProjectDocument, ProjectLoadResult, ProjectRelinkResult, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
+import type { AudioLayer, AiSettingsStatus, EditingBrainPlan, ProjectDocument, ProjectLoadResult, ProjectRelinkResult, RenderProgress, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
 import AudioLayersPanel from "./AudioLayersPanel";
 import EditingBrainPanel from "./EditingBrainPanel";
 import VisualBrainPanel from "./VisualBrainPanel";
@@ -47,6 +47,7 @@ export default function App() {
   const [transcribing, setTranscribing] = useState(false);
   const [building, setBuilding] = useState(false);
   const [rendering, setRendering] = useState(false);
+  const [renderProgress, setRenderProgress] = useState<RenderProgress | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -112,6 +113,10 @@ export default function App() {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    return window.videoEditor.onRenderProgress(setRenderProgress);
   }, []);
 
   const projectDocument = useMemo<ProjectDocument>(
@@ -397,6 +402,11 @@ export default function App() {
     if (!outputPath) return;
 
     setRendering(true);
+    setRenderProgress({
+      progress: 0,
+      elapsed: 0,
+      duration: timeline.duration
+    });
     setError(null);
     setNotice("Rendering MP4 with FFmpeg...");
 
@@ -421,7 +431,7 @@ export default function App() {
         </div>
         <div className="status">
           <span className="statusDot" />
-          Phase 1 · Media relink foundation
+          Phase 1 · Long-episode render foundation
         </div>
       </header>
 
@@ -614,10 +624,43 @@ export default function App() {
             {building ? "Building timeline..." : timeline ? "Rebuild baseline timeline" : ready ? "Build baseline timeline" : "Add images + narration"}
           </button>
           <button className="exportButton" disabled={!timeline || rendering || building || transcribing || missingMedia.length > 0} onClick={exportVideo}>
-            {rendering ? "Rendering..." : "Export MP4"}
+            {rendering
+              ? `Rendering ${Math.round((renderProgress?.progress ?? 0) * 100)}%...`
+              : "Export MP4"}
           </button>
         </div>
       </section>
+
+      {rendering && renderProgress && (
+        <section className="renderProgressPanel">
+          <div className="renderProgressHeader">
+            <div>
+              <p className="eyebrow">RENDERING</p>
+              <strong>
+                {Math.round(renderProgress.progress * 100)}% complete
+              </strong>
+            </div>
+            <span>
+              {formatTime(renderProgress.elapsed)} / {formatTime(renderProgress.duration)}
+            </span>
+          </div>
+          <div className="renderProgressTrack">
+            <div
+              className="renderProgressFill"
+              style={{
+                width: `${Math.max(
+                  1,
+                  Math.min(100, renderProgress.progress * 100)
+                )}%`
+              }}
+            />
+          </div>
+          <p>
+            Long renders use a temporary FFmpeg filter script instead of placing
+            the complete filter graph on the operating-system command line.
+          </p>
+        </section>
+      )}
 
       {timeline && (
         <section className="timelinePanel">
