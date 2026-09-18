@@ -120,15 +120,25 @@ ipcMain.handle(
 
 ipcMain.handle(
   "visual:build-timeline",
-  async (_event, narrationPath: string, plan: VisualBrainPlan) => {
-    return buildTimelineFromVisualPlan(narrationPath, plan);
+  async (
+    _event,
+    narrationPath: string,
+    plan: VisualBrainPlan,
+    transcript: TranscriptResult
+  ) => {
+    return buildTimelineFromVisualPlan(narrationPath, plan, transcript);
   }
 );
 
 ipcMain.handle(
   "timeline:build",
-  async (_event, images: string[], narration: string) => {
-    return buildAutomaticTimeline(images, narration);
+  async (
+    _event,
+    images: string[],
+    narration: string,
+    transcript?: TranscriptResult | null
+  ) => {
+    return buildAutomaticTimeline(images, narration, transcript);
   }
 );
 
