@@ -38,6 +38,8 @@ const api: DesktopApi = {
     ipcRenderer.invoke("visual:build-plan", scenes, imagePaths),
   buildTimelineFromVisualPlan: (narrationPath, plan, transcript) =>
     ipcRenderer.invoke("visual:build-timeline", narrationPath, plan, transcript),
+  analyzeRenderPlan: (plan) =>
+    ipcRenderer.invoke("render:analyze-plan", plan),
   chooseOutput: () => ipcRenderer.invoke("render:choose-output"),
   renderTimeline: (plan: TimelinePlan, outputPath: string) =>
     ipcRenderer.invoke("render:timeline", plan, outputPath),
