@@ -10,7 +10,8 @@
     "build": "npm run build:renderer && npm run build:electron",
     "build:renderer": "vite build",
     "build:electron": "tsc -p tsconfig.electron.json",
-    "typecheck": "tsc --noEmit && tsc -p tsconfig.electron.json --noEmit"
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.electron.json --noEmit",
+    "smoke:render": "node scripts/render-smoke.cjs"
   },
   "dependencies": {
     "ffmpeg-static": "^5.2.0",
