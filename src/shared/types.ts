@@ -34,6 +34,17 @@ export type ProjectSaveResult = {
   filePath: string;
 };
 
+export type MediaRelink = {
+  from: string;
+  to: string;
+};
+
+export type ProjectRelinkResult = {
+  project: ProjectDocument;
+  missingMedia: string[];
+  relinked: MediaRelink[];
+};
+
 export type ShotMotion =
   | "hold"
   | "slow-zoom-in"
@@ -193,6 +204,14 @@ export type DesktopApi = {
   ) => Promise<ProjectSaveResult | null>;
   autosaveProject: (project: ProjectDocument) => Promise<void>;
   loadAutosaveProject: () => Promise<ProjectLoadResult | null>;
+  relinkMissingMediaFromFolder: (
+    project: ProjectDocument,
+    missingMedia: string[]
+  ) => Promise<ProjectRelinkResult | null>;
+  relinkSingleMedia: (
+    project: ProjectDocument,
+    missingPath: string
+  ) => Promise<ProjectRelinkResult | null>;
   buildTimeline: (
     images: string[],
     narration: string,
