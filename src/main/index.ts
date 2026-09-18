@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, nativeImage } from "electron";
 import path from "node:path";
 import type { AudioAsset, SceneBlock, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
 import { transcribeLongNarration } from "./ai/transcription";
@@ -48,6 +48,15 @@ ipcMain.handle("media:select-images", async () => {
   });
 
   return result.canceled ? [] : result.filePaths;
+});
+
+ipcMain.handle("media:image-preview", async (_event, filePath: string) => {
+  const image = nativeImage.createFromPath(filePath);
+  if (image.isEmpty()) return null;
+
+  const size = image.getSize();
+  const width = Math.min(960, Math.max(1, size.width));
+  return image.resize({ width }).toDataURL();
 });
 
 ipcMain.handle("media:select-narration", async () => {
