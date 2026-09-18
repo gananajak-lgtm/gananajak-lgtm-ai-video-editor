@@ -110,7 +110,7 @@ function createVideoFilter(
         plan.fps
       ),
       ",",
-      `trim=duration=${fixed(renderDuration)},setpts=PTS-STARTPTS[v${index}]`
+      `trim=duration=${fixed(renderDuration)},setpts=PTS-STARTPTS,fps=${plan.fps},settb=AVTB,format=yuv420p[v${index}]`
     ].join("");
   });
 
