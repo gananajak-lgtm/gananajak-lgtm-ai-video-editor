@@ -3,6 +3,7 @@ import type { AudioLayer, AiSettingsStatus, EditingBrainPlan, TimelinePlan, Tran
 import AudioLayersPanel from "./AudioLayersPanel";
 import EditingBrainPanel from "./EditingBrainPanel";
 import VisualBrainPanel from "./VisualBrainPanel";
+import TimelineEditor from "./TimelineEditor";
 
 function fileName(filePath: string) {
   return filePath.split(/[\\/]/).pop() ?? filePath;
@@ -193,7 +194,7 @@ export default function App() {
         </div>
         <div className="status">
           <span className="statusDot" />
-          Phase 1 · Visual Brain foundation
+          Phase 1 · Manual finishing foundation
         </div>
       </header>
 
@@ -409,6 +410,8 @@ export default function App() {
           <p className="timelineHint">
             Visual Brain can now replace the fallback sequential edit with a timestamp-aligned shot plan. The baseline button remains available as a safe fallback.
           </p>
+
+          <TimelineEditor plan={timeline} onChange={setTimeline} />
         </section>
       )}
     </main>
