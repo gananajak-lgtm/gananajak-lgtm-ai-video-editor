@@ -1,6 +1,8 @@
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import path from "node:path";
 import type { TimelinePlan } from "../shared/types";
+import { transcribeLongNarration } from "./ai/transcription";
+import { getAiSettingsStatus, saveOpenAiApiKey } from "./settings";
 import { renderTimeline } from "./video/render";
 import { buildAutomaticTimeline } from "./video/timeline";
 
@@ -57,6 +59,18 @@ ipcMain.handle("media:select-narration", async () => {
   });
 
   return result.canceled ? null : result.filePaths[0] ?? null;
+});
+
+ipcMain.handle("ai:settings-status", async () => {
+  return getAiSettingsStatus();
+});
+
+ipcMain.handle("ai:save-openai-key", async (_event, apiKey: string) => {
+  return saveOpenAiApiKey(apiKey);
+});
+
+ipcMain.handle("ai:transcribe-narration", async (_event, narrationPath: string) => {
+  return transcribeLongNarration(narrationPath);
 });
 
 ipcMain.handle(
