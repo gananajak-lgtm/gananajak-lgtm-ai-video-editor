@@ -41,6 +41,10 @@ The desktop app currently includes:
 - Baseline sequential timeline retained as a fallback
 - Manual finishing controls for image replacement, shot motion, cut nudging, crossfade timing, and subtitle corrections
 - Safe local still-image preview in the Electron renderer
+- Project save/open using portable `.aivproj` JSON documents
+- Recovery autosave stored in the Electron user-data directory
+- Full project persistence for narration, images, transcript, Editing Brain plan, timeline edits, subtitles, transitions, and audio layers
+- Missing-media detection when a project is reopened
 - CI runtime smoke render covering images, narration, overlapping SFX, subtitles, motion, and transitions
 
 ## Audio Brain
@@ -76,7 +80,7 @@ Pauses between spoken scenes extend the current visual shot until the next plann
 - Scene-to-image ranking is currently heuristic over AI-generated descriptors rather than a full semantic reranker.
 - Character identity can only use visually supported information or helpful fictional labels present in filenames.
 - The CI smoke render now verifies the real FFmpeg pipeline with synthetic media, but a representative long real-world episode still needs end-to-end verification.
-- Manual finishing controls are now present; richer playback/scrubbing can be added after the core MVP is proven.
+- Manual finishing controls and project persistence are now present; richer playback/scrubbing can be added after the core MVP is proven.
 - Thai subtitle appearance depends on suitable Thai fonts being available on the target operating system.
 
 ## Product direction
