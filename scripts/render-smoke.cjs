@@ -57,6 +57,8 @@ async function main() {
       effect
     ]);
 
+    const progressEvents = [];
+
     await renderTimeline(
       {
         duration: 3,
@@ -111,15 +113,25 @@ async function main() {
         transitionDuration: 0.25,
         quality: "draft"
       },
-      output
+      output,
+      (progress) => progressEvents.push(progress)
     );
+
+    if (
+      progressEvents.length === 0 ||
+      progressEvents[progressEvents.length - 1].progress !== 1
+    ) {
+      throw new Error("Render progress did not reach 100%.");
+    }
 
     const stat = fs.statSync(output);
     if (stat.size < 1000) {
       throw new Error(`Smoke render output is unexpectedly small: ${stat.size} bytes`);
     }
 
-    console.log(`render smoke test passed (${stat.size} bytes)`);
+    console.log(
+      `render smoke test passed (${stat.size} bytes, ${progressEvents.length} progress events)`
+    );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
