@@ -27,6 +27,26 @@ export type TimelinePlan = {
   clips: TimelineClip[];
 };
 
+export type TranscriptSegment = {
+  id: string;
+  start: number;
+  end: number;
+  text: string;
+};
+
+export type TranscriptResult = {
+  provider: "openai-whisper-1";
+  language: string | null;
+  duration: number;
+  text: string;
+  segments: TranscriptSegment[];
+};
+
+export type AiSettingsStatus = {
+  configured: boolean;
+  persistedSecurely: boolean;
+};
+
 export type RenderResult = {
   outputPath: string;
 };
@@ -35,6 +55,9 @@ export type DesktopApi = {
   selectImages: () => Promise<string[]>;
   selectNarration: () => Promise<string | null>;
   buildTimeline: (images: string[], narration: string) => Promise<TimelinePlan>;
+  getAiSettingsStatus: () => Promise<AiSettingsStatus>;
+  saveOpenAiApiKey: (apiKey: string) => Promise<AiSettingsStatus>;
+  transcribeNarration: (narrationPath: string) => Promise<TranscriptResult>;
   chooseOutput: () => Promise<string | null>;
   renderTimeline: (plan: TimelinePlan, outputPath: string) => Promise<RenderResult>;
 };
