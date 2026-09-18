@@ -74,6 +74,8 @@ export type AudioLayer = {
   label?: string;
 };
 
+export type RenderQuality = "draft" | "standard" | "high";
+
 export type SubtitleCue = {
   id: string;
   start: number;
@@ -91,6 +93,7 @@ export type TimelinePlan = {
   audioLayers: AudioLayer[];
   subtitles: SubtitleCue[];
   transitionDuration: number;
+  quality: RenderQuality;
 };
 
 export type TranscriptSegment = {
