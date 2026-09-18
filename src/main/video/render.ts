@@ -1,9 +1,58 @@
 import { spawn } from "node:child_process";
 import ffmpegPath from "ffmpeg-static";
-import type { AudioLayer, TimelinePlan } from "../../shared/types";
+import type { AudioLayer, ShotMotion, TimelinePlan } from "../../shared/types";
 
 function fixed(value: number) {
   return Math.max(0.04, value).toFixed(3);
+}
+
+function motionFilter(
+  motion: ShotMotion,
+  duration: number,
+  width: number,
+  height: number,
+  fps: number
+) {
+  const frames = Math.max(1, Math.round(duration * fps));
+  const common = `d=1:s=${width}x${height}:fps=${fps}`;
+
+  switch (motion) {
+    case "hold":
+      return `zoompan=z='1.0':x='0':y='0':${common}`;
+    case "slow-zoom-out":
+      return [
+        "zoompan=",
+        "z='max(1.0,1.08-on*0.0006)':",
+        "x='iw/2-(iw/zoom/2)':",
+        "y='ih/2-(ih/zoom/2)':",
+        common
+      ].join("");
+    case "pan-left":
+      return [
+        "zoompan=",
+        "z='1.08':",
+        `x='(iw-iw/zoom)*(1-min(on/${frames},1))':`,
+        "y='ih/2-(ih/zoom/2)':",
+        common
+      ].join("");
+    case "pan-right":
+      return [
+        "zoompan=",
+        "z='1.08':",
+        `x='(iw-iw/zoom)*min(on/${frames},1)':`,
+        "y='ih/2-(ih/zoom/2)':",
+        common
+      ].join("");
+    case "slow-zoom-in":
+    default:
+      return [
+        "zoompan=",
+        "z='min(zoom+0.0006,1.08)':",
+        "x='iw/2-(iw/zoom/2)':",
+        "y='ih/2-(ih/zoom/2)':",
+        common
+      ].join("");
+  }
 }
 
 function createVideoFilter(plan: TimelinePlan) {
@@ -15,11 +64,14 @@ function createVideoFilter(plan: TimelinePlan) {
       `scale=${plan.width}:${plan.height}:force_original_aspect_ratio=increase,`,
       `crop=${plan.width}:${plan.height},`,
       "setsar=1,",
-      "zoompan=",
-      "z='min(zoom+0.0006,1.08)':",
-      "x='iw/2-(iw/zoom/2)':",
-      "y='ih/2-(ih/zoom/2)':",
-      `d=1:s=${plan.width}x${plan.height}:fps=${plan.fps},`,
+      motionFilter(
+        clip.motion,
+        clip.duration,
+        plan.width,
+        plan.height,
+        plan.fps
+      ),
+      ",",
       `trim=duration=${duration},setpts=PTS-STARTPTS[v${index}]`
     ].join("");
   });
