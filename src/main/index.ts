@@ -1,8 +1,9 @@
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import path from "node:path";
-import type { TimelinePlan } from "../shared/types";
+import type { AudioAsset, TimelinePlan } from "../shared/types";
 import { transcribeLongNarration } from "./ai/transcription";
 import { getAiSettingsStatus, saveOpenAiApiKey } from "./settings";
+import { probeDuration } from "./video/probe";
 import { renderTimeline } from "./video/render";
 import { buildAutomaticTimeline } from "./video/timeline";
 
@@ -59,6 +60,33 @@ ipcMain.handle("media:select-narration", async () => {
   });
 
   return result.canceled ? null : result.filePaths[0] ?? null;
+});
+
+ipcMain.handle("media:select-audio-layers", async () => {
+  const result = await dialog.showOpenDialog({
+    title: "Select sound effects, ambience, or music",
+    properties: ["openFile", "multiSelections"],
+    filters: [
+      {
+        name: "Audio",
+        extensions: ["mp3", "wav", "m4a", "aac", "flac", "ogg"]
+      }
+    ]
+  });
+
+  if (result.canceled) return [];
+
+  const assets: AudioAsset[] = [];
+  for (const [index, filePath] of result.filePaths.entries()) {
+    const duration = await probeDuration(filePath);
+    assets.push({
+      id: `audio-asset-${Date.now()}-${index}`,
+      filePath,
+      duration
+    });
+  }
+
+  return assets;
 });
 
 ipcMain.handle("ai:settings-status", async () => {
