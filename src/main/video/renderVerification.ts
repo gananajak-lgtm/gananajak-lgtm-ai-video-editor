@@ -40,9 +40,10 @@ export async function verifyRenderedOutput(
   }
 
   if (
-    video?.width !== null &&
-    video?.height !== null &&
-    (video?.width !== plan.width || video?.height !== plan.height)
+    video &&
+    video.width !== null &&
+    video.height !== null &&
+    (video.width !== plan.width || video.height !== plan.height)
   ) {
     push(
       diagnostics,
@@ -52,7 +53,7 @@ export async function verifyRenderedOutput(
     );
   }
 
-  if (video?.fps !== null && Math.abs(video.fps - plan.fps) > 0.1) {
+  if (video && video.fps !== null && Math.abs(video.fps - plan.fps) > 0.1) {
     push(
       diagnostics,
       "fps",
