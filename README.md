@@ -58,6 +58,9 @@ The desktop app currently includes:
 - Long-render FFmpeg filter graphs are written to a temporary filter script instead of passed inline on the command line
 - Live render progress streamed from FFmpeg back to the Electron UI
 - Full Episode Readiness diagnostics for shot count, subtitle count, audio-layer load, runtime, estimated frame count, and pixels per frame
+- Quick Preview renders for a selected 10 / 20 / 30 / 60 second range without exporting the whole episode
+- Preview renders preserve the real narration offset, subtitle timing, overlapping SFX, camera motion, and transitions
+- Preview mode automatically uses Draft quality, caps the longest side at 960 px, and limits output to 30 fps
 - Timeline validation before rendering catches invalid dimensions, FPS, duration, clip timing, subtitle bounds, and visual/narration runtime mismatch
 - Export is blocked when readiness diagnostics contain structural errors
 - CI runtime smoke render covering images, narration, overlapping SFX, subtitles, motion, transitions, portrait export, custom FPS, quality presets, and render-progress completion
@@ -94,7 +97,7 @@ Pauses between spoken scenes extend the current visual shot until the next plann
 
 - Scene-to-image ranking is currently heuristic over AI-generated descriptors rather than a full semantic reranker.
 - Character identity can only use visually supported information or helpful fictional labels present in filenames.
-- The CI smoke render now verifies the real FFmpeg pipeline with synthetic media and progress reporting, but a representative long real-world episode still needs end-to-end verification.
+- The CI smoke render now verifies the real FFmpeg pipeline, progress reporting, and range-preview source offsets with synthetic media, but a representative long real-world episode still needs end-to-end verification.
 - Manual finishing controls and project persistence are now present; richer playback/scrubbing can be added after the core MVP is proven.
 - Export can upscale to 4K or custom dimensions, but true source detail still depends on the original image resolution.
 - Thai subtitle appearance depends on suitable Thai fonts being available on the target operating system.
