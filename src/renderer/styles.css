@@ -2195,3 +2195,53 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+.inAppPlayer {
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  border-radius: 14px;
+  background: rgba(2, 6, 23, 0.78);
+}
+
+.inAppPlayer video {
+  width: 100%;
+  max-height: 540px;
+  display: block;
+  border-radius: 10px;
+  background: #000;
+}
+
+.playerScrubRow {
+  display: grid;
+  grid-template-columns: auto auto auto minmax(180px, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.playerScrubRow input[type="range"] {
+  width: 100%;
+}
+
+.playerScrubRow strong {
+  min-width: 104px;
+  color: #e9d5ff;
+  font-size: 10px;
+  text-align: right;
+}
+
+@media (max-width: 720px) {
+  .playerScrubRow {
+    grid-template-columns: auto auto auto;
+  }
+
+  .playerScrubRow input[type="range"],
+  .playerScrubRow strong {
+    grid-column: 1 / -1;
+  }
+
+  .playerScrubRow strong {
+    text-align: left;
+  }
+}
