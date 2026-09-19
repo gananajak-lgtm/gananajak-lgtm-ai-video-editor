@@ -3,6 +3,10 @@ import path from "node:path";
 import type { AudioAsset, ProjectDocument, SceneBlock, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
 import { transcribeLongNarration } from "./ai/transcription";
 import { buildEditingBrainPlan } from "./editing/editingBrain";
+import {
+  createPlaybackUrl,
+  installMediaProtocol
+} from "./mediaProtocol";
 import { getAiSettingsStatus, saveOpenAiApiKey } from "./settings";
 import {
   autosaveProject,
@@ -250,14 +254,10 @@ ipcMain.handle(
       }
     );
 
-    const openError = await shell.openPath(renderedPath);
-    if (openError) {
-      throw new Error(
-        `Preview rendered, but the default video player could not open it: ${openError}`
-      );
-    }
-
-    return { outputPath: renderedPath };
+    return {
+      outputPath: renderedPath,
+      playbackUrl: createPlaybackUrl(renderedPath)
+    };
   }
 );
 
@@ -324,6 +324,7 @@ ipcMain.handle(
 );
 
 app.whenReady().then(() => {
+  installMediaProtocol();
   createWindow();
 
   app.on("activate", () => {
