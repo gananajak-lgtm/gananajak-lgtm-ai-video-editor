@@ -1666,3 +1666,100 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+.quickPreviewPanel {
+  margin-top: 18px;
+  padding: 22px;
+  border: 1px solid rgba(168, 85, 247, 0.22);
+  border-radius: 18px;
+  background: rgba(76, 29, 149, 0.1);
+}
+
+.quickPreviewPanel h3 {
+  margin: 0;
+}
+
+.quickPreviewHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 22px;
+}
+
+.quickPreviewHeader .muted {
+  max-width: 790px;
+  margin-bottom: 0;
+  line-height: 1.55;
+}
+
+.quickPreviewControls {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.6fr) minmax(160px, 0.7fr) minmax(180px, 0.7fr);
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.quickPreviewControls label,
+.quickPreviewRange {
+  display: grid;
+  gap: 7px;
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.quickPreviewControls label:first-child {
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+}
+
+.quickPreviewControls input[type="range"] {
+  width: 100%;
+}
+
+.quickPreviewControls select {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 10px;
+  padding: 9px 10px;
+  color: #f8fafc;
+  background: #020617;
+  font: inherit;
+}
+
+.quickPreviewControls strong,
+.quickPreviewRange strong {
+  color: #e9d5ff;
+  font-size: 11px;
+  letter-spacing: 0;
+}
+
+.quickPreviewProgress {
+  height: 8px;
+  margin-top: 14px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.88);
+}
+
+.quickPreviewProgress > div {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #8b5cf6, #d8b4fe);
+  transition: width 160ms linear;
+}
+
+@media (max-width: 820px) {
+  .quickPreviewHeader {
+    flex-direction: column;
+  }
+
+  .quickPreviewControls {
+    grid-template-columns: 1fr;
+  }
+
+  .quickPreviewControls label:first-child {
+    grid-template-columns: 1fr;
+  }
+}
