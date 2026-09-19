@@ -54,6 +54,9 @@ The desktop app currently includes:
 - 24 / 25 / 30 / 60 fps export options
 - Draft / Standard / High encoder-quality presets
 - Resolution-aware subtitle sizing
+- Subtitle font-family selection with operating-system fallback
+- Subtitle size scaling and bottom / middle placement controls
+- Optional corrected `.srt` sidecar export beside the MP4 for YouTube or external caption workflows
 - Aspect-preserving scale + center crop so artwork is not stretched
 - Long-render FFmpeg filter graphs are written to a temporary filter script instead of passed inline on the command line
 - Live render progress streamed from FFmpeg back to the Electron UI
@@ -106,7 +109,7 @@ Pauses between spoken scenes extend the current visual shot until the next plann
 - The CI smoke render now verifies the real FFmpeg pipeline, progress reporting, range-preview source offsets, Opening / Middle / Ending QC sample selection, and FFprobe post-render metadata/report generation with synthetic media. A representative long real-world episode is still the final production-scale validation.
 - Manual finishing controls and project persistence are now present; richer playback/scrubbing can be added after the core MVP is proven.
 - Export can upscale to 4K or custom dimensions, but true source detail still depends on the original image resolution.
-- Thai subtitle appearance depends on suitable Thai fonts being available on the target operating system.
+- Named subtitle fonts must already be installed on the target operating system; leaving the font blank uses the system/libass fallback.
 
 ## Product direction
 
