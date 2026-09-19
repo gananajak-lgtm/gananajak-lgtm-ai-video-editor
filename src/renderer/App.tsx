@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { AudioLayer, AiSettingsStatus, EditingBrainPlan, ProjectDocument, ProjectLoadResult, ProjectRelinkResult, RenderProgress, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
+import type { AudioLayer, AiSettingsStatus, EditingBrainPlan, FullEpisodeTestReport, ProjectDocument, ProjectLoadResult, ProjectRelinkResult, RenderProgress, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
 import AudioLayersPanel from "./AudioLayersPanel";
 import EditingBrainPanel from "./EditingBrainPanel";
 import VisualBrainPanel from "./VisualBrainPanel";
@@ -10,6 +10,7 @@ import MediaRelinkPanel from "./MediaRelinkPanel";
 import EpisodeReadinessPanel from "./EpisodeReadinessPanel";
 import QuickPreviewPanel from "./QuickPreviewPanel";
 import EpisodeQcPackPanel from "./EpisodeQcPackPanel";
+import FullEpisodeTestPanel from "./FullEpisodeTestPanel";
 
 function fileName(filePath: string) {
   return filePath.split(/[\\/]/).pop() ?? filePath;
@@ -51,6 +52,7 @@ export default function App() {
   const [building, setBuilding] = useState(false);
   const [rendering, setRendering] = useState(false);
   const [renderProgress, setRenderProgress] = useState<RenderProgress | null>(null);
+  const [renderHistory, setRenderHistory] = useState<FullEpisodeTestReport[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,6 +75,7 @@ export default function App() {
         : null
     );
     setAudioLayers(project.audioLayers);
+    setRenderHistory(project.renderHistory ?? []);
     setMissingMedia(loaded.missingMedia);
 
     if (loaded.missingMedia.length > 0) {
@@ -134,7 +137,8 @@ export default function App() {
       transcript,
       editingPlan,
       timeline,
-      audioLayers
+      audioLayers,
+      renderHistory
     }),
     [
       projectId,
@@ -145,7 +149,8 @@ export default function App() {
       transcript,
       editingPlan,
       timeline,
-      audioLayers
+      audioLayers,
+      renderHistory
     ]
   );
 
@@ -199,6 +204,7 @@ export default function App() {
         : null
     );
     setAudioLayers(project.audioLayers);
+    setRenderHistory(project.renderHistory ?? renderHistory);
     setMissingMedia(result.missingMedia);
     setNotice(
       result.relinked.length > 0
@@ -427,7 +433,17 @@ export default function App() {
 
     try {
       const result = await window.videoEditor.renderTimeline(renderPlan, outputPath);
-      setNotice(`Export complete: ${result.outputPath}`);
+      if (result.testReport) {
+        setRenderHistory((current) => [
+          result.testReport as FullEpisodeTestReport,
+          ...current.filter((item) => item.id !== result.testReport?.id)
+        ].slice(0, 20));
+      }
+      setNotice(
+        result.testReport
+          ? `Export complete: ${result.outputPath} · Post-render test ${result.testReport.passed ? "passed" : "needs review"}.`
+          : `Export complete: ${result.outputPath}`
+      );
     } catch (renderError) {
       setError(renderError instanceof Error ? renderError.message : String(renderError));
       setNotice(null);
@@ -445,7 +461,7 @@ export default function App() {
         </div>
         <div className="status">
           <span className="statusDot" />
-          Phase 1 · Episode QC foundation
+          Phase 1 · Full episode test foundation
         </div>
       </header>
 
@@ -631,6 +647,8 @@ export default function App() {
       <EpisodeReadinessPanel
         plan={timeline ? { ...timeline, audioLayers } : null}
       />
+
+      <FullEpisodeTestPanel history={renderHistory} />
 
       {timeline && (
         <>
