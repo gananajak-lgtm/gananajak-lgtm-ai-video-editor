@@ -7,6 +7,9 @@ const { renderTimeline } = require("../dist-electron/main/video/render.js");
 const {
   createPreviewTimeline
 } = require("../dist-electron/main/video/previewPlan.js");
+const {
+  buildQcSampleSpecs
+} = require("../dist-electron/main/video/qcPack.js");
 
 function run(args) {
   const result = spawnSync(ffmpegPath, args, {
@@ -113,6 +116,20 @@ async function main() {
       transitionDuration: 0.25,
       quality: "draft"
     };
+
+    const qcSpecs = buildQcSampleSpecs(
+      { ...fullPlan, duration: 1800 },
+      15
+    );
+
+    if (
+      qcSpecs.length !== 3 ||
+      qcSpecs[0].id !== "opening" ||
+      Math.abs(qcSpecs[1].start - 892.5) > 0.001 ||
+      Math.abs(qcSpecs[2].start - 1785) > 0.001
+    ) {
+      throw new Error("QC sample points are not opening / middle / ending.");
+    }
 
     const previewPlan = createPreviewTimeline(fullPlan, 1.2, 1.3);
 
