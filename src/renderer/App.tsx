@@ -461,7 +461,7 @@ export default function App() {
         </div>
         <div className="status">
           <span className="statusDot" />
-          Phase 1 · Full episode test foundation
+          Phase 1 · Subtitle delivery foundation
         </div>
       </header>
 
