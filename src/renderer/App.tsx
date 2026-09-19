@@ -8,6 +8,7 @@ import ProjectToolbar from "./ProjectToolbar";
 import ExportSettingsPanel from "./ExportSettingsPanel";
 import MediaRelinkPanel from "./MediaRelinkPanel";
 import EpisodeReadinessPanel from "./EpisodeReadinessPanel";
+import QuickPreviewPanel from "./QuickPreviewPanel";
 
 function fileName(filePath: string) {
   return filePath.split(/[\\/]/).pop() ?? filePath;
@@ -443,7 +444,7 @@ export default function App() {
         </div>
         <div className="status">
           <span className="statusDot" />
-          Phase 1 · Long-episode render foundation
+          Phase 1 · Quick preview foundation
         </div>
       </header>
 
@@ -629,6 +630,18 @@ export default function App() {
       <EpisodeReadinessPanel
         plan={timeline ? { ...timeline, audioLayers } : null}
       />
+
+      {timeline && (
+        <QuickPreviewPanel
+          plan={{ ...timeline, audioLayers }}
+          disabled={
+            rendering ||
+            building ||
+            transcribing ||
+            missingMedia.length > 0
+          }
+        />
+      )}
 
       <section className="pipeline">
         <div>
