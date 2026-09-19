@@ -1,4 +1,8 @@
-import type { RenderQuality, TimelinePlan } from "../shared/types";
+import type {
+  RenderQuality,
+  SubtitlePosition,
+  TimelinePlan
+} from "../shared/types";
 
 type Props = {
   plan: TimelinePlan;
@@ -19,6 +23,14 @@ const PRESETS: Preset[] = [
   { id: "shorts", label: "Shorts / TikTok · 9:16", width: 1080, height: 1920 },
   { id: "square", label: "Square · 1:1", width: 1080, height: 1080 },
   { id: "portrait", label: "Portrait feed · 4:5", width: 1080, height: 1350 }
+];
+
+const FONT_SUGGESTIONS = [
+  "Noto Sans Thai",
+  "Tahoma",
+  "Arial",
+  "Sarabun",
+  "Leelawadee UI"
 ];
 
 function presetFor(plan: TimelinePlan) {
@@ -51,9 +63,25 @@ function evenDimension(value: number) {
 export default function ExportSettingsPanel({ plan, onChange }: Props) {
   const currentPreset = presetFor(plan);
   const quality = plan.quality ?? "standard";
+  const subtitleStyle = plan.subtitleStyle ?? {
+    fontFamily: "",
+    scale: 1,
+    position: "bottom" as const
+  };
 
   const patch = (patch: Partial<TimelinePlan>) => {
     onChange({ ...plan, ...patch });
+  };
+
+  const patchSubtitleStyle = (
+    patchStyle: Partial<typeof subtitleStyle>
+  ) => {
+    patch({
+      subtitleStyle: {
+        ...subtitleStyle,
+        ...patchStyle
+      }
+    });
   };
 
   const applyPreset = (id: string) => {
@@ -68,7 +96,7 @@ export default function ExportSettingsPanel({ plan, onChange }: Props) {
       <div className="exportSettingsHeader">
         <div>
           <p className="eyebrow">EXPORT SETTINGS</p>
-          <h3>Resolution, aspect ratio, frame rate, and quality</h3>
+          <h3>Resolution, frame rate, quality, and subtitle delivery</h3>
           <p className="muted">
             Images keep their proportions. The renderer scales and center-crops
             to fill the selected frame instead of stretching the artwork.
@@ -153,11 +181,92 @@ export default function ExportSettingsPanel({ plan, onChange }: Props) {
         </label>
       </div>
 
+      <div className="subtitleExportSettings">
+        <div>
+          <p className="eyebrow">SUBTITLE STYLE</p>
+          <strong>Burned captions + optional YouTube-ready SRT</strong>
+        </div>
+
+        <div className="subtitleSettingsGrid">
+          <label>
+            Font family
+            <input
+              list="subtitle-font-suggestions"
+              value={subtitleStyle.fontFamily}
+              placeholder="Auto / system fallback"
+              onChange={(event) =>
+                patchSubtitleStyle({ fontFamily: event.target.value })
+              }
+            />
+            <datalist id="subtitle-font-suggestions">
+              {FONT_SUGGESTIONS.map((font) => (
+                <option value={font} key={font} />
+              ))}
+            </datalist>
+          </label>
+
+          <label>
+            Size
+            <select
+              value={subtitleStyle.scale}
+              onChange={(event) =>
+                patchSubtitleStyle({ scale: Number(event.target.value) })
+              }
+            >
+              <option value={0.8}>80%</option>
+              <option value={1}>100%</option>
+              <option value={1.2}>120%</option>
+              <option value={1.4}>140%</option>
+              <option value={1.6}>160%</option>
+            </select>
+          </label>
+
+          <label>
+            Position
+            <select
+              value={subtitleStyle.position}
+              onChange={(event) =>
+                patchSubtitleStyle({
+                  position: event.target.value as SubtitlePosition
+                })
+              }
+            >
+              <option value="bottom">Bottom center</option>
+              <option value="middle">Middle center</option>
+            </select>
+          </label>
+
+          <label className="subtitleSidecarToggle">
+            <input
+              type="checkbox"
+              checked={plan.exportSubtitleSidecar ?? false}
+              onChange={(event) =>
+                patch({ exportSubtitleSidecar: event.target.checked })
+              }
+            />
+            Also export .srt beside MP4
+          </label>
+        </div>
+
+        <p className="timelineHint">
+          Leave the font blank to let the operating system choose a fallback.
+          A named font must already be installed on the computer that renders
+          the video. The optional SRT uses the same corrected subtitle timing
+          and text as the burned captions.
+        </p>
+      </div>
+
       <div className="exportPresetNotes">
         <span>4K supported: 3840×2160</span>
         <span>Vertical supported: 1080×1920</span>
         <span>Custom up to 7680 px per side</span>
-        <span>{quality === "high" ? "High-quality encode" : quality === "draft" ? "Fast draft encode" : "Balanced encode"}</span>
+        <span>
+          {quality === "high"
+            ? "High-quality encode"
+            : quality === "draft"
+              ? "Fast draft encode"
+              : "Balanced encode"}
+        </span>
       </div>
 
       <p className="timelineHint">
