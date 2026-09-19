@@ -9,6 +9,7 @@ import ExportSettingsPanel from "./ExportSettingsPanel";
 import MediaRelinkPanel from "./MediaRelinkPanel";
 import EpisodeReadinessPanel from "./EpisodeReadinessPanel";
 import QuickPreviewPanel from "./QuickPreviewPanel";
+import EpisodeQcPackPanel from "./EpisodeQcPackPanel";
 
 function fileName(filePath: string) {
   return filePath.split(/[\\/]/).pop() ?? filePath;
@@ -444,7 +445,7 @@ export default function App() {
         </div>
         <div className="status">
           <span className="statusDot" />
-          Phase 1 · Quick preview foundation
+          Phase 1 · Episode QC foundation
         </div>
       </header>
 
@@ -632,15 +633,26 @@ export default function App() {
       />
 
       {timeline && (
-        <QuickPreviewPanel
-          plan={{ ...timeline, audioLayers }}
-          disabled={
-            rendering ||
-            building ||
-            transcribing ||
-            missingMedia.length > 0
-          }
-        />
+        <>
+          <QuickPreviewPanel
+            plan={{ ...timeline, audioLayers }}
+            disabled={
+              rendering ||
+              building ||
+              transcribing ||
+              missingMedia.length > 0
+            }
+          />
+          <EpisodeQcPackPanel
+            plan={{ ...timeline, audioLayers }}
+            disabled={
+              rendering ||
+              building ||
+              transcribing ||
+              missingMedia.length > 0
+            }
+          />
+        </>
       )}
 
       <section className="pipeline">
