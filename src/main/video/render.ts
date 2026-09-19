@@ -124,6 +124,16 @@ function motionFilter(
   }
 }
 
+function sanitizeAssStyleValue(value: string) {
+  return value.replace(/[,']/g, " ").trim();
+}
+
+function subtitleSidecarPath(outputPath: string) {
+  const ext = path.extname(outputPath);
+  const base = ext ? outputPath.slice(0, -ext.length) : outputPath;
+  return `${base}.srt`;
+}
+
 function escapeFilterPath(filePath: string) {
   return filePath
     .replace(/\\/g, "/")
@@ -192,9 +202,13 @@ function createVideoFilter(
 
   if (subtitlePath) {
     const escaped = escapeFilterPath(subtitlePath);
+    const subtitleScale = Math.max(
+      0.7,
+      Math.min(1.8, plan.subtitleStyle?.scale ?? 1)
+    );
     const subtitleFontSize = Math.max(
-      22,
-      Math.round(plan.height * 0.028)
+      18,
+      Math.round(plan.height * 0.028 * subtitleScale)
     );
     const subtitleOutline = Math.max(
       2,
@@ -204,9 +218,24 @@ function createVideoFilter(
       42,
       Math.round(plan.height * 0.04)
     );
+    const alignment =
+      plan.subtitleStyle?.position === "middle" ? 5 : 2;
+    const requestedFont = sanitizeAssStyleValue(
+      plan.subtitleStyle?.fontFamily ?? ""
+    );
+    const style = [
+      requestedFont ? `FontName=${requestedFont}` : "",
+      `FontSize=${subtitleFontSize}`,
+      `Outline=${subtitleOutline}`,
+      "Shadow=0",
+      `Alignment=${alignment}`,
+      `MarginV=${alignment === 2 ? subtitleMargin : 0}`
+    ]
+      .filter(Boolean)
+      .join(",");
 
     filters.push(
-      `${videoMap}subtitles=filename='${escaped}':force_style='FontSize=${subtitleFontSize},Outline=${subtitleOutline},Shadow=0,Alignment=2,MarginV=${subtitleMargin}'[vsub]`
+      `${videoMap}subtitles=filename='${escaped}':force_style='${style}'[vsub]`
     );
     videoMap = "[vsub]";
   }
@@ -495,12 +524,22 @@ export async function renderTimeline(
       outputPath
     );
 
-    return await runFfmpeg(
+    const renderedPath = await runFfmpeg(
       args,
       outputPath,
       plan.duration,
       onProgress
     );
+
+    if (plan.exportSubtitleSidecar && (plan.subtitles?.length ?? 0) > 0) {
+      await fs.writeFile(
+        subtitleSidecarPath(outputPath),
+        subtitleFileContents(plan.subtitles),
+        "utf8"
+      );
+    }
+
+    return renderedPath;
   } finally {
     await fs
       .rm(workDirectory, { recursive: true, force: true })
