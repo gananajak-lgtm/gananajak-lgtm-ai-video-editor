@@ -17,6 +17,7 @@ import { buildTimelineFromVisualPlan } from "./visual/timelineAdapter";
 import { buildVisualBrainPlan } from "./visual/visualBrain";
 import { probeDuration } from "./video/probe";
 import { renderTimeline } from "./video/render";
+import { verifyRenderedOutput } from "./video/renderVerification";
 import { analyzeRenderPlan } from "./video/renderDiagnostics";
 import { createPreviewTimeline } from "./video/previewPlan";
 import { renderQcPack } from "./video/qcPack";
@@ -313,7 +314,12 @@ ipcMain.handle(
         }
       }
     );
-    return { outputPath: renderedPath };
+
+    const testReport = await verifyRenderedOutput(plan, renderedPath);
+    return {
+      outputPath: renderedPath,
+      testReport
+    };
   }
 );
 
