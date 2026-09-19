@@ -136,6 +136,7 @@ export function createPreviewTimeline(
     audioLayers,
     subtitles: sliceSubtitles(plan.subtitles, start, end),
     quality: "draft",
+    exportSubtitleSidecar: false,
     narrationOffset: (plan.narrationOffset ?? 0) + start
   };
 }
