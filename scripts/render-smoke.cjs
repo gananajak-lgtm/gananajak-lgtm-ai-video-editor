@@ -4,6 +4,9 @@ const os = require("node:os");
 const path = require("node:path");
 const ffmpegPath = require("ffmpeg-static");
 const { renderTimeline } = require("../dist-electron/main/video/render.js");
+const {
+  createPreviewTimeline
+} = require("../dist-electron/main/video/previewPlan.js");
 
 function run(args) {
   const result = spawnSync(ffmpegPath, args, {
@@ -57,16 +60,13 @@ async function main() {
       effect
     ]);
 
-    const progressEvents = [];
-
-    await renderTimeline(
-      {
-        duration: 3,
-        narration,
-        width: 360,
-        height: 640,
-        fps: 24,
-        clips: [
+    const fullPlan = {
+      duration: 3,
+      narration,
+      width: 360,
+      height: 640,
+      fps: 24,
+      clips: [
           {
             id: "clip-1",
             imagePath: image1,
@@ -110,9 +110,26 @@ async function main() {
             text: "Second subtitle"
           }
         ],
-        transitionDuration: 0.25,
-        quality: "draft"
-      },
+      transitionDuration: 0.25,
+      quality: "draft"
+    };
+
+    const previewPlan = createPreviewTimeline(fullPlan, 1.2, 1.3);
+
+    if (
+      Math.abs(previewPlan.duration - 1.3) > 0.001 ||
+      Math.abs((previewPlan.narrationOffset ?? 0) - 1.2) > 0.001 ||
+      previewPlan.clips.length !== 2 ||
+      previewPlan.audioLayers.length !== 1 ||
+      Math.abs((previewPlan.audioLayers[0].sourceOffset ?? 0) - 0.2) > 0.001
+    ) {
+      throw new Error("Preview timeline slicing did not preserve expected offsets.");
+    }
+
+    const progressEvents = [];
+
+    await renderTimeline(
+      previewPlan,
       output,
       (progress) => progressEvents.push(progress)
     );
