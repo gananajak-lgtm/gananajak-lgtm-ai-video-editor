@@ -2116,3 +2116,82 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+.subtitleExportSettings {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.46);
+}
+
+.subtitleExportSettings > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.subtitleExportSettings > div:first-child > strong {
+  color: #e2e8f0;
+  font-size: 12px;
+}
+
+.subtitleSettingsGrid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.4fr) repeat(2, minmax(130px, 0.7fr)) minmax(210px, 1fr);
+  gap: 10px;
+  align-items: end;
+  margin-top: 12px;
+}
+
+.subtitleSettingsGrid label {
+  display: grid;
+  gap: 6px;
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.subtitleSettingsGrid input[type="text"],
+.subtitleSettingsGrid input[list],
+.subtitleSettingsGrid select {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 10px;
+  padding: 9px 10px;
+  color: #f8fafc;
+  background: #020617;
+  font: inherit;
+}
+
+.subtitleSidecarToggle {
+  min-height: 38px;
+  display: flex !important;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px !important;
+  padding: 9px 10px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 10px;
+  color: #cbd5e1 !important;
+  background: rgba(2, 6, 23, 0.55);
+  letter-spacing: 0 !important;
+}
+
+.subtitleSidecarToggle input {
+  width: 16px;
+  height: 16px;
+}
+
+@media (max-width: 980px) {
+  .subtitleSettingsGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .subtitleSettingsGrid {
+    grid-template-columns: 1fr;
+  }
+}
