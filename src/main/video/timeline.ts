@@ -38,6 +38,12 @@ export async function buildAutomaticTimeline(
     audioLayers: [],
     subtitles: transcript ? buildSubtitleCues(transcript) : [],
     transitionDuration: 0.35,
-    quality: "standard"
+    quality: "standard",
+    subtitleStyle: {
+      fontFamily: "",
+      scale: 1,
+      position: "bottom"
+    },
+    exportSubtitleSidecar: false
   };
 }
