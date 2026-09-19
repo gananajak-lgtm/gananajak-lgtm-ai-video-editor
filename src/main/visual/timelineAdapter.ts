@@ -45,6 +45,12 @@ export async function buildTimelineFromVisualPlan(
     audioLayers: [],
     subtitles: buildSubtitleCues(transcript),
     transitionDuration: 0.35,
-    quality: "standard"
+    quality: "standard",
+    subtitleStyle: {
+      fontFamily: "",
+      scale: 1,
+      position: "bottom"
+    },
+    exportSubtitleSidecar: false
   };
 }
