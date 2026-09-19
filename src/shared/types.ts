@@ -22,6 +22,7 @@ export type ProjectDocument = {
   editingPlan: EditingBrainPlan | null;
   timeline: TimelinePlan | null;
   audioLayers: AudioLayer[];
+  renderHistory?: FullEpisodeTestReport[];
 };
 
 export type ProjectLoadResult = {
@@ -236,8 +237,32 @@ export type QcPackProgress = {
   overallProgress: number;
 };
 
+export type FullEpisodeTestReport = {
+  id: string;
+  createdAt: string;
+  outputPath: string;
+  reportPath: string;
+  passed: boolean;
+  expectedDuration: number;
+  actualDuration: number;
+  durationDelta: number;
+  fileSizeBytes: number;
+  width: number | null;
+  height: number | null;
+  fps: number | null;
+  videoCodec: string | null;
+  audioCodec: string | null;
+  videoDuration: number | null;
+  audioDuration: number | null;
+  avSyncDelta: number | null;
+  frameCount: number | null;
+  expectedFrames: number;
+  diagnostics: RenderDiagnostic[];
+};
+
 export type RenderResult = {
   outputPath: string;
+  testReport?: FullEpisodeTestReport;
 };
 
 export type DesktopApi = {
