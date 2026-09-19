@@ -228,8 +228,11 @@ function createAudioFilter(
   narrationInput: number,
   activeLayers: AudioLayer[]
 ) {
+  const narrationOffset = Math.max(0, plan.narrationOffset ?? 0);
   const filters: string[] = [
-    `[${narrationInput}:a]atrim=duration=${fixed(
+    `[${narrationInput}:a]atrim=start=${narrationOffset.toFixed(
+      3
+    )}:duration=${fixed(
       plan.duration
     )},asetpts=PTS-STARTPTS,volume=1[narr]`
   ];
@@ -244,9 +247,10 @@ function createAudioFilter(
     const fadeOut = Math.min(Math.max(0, layer.fadeOut), duration / 2);
     const fadeOutStart = Math.max(0, duration - fadeOut);
 
+    const sourceOffset = Math.max(0, layer.sourceOffset ?? 0);
     const chain = [
       `[${inputIndex}:a]`,
-      `atrim=duration=${fixed(duration)},`,
+      `atrim=start=${sourceOffset.toFixed(3)}:duration=${fixed(duration)},`,
       "asetpts=PTS-STARTPTS,",
       `volume=${Math.max(0, layer.volume).toFixed(3)},`,
       fadeIn > 0 ? `afade=t=in:st=0:d=${fixed(fadeIn)},` : "",
