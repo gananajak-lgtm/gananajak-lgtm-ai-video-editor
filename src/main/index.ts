@@ -19,6 +19,7 @@ import { probeDuration } from "./video/probe";
 import { renderTimeline } from "./video/render";
 import { analyzeRenderPlan } from "./video/renderDiagnostics";
 import { createPreviewTimeline } from "./video/previewPlan";
+import { renderQcPack } from "./video/qcPack";
 import { buildAutomaticTimeline } from "./video/timeline";
 
 const isDev = !app.isPackaged;
@@ -256,6 +257,37 @@ ipcMain.handle(
     }
 
     return { outputPath: renderedPath };
+  }
+);
+
+ipcMain.handle(
+  "render:qc-pack",
+  async (
+    event,
+    plan: TimelinePlan,
+    sampleDuration: number
+  ) => {
+    const result = await dialog.showOpenDialog({
+      title: "Choose folder for QC preview pack",
+      properties: ["openDirectory", "createDirectory"]
+    });
+
+    if (result.canceled || !result.filePaths[0]) return null;
+
+    const folderPath = result.filePaths[0];
+    const pack = await renderQcPack(
+      plan,
+      folderPath,
+      sampleDuration,
+      (progress) => {
+        if (!event.sender.isDestroyed()) {
+          event.sender.send("render:qc-progress", progress);
+        }
+      }
+    );
+
+    await shell.openPath(folderPath);
+    return pack;
   }
 );
 
