@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from "electron";
 import type { IpcRendererEvent } from "electron";
 import type {
   DesktopApi,
+  QcPackProgress,
   RenderProgress,
   TimelinePlan
 } from "../shared/types";
@@ -42,6 +43,8 @@ const api: DesktopApi = {
     ipcRenderer.invoke("render:analyze-plan", plan),
   renderPreview: (plan, start, duration) =>
     ipcRenderer.invoke("render:preview", plan, start, duration),
+  renderQcPack: (plan, sampleDuration) =>
+    ipcRenderer.invoke("render:qc-pack", plan, sampleDuration),
   chooseOutput: () => ipcRenderer.invoke("render:choose-output"),
   renderTimeline: (plan: TimelinePlan, outputPath: string) =>
     ipcRenderer.invoke("render:timeline", plan, outputPath),
@@ -53,6 +56,15 @@ const api: DesktopApi = {
 
     ipcRenderer.on("render:progress", handler);
     return () => ipcRenderer.removeListener("render:progress", handler);
+  },
+  onQcPackProgress: (listener) => {
+    const handler = (
+      _event: IpcRendererEvent,
+      progress: QcPackProgress
+    ) => listener(progress);
+
+    ipcRenderer.on("render:qc-progress", handler);
+    return () => ipcRenderer.removeListener("render:qc-progress", handler);
   }
 };
 
