@@ -1918,3 +1918,201 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+.fullEpisodeTestPanel {
+  margin-top: 18px;
+  padding: 22px;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 18px;
+  background: rgba(20, 83, 45, 0.08);
+}
+
+.fullEpisodeTestPanel h3 {
+  margin: 0;
+}
+
+.fullEpisodeTestHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 22px;
+}
+
+.fullEpisodeTestHeader .muted {
+  max-width: 800px;
+  margin-bottom: 0;
+  line-height: 1.55;
+}
+
+.fullTestBadge {
+  flex: 0 0 auto;
+  padding: 8px 11px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.fullTestPass {
+  color: #86efac;
+  background: rgba(22, 101, 52, 0.2);
+}
+
+.fullTestFail {
+  color: #fecaca;
+  background: rgba(127, 29, 29, 0.22);
+}
+
+.fullTestStats {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.fullTestStats span {
+  padding: 6px 9px;
+  border-radius: 999px;
+  color: #bbf7d0;
+  background: rgba(22, 101, 52, 0.13);
+  font-size: 10px;
+}
+
+.fullTestLatest {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.fullTestLatest > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 11px;
+  border-radius: 11px;
+  background: rgba(30, 41, 59, 0.54);
+}
+
+.fullTestLatest strong,
+.fullTestLatest small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fullTestLatest strong {
+  color: #dcfce7;
+  font-size: 11px;
+}
+
+.fullTestLatest small {
+  color: #94a3b8;
+  font-size: 9px;
+}
+
+.fullTestDiagnostics {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.fullTestDiagnostic {
+  display: grid;
+  grid-template-columns: 70px 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 10px 11px;
+  border-radius: 10px;
+  background: rgba(30, 41, 59, 0.5);
+}
+
+.fullTestDiagnostic strong {
+  font-size: 9px;
+  letter-spacing: 0.06em;
+}
+
+.fullTestDiagnostic p {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.fullTest-info strong {
+  color: #7dd3fc;
+}
+
+.fullTest-warning strong {
+  color: #fde047;
+}
+
+.fullTest-error strong {
+  color: #fca5a5;
+}
+
+.fullTestHistory {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.fullTestHistoryRow {
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  gap: 10px;
+  align-items: center;
+  margin-top: 7px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: rgba(30, 41, 59, 0.46);
+}
+
+.fullTestHistoryRow > span {
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.historyPass {
+  color: #86efac;
+}
+
+.historyFail {
+  color: #fca5a5;
+}
+
+.fullTestHistoryRow > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.fullTestHistoryRow strong,
+.fullTestHistoryRow small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fullTestHistoryRow strong {
+  color: #e2e8f0;
+  font-size: 10px;
+}
+
+.fullTestHistoryRow small {
+  color: #64748b;
+  font-size: 9px;
+}
+
+@media (max-width: 760px) {
+  .fullEpisodeTestHeader {
+    flex-direction: column;
+  }
+
+  .fullTestLatest {
+    grid-template-columns: 1fr;
+  }
+
+  .fullTestDiagnostic {
+    grid-template-columns: 1fr;
+  }
+}
