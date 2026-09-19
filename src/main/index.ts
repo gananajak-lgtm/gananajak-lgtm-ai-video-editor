@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, nativeImage } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell } from "electron";
 import path from "node:path";
 import type { AudioAsset, ProjectDocument, SceneBlock, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
 import { transcribeLongNarration } from "./ai/transcription";
@@ -18,6 +18,7 @@ import { buildVisualBrainPlan } from "./visual/visualBrain";
 import { probeDuration } from "./video/probe";
 import { renderTimeline } from "./video/render";
 import { analyzeRenderPlan } from "./video/renderDiagnostics";
+import { createPreviewTimeline } from "./video/previewPlan";
 import { buildAutomaticTimeline } from "./video/timeline";
 
 const isDev = !app.isPackaged;
@@ -220,6 +221,41 @@ ipcMain.handle(
   "render:analyze-plan",
   async (_event, plan: TimelinePlan) => {
     return analyzeRenderPlan(plan);
+  }
+);
+
+ipcMain.handle(
+  "render:preview",
+  async (
+    event,
+    plan: TimelinePlan,
+    start: number,
+    duration: number
+  ) => {
+    const previewPlan = createPreviewTimeline(plan, start, duration);
+    const outputPath = path.join(
+      app.getPath("temp"),
+      "gananajak-ai-video-editor-preview.mp4"
+    );
+
+    const renderedPath = await renderTimeline(
+      previewPlan,
+      outputPath,
+      (progress) => {
+        if (!event.sender.isDestroyed()) {
+          event.sender.send("render:progress", progress);
+        }
+      }
+    );
+
+    const openError = await shell.openPath(renderedPath);
+    if (openError) {
+      throw new Error(
+        `Preview rendered, but the default video player could not open it: ${openError}`
+      );
+    }
+
+    return { outputPath: renderedPath };
   }
 );
 
