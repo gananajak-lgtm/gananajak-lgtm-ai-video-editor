@@ -215,6 +215,27 @@ export type RenderDiagnostics = {
   diagnostics: RenderDiagnostic[];
 };
 
+export type QcSample = {
+  id: string;
+  label: string;
+  start: number;
+  duration: number;
+  outputPath: string;
+};
+
+export type QcPackResult = {
+  folderPath: string;
+  samples: QcSample[];
+};
+
+export type QcPackProgress = {
+  sampleIndex: number;
+  totalSamples: number;
+  label: string;
+  sampleProgress: number;
+  overallProgress: number;
+};
+
 export type RenderResult = {
   outputPath: string;
 };
@@ -267,9 +288,16 @@ export type DesktopApi = {
     start: number,
     duration: number
   ) => Promise<RenderResult>;
+  renderQcPack: (
+    plan: TimelinePlan,
+    sampleDuration: number
+  ) => Promise<QcPackResult | null>;
   chooseOutput: () => Promise<string | null>;
   renderTimeline: (plan: TimelinePlan, outputPath: string) => Promise<RenderResult>;
   onRenderProgress: (
     listener: (progress: RenderProgress) => void
+  ) => () => void;
+  onQcPackProgress: (
+    listener: (progress: QcPackProgress) => void
   ) => () => void;
 };
