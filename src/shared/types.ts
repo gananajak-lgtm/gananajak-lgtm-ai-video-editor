@@ -81,6 +81,7 @@ export type AudioLayer = {
   loop: boolean;
   fadeIn: number;
   fadeOut: number;
+  sourceOffset?: number;
   origin?: AudioLayerOrigin;
   label?: string;
 };
@@ -105,6 +106,7 @@ export type TimelinePlan = {
   subtitles: SubtitleCue[];
   transitionDuration: number;
   quality: RenderQuality;
+  narrationOffset?: number;
 };
 
 export type TranscriptSegment = {
@@ -260,6 +262,11 @@ export type DesktopApi = {
     transcript: TranscriptResult
   ) => Promise<TimelinePlan>;
   analyzeRenderPlan: (plan: TimelinePlan) => Promise<RenderDiagnostics>;
+  renderPreview: (
+    plan: TimelinePlan,
+    start: number,
+    duration: number
+  ) => Promise<RenderResult>;
   chooseOutput: () => Promise<string | null>;
   renderTimeline: (plan: TimelinePlan, outputPath: string) => Promise<RenderResult>;
   onRenderProgress: (
