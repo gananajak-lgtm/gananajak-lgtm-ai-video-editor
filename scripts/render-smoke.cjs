@@ -10,6 +10,9 @@ const {
 const {
   buildQcSampleSpecs
 } = require("../dist-electron/main/video/qcPack.js");
+const {
+  verifyRenderedOutput
+} = require("../dist-electron/main/video/renderVerification.js");
 
 function run(args) {
   const result = spawnSync(ffmpegPath, args, {
@@ -163,8 +166,21 @@ async function main() {
       throw new Error(`Smoke render output is unexpectedly small: ${stat.size} bytes`);
     }
 
+    const report = await verifyRenderedOutput(previewPlan, output);
+    if (
+      !report.passed ||
+      report.width !== previewPlan.width ||
+      report.height !== previewPlan.height ||
+      report.fileSizeBytes <= 0 ||
+      report.actualDuration <= 0 ||
+      Math.abs((report.fps ?? 0) - previewPlan.fps) > 0.1 ||
+      !fs.existsSync(report.reportPath)
+    ) {
+      throw new Error("Post-render verification did not validate the smoke output.");
+    }
+
     console.log(
-      `render smoke test passed (${stat.size} bytes, ${progressEvents.length} progress events)`
+      `render smoke test passed (${stat.size} bytes, ${progressEvents.length} progress events, ${report.frameCount ?? "n/a"} frames)`
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
