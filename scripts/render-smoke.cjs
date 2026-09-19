@@ -134,7 +134,15 @@ async function main() {
       throw new Error("QC sample points are not opening / middle / ending.");
     }
 
-    const previewPlan = createPreviewTimeline(fullPlan, 1.2, 1.3);
+    const previewPlan = {
+      ...createPreviewTimeline(fullPlan, 1.2, 1.3),
+      subtitleStyle: {
+        fontFamily: "",
+        scale: 1.2,
+        position: "middle"
+      },
+      exportSubtitleSidecar: true
+    };
 
     if (
       Math.abs(previewPlan.duration - 1.3) > 0.001 ||
@@ -164,6 +172,14 @@ async function main() {
     const stat = fs.statSync(output);
     if (stat.size < 1000) {
       throw new Error(`Smoke render output is unexpectedly small: ${stat.size} bytes`);
+    }
+
+    const subtitleSidecar = path.join(root, "smoke.srt");
+    if (
+      !fs.existsSync(subtitleSidecar) ||
+      !fs.readFileSync(subtitleSidecar, "utf8").includes("Second subtitle")
+    ) {
+      throw new Error("Subtitle sidecar was not written from the corrected cues.");
     }
 
     const report = await verifyRenderedOutput(previewPlan, output);
