@@ -272,6 +272,7 @@ export type FullEpisodeTestReport = {
 
 export type RenderResult = {
   outputPath: string;
+  playbackUrl?: string;
   testReport?: FullEpisodeTestReport;
 };
 
