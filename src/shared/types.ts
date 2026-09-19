@@ -89,6 +89,14 @@ export type AudioLayer = {
 
 export type RenderQuality = "draft" | "standard" | "high";
 
+export type SubtitlePosition = "bottom" | "middle";
+
+export type SubtitleStyle = {
+  fontFamily: string;
+  scale: number;
+  position: SubtitlePosition;
+};
+
 export type SubtitleCue = {
   id: string;
   start: number;
@@ -107,6 +115,8 @@ export type TimelinePlan = {
   subtitles: SubtitleCue[];
   transitionDuration: number;
   quality: RenderQuality;
+  subtitleStyle?: SubtitleStyle;
+  exportSubtitleSidecar?: boolean;
   narrationOffset?: number;
 };
 
