@@ -424,8 +424,8 @@ button:disabled {
   margin-top: 20px;
 }
 
-.keyRow input {
-  flex: 1;
+.keyRow input,
+.keyRow select {
   min-width: 0;
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 12px;
@@ -436,9 +436,29 @@ button:disabled {
   font: inherit;
 }
 
-.keyRow input:focus {
+.keyRow input {
+  flex: 1;
+}
+
+.keyRow select {
+  flex: 0 1 150px;
+}
+
+.keyRow input[type="number"] {
+  flex: 0 1 120px;
+}
+
+.keyRow input:focus,
+.keyRow select:focus {
   border-color: rgba(96, 165, 250, 0.7);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.transcriptRow small {
+  display: block;
+  margin-top: 6px;
+  color: #94a3b8;
+  line-height: 1.45;
 }
 
 .aiControls {
