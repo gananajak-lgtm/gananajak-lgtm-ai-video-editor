@@ -79,3 +79,24 @@ test("asset runner replaces a previous job asset instead of duplicating it", asy
   assert.equal(result.jobs[0].status,"succeeded");
   assert.equal(result.jobs[0].outputAssetId,"asset-img-new");
 });
+
+
+test("asset progress starts from already completed runnable jobs", async () => {
+  const provider: AssetProvider = {
+    id:"fake-resume-progress",
+    supports:() => true,
+    async generate(job) {
+      return {id:`asset-${job.id}`,projectId:job.projectId,sceneId:job.sceneId,kind:job.kind,filePath:`/tmp/${job.id}`};
+    }
+  };
+  const now=new Date().toISOString();
+  const plan={projectId:"p",assets:[{id:"asset-done",projectId:"p",sceneId:"s1",kind:"image" as const,filePath:"/tmp/done.png"}],jobs:[
+    {id:"done",projectId:"p",sceneId:"s1",kind:"image" as const,prompt:"done",status:"succeeded" as const,attempts:1,outputAssetId:"asset-done",createdAt:now,updatedAt:now},
+    {id:"todo",projectId:"p",sceneId:"s2",kind:"voice" as const,prompt:"todo",status:"queued" as const,attempts:0,createdAt:now,updatedAt:now}
+  ]};
+  const progress:Array<{completed:number;total:number}>=[];
+  await runAssetPlan(plan,new AssetProviderRegistry([provider]),"/tmp",(value)=>progress.push(value));
+  assert.deepEqual(progress[0],{completed:1,total:2});
+  assert.equal(progress.at(-1)?.completed,2);
+  assert.equal(progress.at(-1)?.total,2);
+});
