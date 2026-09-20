@@ -22,6 +22,7 @@ export type ContentScene = {
 };
 
 export type AssetKind = "image" | "video" | "voice" | "sfx";
+export type AssetSource = "generated" | "meta-manual" | "imported";
 export type AssetJobStatus = "queued" | "running" | "succeeded" | "failed" | "cancelled";
 
 export type GeneratedAsset = {
@@ -33,6 +34,8 @@ export type GeneratedAsset = {
   provider?: string;
   mimeType?: string;
   duration?: number;
+  source?: AssetSource;
+  sourcePrompt?: string;
 };
 
 export type AssetJob = {
