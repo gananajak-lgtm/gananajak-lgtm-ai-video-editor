@@ -61,6 +61,7 @@ export type ShotType = "close" | "medium" | "wide" | "unknown";
 export type TimelineClip = {
   id: string;
   imagePath: string;
+  videoPath?: string;
   start: number;
   duration: number;
   motion: ShotMotion;
