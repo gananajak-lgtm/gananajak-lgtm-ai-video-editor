@@ -210,7 +210,7 @@ ipcMain.handle("content:generate-project", async (_event, brief: ContentBrief) =
 });
 
 ipcMain.handle("content:generate-assets", async (_event, project: import("../shared/content-factory").ContentProject) => {
-  const planned = project.assetPlan ?? buildAssetPlan(project);
+  const planned = project.assetPlan ?? buildAssetPlan(project, { includeVideo: true, includeSfx: false });
   const workDir = path.join(app.getPath("userData"), "content-assets", project.id);
   const assetPlan = await runAssetPlan(planned, createDefaultAssetProviderRegistry(), workDir);
   return { ...project, assetPlan, updatedAt: new Date().toISOString() };
