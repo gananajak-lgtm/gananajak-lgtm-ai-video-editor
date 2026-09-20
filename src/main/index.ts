@@ -6,6 +6,7 @@ import { generateContentProject } from "./ai/contentGeneration";
 import { transcribeLongNarration } from "./ai/transcription";
 import { buildEditingBrainPlan } from "./editing/editingBrain";
 import { assembleNarrationAndTimeline } from "./content-narration-runner";
+import { importMetaVideo } from "./providers/meta-manual-video-provider";
 import {
   createPlaybackUrl,
   installMediaProtocol
@@ -186,6 +187,17 @@ ipcMain.handle("ai:save-openai-key", async (_event, apiKey: string) => {
 
 ipcMain.handle("content:generate-project", async (_event, brief: ContentBrief) => {
   return generateContentProject(brief);
+});
+
+ipcMain.handle("content:import-meta-video", async (_event, project: import("../shared/content-factory").ContentProject, sceneId: string) => {
+  const job = project.assetPlan?.jobs.find((candidate) => candidate.sceneId === sceneId && candidate.kind === "video");
+  if (!job) throw new Error(`No video asset job found for scene ${sceneId}.`);
+  const result = await dialog.showOpenDialog({ title: "Import Meta AI video", properties: ["openFile"], filters: [{ name: "Video", extensions: ["mp4", "mov", "webm", "mkv"] }] });
+  if (result.canceled || !result.filePaths[0]) return null;
+  const workDir = path.join(app.getPath("userData"), "content-assets", project.id);
+  const asset = await importMetaVideo(job, result.filePaths[0], workDir);
+  const jobs = project.assetPlan!.jobs.map((candidate) => candidate.id === job.id ? { ...candidate, status: "succeeded" as const, outputAssetId: asset.id, error: undefined, updatedAt: new Date().toISOString() } : candidate);
+  return { ...project, updatedAt: new Date().toISOString(), assetPlan: { ...project.assetPlan!, jobs, assets: [...project.assetPlan!.assets.filter((existing) => existing.id !== asset.id), asset] } };
 });
 
 ipcMain.handle(
