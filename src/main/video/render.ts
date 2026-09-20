@@ -155,6 +155,16 @@ function createVideoFilter(
     const renderDuration = clip.duration + extra;
 
     if (clip.videoPath) {
+      const sourceDuration = clip.videoDuration ?? renderDuration;
+      if (clip.imagePath && sourceDuration + 0.04 < renderDuration) {
+        const videoDuration = Math.max(0.04, Math.min(sourceDuration, renderDuration));
+        const fallbackDuration = Math.max(0.04, renderDuration - videoDuration);
+        return [
+          `[${index}:v]scale=${plan.width}:${plan.height}:force_original_aspect_ratio=increase,crop=${plan.width}:${plan.height},setsar=1,trim=duration=${fixed(videoDuration)},setpts=PTS-STARTPTS,fps=${plan.fps},settb=AVTB,format=yuv420p[vclip${index}];`,
+          `[${index + plan.clips.length}:v]scale=${plan.width}:${plan.height}:force_original_aspect_ratio=increase,crop=${plan.width}:${plan.height},setsar=1,${motionFilter(clip.motion, fallbackDuration, plan.width, plan.height, plan.fps)},trim=duration=${fixed(fallbackDuration)},setpts=PTS-STARTPTS,fps=${plan.fps},settb=AVTB,format=yuv420p[vfallback${index}];`,
+          `[vclip${index}][vfallback${index}]concat=n=2:v=1:a=0[v${index}]`
+        ].join("");
+      }
       return [
         `[${index}:v]`,
         `scale=${plan.width}:${plan.height}:force_original_aspect_ratio=increase,`,
@@ -457,14 +467,7 @@ export async function renderTimeline(
     for (const [index, clip] of plan.clips.entries()) {
       const renderDuration = clip.duration + (transitions[index] ?? 0);
       if (clip.videoPath) {
-        args.push(
-          "-stream_loop",
-          "-1",
-          "-t",
-          fixed(renderDuration),
-          "-i",
-          clip.videoPath
-        );
+        args.push("-t", fixed(Math.min(clip.videoDuration ?? renderDuration, renderDuration)), "-i", clip.videoPath);
       } else {
         args.push(
           "-loop",
@@ -479,7 +482,17 @@ export async function renderTimeline(
       }
     }
 
-    const narrationInput = plan.clips.length;
+    for (const [index, clip] of plan.clips.entries()) {
+      const renderDuration = clip.duration + (transitions[index] ?? 0);
+      if (clip.videoPath && clip.imagePath && (clip.videoDuration ?? renderDuration) + 0.04 < renderDuration) {
+        const fallbackDuration = renderDuration - (clip.videoDuration ?? 0);
+        args.push("-loop", "1", "-framerate", String(plan.fps), "-t", fixed(fallbackDuration), "-i", clip.imagePath);
+      } else {
+        args.push("-f", "lavfi", "-t", "0.04", "-i", "color=c=black:s=2x2");
+      }
+    }
+
+    const narrationInput = plan.clips.length * 2;
     args.push("-i", plan.narration);
 
     const activeLayers = (plan.audioLayers ?? []).filter(
