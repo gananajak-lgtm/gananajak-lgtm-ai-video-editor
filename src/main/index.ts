@@ -1,7 +1,9 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell } from "electron";
 import path from "node:path";
-import type { ContentBrief } from "../shared/content-factory";\nimport type { AudioAsset, ProjectDocument, SceneBlock, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
-import { generateContentProject } from "./ai/contentGeneration";\nimport { transcribeLongNarration } from "./ai/transcription";
+import type { ContentBrief } from "../shared/content-factory";
+import type { AudioAsset, ProjectDocument, SceneBlock, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
+import { generateContentProject } from "./ai/contentGeneration";
+import { transcribeLongNarration } from "./ai/transcription";
 import { buildEditingBrainPlan } from "./editing/editingBrain";
 import {
   createPlaybackUrl,
@@ -181,7 +183,11 @@ ipcMain.handle("ai:save-openai-key", async (_event, apiKey: string) => {
   return saveOpenAiApiKey(apiKey);
 });
 
-ipcMain.handle("content:generate-project", async (_event, brief: ContentBrief) => {\n  return generateContentProject(brief);\n});\n\nipcMain.handle("ai:transcribe-narration", async (_event, narrationPath: string) => {
+ipcMain.handle("content:generate-project", async (_event, brief: ContentBrief) => {
+  return generateContentProject(brief);
+});
+
+ipcMain.handle("ai:transcribe-narration", async (_event, narrationPath: string) => {
   return transcribeLongNarration(narrationPath);
 });
 
