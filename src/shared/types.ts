@@ -62,6 +62,7 @@ export type TimelineClip = {
   id: string;
   imagePath: string;
   videoPath?: string;
+  videoDuration?: number;
   start: number;
   duration: number;
   motion: ShotMotion;
