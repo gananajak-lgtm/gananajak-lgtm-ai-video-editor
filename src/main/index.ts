@@ -224,7 +224,7 @@ ipcMain.handle("content:import-meta-video", async (_event, project: import("../s
   const workDir = path.join(app.getPath("userData"), "content-assets", project.id);
   const asset = await importMetaVideo(job, result.filePaths[0], workDir);
   const jobs = project.assetPlan!.jobs.map((candidate) => candidate.id === job.id ? { ...candidate, status: "succeeded" as const, outputAssetId: asset.id, error: undefined, updatedAt: new Date().toISOString() } : candidate);
-  return { ...project, updatedAt: new Date().toISOString(), assetPlan: { ...project.assetPlan!, jobs, assets: [...project.assetPlan!.assets.filter((existing) => existing.id !== asset.id), asset] } };
+  return { ...project, updatedAt: new Date().toISOString(), assetPlan: { ...project.assetPlan!, jobs, assets: [...project.assetPlan!.assets.filter((existing) => existing.id !== asset.id && !(existing.sceneId === sceneId && existing.kind === "video")), asset] } };
 });
 
 ipcMain.handle(
