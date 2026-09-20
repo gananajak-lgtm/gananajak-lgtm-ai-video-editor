@@ -13,8 +13,13 @@ export type ContentTimelineBridge = {
   readyForNarrationAssembly: boolean;
 };
 
+function latestAssetFor(assets: GeneratedAsset[], sceneId: string, kind: GeneratedAsset["kind"]) {
+  const matches = assets.filter((asset) => asset.sceneId === sceneId && asset.kind === kind);
+  return matches.at(-1);
+}
+
 function voiceFor(assets: GeneratedAsset[], sceneId: string) {
-  return assets.find((asset) => asset.sceneId === sceneId && asset.kind === "voice");
+  return latestAssetFor(assets, sceneId, "voice");
 }
 
 export function bridgeGeneratedAssets(project: ContentProject): ContentTimelineBridge {
@@ -30,8 +35,8 @@ export function bridgeGeneratedAssets(project: ContentProject): ContentTimelineB
 
   for (const scene of project.scenes) {
     const sceneAssets = assets.filter((asset) => asset.sceneId === scene.id);
-    const image = sceneAssets.find((asset) => asset.kind === "image");
-    const video = sceneAssets.find((asset) => asset.kind === "video");
+    const image = latestAssetFor(sceneAssets, scene.id, "image");
+    const video = latestAssetFor(sceneAssets, scene.id, "video");
     const voice = voiceFor(assets, scene.id);
     const measuredVoiceDuration = voice?.duration;
     const duration = measuredVoiceDuration && Number.isFinite(measuredVoiceDuration) && measuredVoiceDuration > 0
@@ -79,8 +84,9 @@ export function buildGeneratedTimeline(project: ContentProject, narrationPath: s
     height: 1920,
     fps: 30,
     clips: bridge.visualPlan.shots.map((shot) => {
-      const video = project.assetPlan?.assets.find((asset) => asset.sceneId === shot.sceneId && asset.kind === "video");
-      const image = project.assetPlan?.assets.find((asset) => asset.sceneId === shot.sceneId && asset.kind === "image");
+      const assets = project.assetPlan?.assets ?? [];
+      const video = latestAssetFor(assets, shot.sceneId, "video");
+      const image = latestAssetFor(assets, shot.sceneId, "image");
       return { id:shot.id, imagePath:image?.filePath ?? shot.imagePath, videoPath:video?.filePath, videoDuration:video?.duration, start:shot.start, duration:shot.duration, motion:shot.motion };
     }),
     audioLayers: bridge.sfxLayers,
