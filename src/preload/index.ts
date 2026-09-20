@@ -59,6 +59,15 @@ const api: DesktopApi = {
   chooseOutput: () => ipcRenderer.invoke("render:choose-output"),
   renderTimeline: (plan: TimelinePlan, outputPath: string) =>
     ipcRenderer.invoke("render:timeline", plan, outputPath),
+  onContentAssetProgress: (listener) => {
+    const handler = (
+      _event: IpcRendererEvent,
+      progress: { completed: number; total: number; currentJobId?: string; kind?: string }
+    ) => listener(progress);
+
+    ipcRenderer.on("content:asset-progress", handler);
+    return () => ipcRenderer.removeListener("content:asset-progress", handler);
+  },
   onRenderProgress: (listener) => {
     const handler = (
       _event: IpcRendererEvent,
