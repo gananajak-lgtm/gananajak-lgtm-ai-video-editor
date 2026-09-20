@@ -5,6 +5,7 @@ import type { AudioAsset, ProjectDocument, SceneBlock, TimelinePlan, TranscriptR
 import { generateContentProject } from "./ai/contentGeneration";
 import { transcribeLongNarration } from "./ai/transcription";
 import { buildEditingBrainPlan } from "./editing/editingBrain";
+import { assembleNarrationAndTimeline } from "./content-narration-runner";
 import {
   createPlaybackUrl,
   installMediaProtocol
@@ -186,6 +187,23 @@ ipcMain.handle("ai:save-openai-key", async (_event, apiKey: string) => {
 ipcMain.handle("content:generate-project", async (_event, brief: ContentBrief) => {
   return generateContentProject(brief);
 });
+
+ipcMain.handle(
+  "content:assemble-and-render",
+  async (event, project: import("../shared/content-factory").ContentProject, outputPath: string) => {
+    const workDir = path.join(app.getPath("temp"), "gananajak-content-factory", project.id);
+    const assembled = await assembleNarrationAndTimeline(project, workDir);
+    const renderedPath = await renderTimeline(
+      assembled.timeline,
+      outputPath,
+      (progress) => {
+        if (!event.sender.isDestroyed()) event.sender.send("render:progress", progress);
+      }
+    );
+    const testReport = await verifyRenderedOutput(assembled.timeline, renderedPath);
+    return { outputPath: renderedPath, narrationPath: assembled.narrationPath, timeline: assembled.timeline, testReport };
+  }
+);
 
 ipcMain.handle("ai:transcribe-narration", async (_event, narrationPath: string) => {
   return transcribeLongNarration(narrationPath);
