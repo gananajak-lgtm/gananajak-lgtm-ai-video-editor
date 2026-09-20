@@ -33,7 +33,10 @@ export function bridgeGeneratedAssets(project: ContentProject): ContentTimelineB
     const image = sceneAssets.find((asset) => asset.kind === "image");
     const video = sceneAssets.find((asset) => asset.kind === "video");
     const voice = voiceFor(assets, scene.id);
-    const duration = voice?.duration ?? scene.estimatedDuration;
+    const measuredVoiceDuration = voice?.duration;
+    const duration = measuredVoiceDuration && Number.isFinite(measuredVoiceDuration) && measuredVoiceDuration > 0
+      ? measuredVoiceDuration
+      : scene.estimatedDuration;
     const start = cursor;
 
     if (!image && !video) missingSceneIds.push(scene.id);
