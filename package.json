@@ -11,7 +11,8 @@
     "build:renderer": "vite build",
     "build:electron": "tsc -p tsconfig.electron.json",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.electron.json --noEmit",
-    "smoke:render": "node scripts/render-smoke.cjs"
+    "smoke:render": "node scripts/render-smoke.cjs",
+    "test:content": "npm run build:electron && node --test dist-electron/main/content-asset-runner.test.js dist-electron/main/content-narration-runner.test.js dist-electron/main/content-timeline-bridge.test.js"
   },
   "dependencies": {
     "ffmpeg-static": "^5.2.0",
