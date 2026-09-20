@@ -70,6 +70,10 @@ export default function ContentFactoryPanel({
 
   const generateAndRender = async () => {
     if (!project) return;
+    if (!providerStatus.replicateConfigured || !providerStatus.elevenLabsConfigured) {
+      setError("Configure both Replicate and ElevenLabs before generating assets.");
+      return;
+    }
     setRendering(true);
     setPipelineStage("assets");
     setRenderProgress(0);
@@ -190,10 +194,11 @@ export default function ContentFactoryPanel({
           </div>
 
           <div className="keyRow">
-            <button className="primary" onClick={generateAndRender} disabled={rendering}>
+            <button className="primary" onClick={generateAndRender} disabled={rendering || !providerStatus.replicateConfigured || !providerStatus.elevenLabsConfigured}>
               {rendering ? (pipelineStage === "assets" ? "Generating images + voices..." : `Rendering ${Math.round(renderProgress * 100)}%...`) : "Generate Assets & Render MP4"}
             </button>
             {rendering && <progress max={1} value={pipelineStage === "assets" ? undefined : renderProgress} aria-label="Pipeline progress" />}
+            {(!providerStatus.replicateConfigured || !providerStatus.elevenLabsConfigured) && <span className="muted">Add Replicate + ElevenLabs credentials to enable rendering.</span>}
             {pipelineStage === "assets" && <span className="muted">Replicate + ElevenLabs are preparing scene assets...</span>}
             {pipelineStage === "ready" && <span className="aiBadge readyBadge">Pipeline complete ✓</span>}
             {renderedPath && <span className="muted">Video ready: {renderedPath}</span>}
