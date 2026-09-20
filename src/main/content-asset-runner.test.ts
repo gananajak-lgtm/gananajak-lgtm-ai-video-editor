@@ -38,3 +38,24 @@ test("asset runner preserves optional manual jobs while completing required asse
   assert.equal(result.jobs.find((job)=>job.id==="sfx")?.status,"queued");
   assert.equal(result.assets.length,2);
 });
+
+
+test("asset progress counts only automatically runnable jobs", async () => {
+  const provider: AssetProvider = {
+    id: "fake-progress",
+    supports: () => true,
+    async generate(job) {
+      return { id:`asset-${job.id}`, projectId:job.projectId, sceneId:job.sceneId, kind:job.kind, filePath:`/tmp/${job.id}` };
+    }
+  };
+  const now=new Date().toISOString();
+  const plan={projectId:"p",assets:[{id:"asset-video",projectId:"p",sceneId:"s",kind:"video" as const,filePath:"/tmp/video.mp4"}],jobs:[
+    {id:"img",projectId:"p",sceneId:"s",kind:"image" as const,prompt:"x",status:"queued" as const,attempts:0,createdAt:now,updatedAt:now},
+    {id:"video",projectId:"p",sceneId:"s",kind:"video" as const,prompt:"x",status:"succeeded" as const,attempts:1,outputAssetId:"asset-video",createdAt:now,updatedAt:now}
+  ]};
+  const progress: Array<{completed:number;total:number}> = [];
+  await runAssetPlan(plan,new AssetProviderRegistry([provider]),"/tmp",(value)=>progress.push(value));
+  assert.ok(progress.every((value)=>value.completed <= value.total));
+  assert.equal(progress.at(-1)?.completed,1);
+  assert.equal(progress.at(-1)?.total,1);
+});
