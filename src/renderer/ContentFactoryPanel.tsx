@@ -23,6 +23,7 @@ export default function ContentFactoryPanel({
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rendering, setRendering] = useState(false);
+  const [pipelineStage, setPipelineStage] = useState<"idle" | "assets" | "render" | "ready">("idle");
   const [renderProgress, setRenderProgress] = useState(0);
   const [renderedPath, setRenderedPath] = useState<string | null>(null);
   const [copiedSceneId, setCopiedSceneId] = useState<string | null>(null);
@@ -58,6 +59,7 @@ export default function ContentFactoryPanel({
   const generateAndRender = async () => {
     if (!project) return;
     setRendering(true);
+    setPipelineStage("assets");
     setRenderProgress(0);
     setRenderedPath(null);
     setError(null);
@@ -67,11 +69,16 @@ export default function ContentFactoryPanel({
     try {
       const outputPath = await window.videoEditor.chooseOutput();
       if (!outputPath) return;
-      const result = await window.videoEditor.assembleAndRenderContent(project, outputPath);
+      const prepared = await window.videoEditor.generateContentAssets(project);
+      onGenerated(prepared);
+      setPipelineStage("render");
+      const result = await window.videoEditor.assembleAndRenderContent(prepared, outputPath);
       setRenderedPath(result.outputPath);
       setRenderProgress(1);
+      setPipelineStage("ready");
     } catch (renderError) {
       setError(renderError instanceof Error ? renderError.message : String(renderError));
+      setPipelineStage("idle");
     } finally {
       unsubscribe();
       setRendering(false);
@@ -167,9 +174,11 @@ export default function ContentFactoryPanel({
 
           <div className="keyRow">
             <button className="primary" onClick={generateAndRender} disabled={rendering}>
-              {rendering ? `Rendering ${Math.round(renderProgress * 100)}%...` : "Generate & Render MP4"}
+              {rendering ? (pipelineStage === "assets" ? "Generating images + voices..." : `Rendering ${Math.round(renderProgress * 100)}%...`) : "Generate Assets & Render MP4"}
             </button>
-            {rendering && <progress max={1} value={renderProgress} aria-label="Render progress" />}
+            {rendering && <progress max={1} value={pipelineStage === "assets" ? undefined : renderProgress} aria-label="Pipeline progress" />}
+            {pipelineStage === "assets" && <span className="muted">Replicate + ElevenLabs are preparing scene assets...</span>}
+            {pipelineStage === "ready" && <span className="aiBadge readyBadge">Pipeline complete ✓</span>}
             {renderedPath && <span className="muted">Video ready: {renderedPath}</span>}
           </div>
 
