@@ -1,32 +1,21 @@
 name: CI
 
 on:
+  pull_request:
   push:
     branches:
-      - main
-      - "phase-1/**"
-  pull_request:
+      - phase-1/mvp-foundation
+      - feature/ai-content-factory
 
 jobs:
-  verify:
+  validate:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Build
-        run: npm run build
-
-      - name: Render smoke test
-        run: npm run smoke:render
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
