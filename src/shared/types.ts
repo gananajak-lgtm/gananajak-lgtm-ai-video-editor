@@ -347,6 +347,9 @@ export type DesktopApi = {
   ) => Promise<QcPackResult | null>;
   chooseOutput: () => Promise<string | null>;
   renderTimeline: (plan: TimelinePlan, outputPath: string) => Promise<RenderResult>;
+  onContentAssetProgress: (
+    listener: (progress: { completed: number; total: number; currentJobId?: string; kind?: string }) => void
+  ) => () => void;
   onRenderProgress: (
     listener: (progress: RenderProgress) => void
   ) => () => void;
