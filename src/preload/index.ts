@@ -8,6 +8,10 @@ import type {
 } from "../shared/types";
 
 const api: DesktopApi = {
+  createContentProject: (input) =>
+    ipcRenderer.invoke("content:create-project", input),
+  planContentScenes: (input) =>
+    ipcRenderer.invoke("content:plan-scenes", input),
   selectImages: () => ipcRenderer.invoke("media:select-images"),
   selectNarration: () => ipcRenderer.invoke("media:select-narration"),
   readImagePreview: (filePath) =>

@@ -1,7 +1,10 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell } from "electron";
 import path from "node:path";
 import type { AudioAsset, ProjectDocument, SceneBlock, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
+import type { CreateContentProjectInput, ScenePlannerInput } from "../shared/contentFactory";
 import { transcribeLongNarration } from "./ai/transcription";
+import { createContentFactoryProject } from "./content/projectFactory";
+import { planContentScenes } from "./content/scenePlanner";
 import { buildEditingBrainPlan } from "./editing/editingBrain";
 import {
   createPlaybackUrl,
@@ -170,6 +173,20 @@ ipcMain.handle(
     missingPath: string
   ) => {
     return relinkSingleMedia(project, missingPath);
+  }
+);
+
+ipcMain.handle(
+  "content:create-project",
+  async (_event, input: CreateContentProjectInput) => {
+    return createContentFactoryProject(input);
+  }
+);
+
+ipcMain.handle(
+  "content:plan-scenes",
+  async (_event, input: ScenePlannerInput) => {
+    return planContentScenes(input);
   }
 );
 
