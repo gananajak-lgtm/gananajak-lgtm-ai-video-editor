@@ -37,6 +37,7 @@ export default function ContentFactoryPanel({
     if (elevenLabsKey.trim()) status = await window.videoEditor.saveElevenLabsApiKey(elevenLabsKey);
     setProviderStatus(status); setReplicateToken(""); setElevenLabsKey("");
   };
+  const [assetProgress, setAssetProgress] = useState({ completed:0, total:0, kind:undefined as string | undefined });
   const [renderProgress, setRenderProgress] = useState(0);
   const [renderedPath, setRenderedPath] = useState<string | null>(null);
   const [copiedSceneId, setCopiedSceneId] = useState<string | null>(null);
@@ -80,6 +81,9 @@ export default function ContentFactoryPanel({
     setRenderProgress(0);
     setRenderedPath(null);
     setError(null);
+    const unsubscribeAssets = window.videoEditor.onContentAssetProgress((progress) => {
+      setAssetProgress({ completed:progress.completed, total:progress.total, kind:progress.kind });
+    });
     const unsubscribe = window.videoEditor.onRenderProgress((progress) => {
       setRenderProgress(Math.max(0, Math.min(1, progress.progress)));
     });
@@ -97,6 +101,7 @@ export default function ContentFactoryPanel({
       setError(renderError instanceof Error ? renderError.message : String(renderError));
       setPipelineStage("idle");
     } finally {
+      unsubscribeAssets();
       unsubscribe();
       setRendering(false);
     }
@@ -200,7 +205,7 @@ export default function ContentFactoryPanel({
             </button>
             {rendering && <progress max={1} value={pipelineStage === "assets" ? undefined : renderProgress} aria-label="Pipeline progress" />}
             {(!providerStatus.replicateConfigured || !providerStatus.elevenLabsConfigured) && <span className="muted">Add Replicate + ElevenLabs credentials to enable rendering.</span>}
-            {pipelineStage === "assets" && <span className="muted">Replicate + ElevenLabs are preparing scene assets...</span>}
+            {pipelineStage === "assets" && <span className="muted">Replicate + ElevenLabs: {assetProgress.completed}/{assetProgress.total || "?"}{assetProgress.kind ? ` · ${assetProgress.kind}` : ""}</span>}
             {pipelineStage === "ready" && <span className="aiBadge readyBadge">Pipeline complete ✓</span>}
             {renderedPath && <span className="muted">Video ready: {renderedPath}</span>}
           </div>
