@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { bridgeGeneratedAssets } from "./content-timeline-bridge";
+import { bridgeGeneratedAssets, buildGeneratedTimeline } from "./content-timeline-bridge";
 import { buildContentProject } from "./content-scene-planner";
 import { buildAssetPlan } from "./content-asset-planner";
 
@@ -32,4 +32,32 @@ test("bridge maps generated scene assets into the existing visual plan", () => {
   } else {
     assert.equal(result.visualPlan.shots[0].start, 0);
   }
+});
+
+
+test("generated timeline prefers imported Meta video and keeps image fallback", () => {
+  const base = buildContentProject(
+    "hybrid",
+    "Mysterious canal",
+    { topic: "Mysterious canal", format: "short", language: "en", targetDurationSeconds: 15 },
+    "A quiet canal disappears into the mist."
+  );
+  const scene = base.scenes[0];
+  const project = {
+    ...base,
+    assetPlan: {
+      projectId: base.id,
+      jobs: [],
+      assets: [
+        { id:"img", projectId:base.id, sceneId:scene.id, kind:"image" as const, filePath:"/tmp/fallback.png" },
+        { id:"video", projectId:base.id, sceneId:scene.id, kind:"video" as const, filePath:"/tmp/meta.mp4", provider:"meta-ai-manual", source:"meta-manual" as const },
+        { id:"voice", projectId:base.id, sceneId:scene.id, kind:"voice" as const, filePath:"/tmp/voice.mp3", duration:7.5 }
+      ]
+    }
+  };
+  const timeline = buildGeneratedTimeline(project, "/tmp/narration.m4a");
+  assert.equal(timeline.clips[0].videoPath, "/tmp/meta.mp4");
+  assert.equal(timeline.clips[0].imagePath, "/tmp/fallback.png");
+  assert.equal(timeline.clips[0].duration, 7.5);
+  assert.equal(timeline.duration, 7.5);
 });
