@@ -30,4 +30,8 @@ export type ContentProject = {
   scenes: ContentScene[];
   createdAt: string;
   updatedAt: string;
+  generation?: {
+    provider: "openai";
+    model: string;
+  };
 };
