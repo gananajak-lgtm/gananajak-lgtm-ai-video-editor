@@ -61,3 +61,16 @@ test("generated timeline prefers imported Meta video and keeps image fallback", 
   assert.equal(timeline.clips[0].duration, 7.5);
   assert.equal(timeline.duration, 7.5);
 });
+
+
+test("fallback scene planner creates Meta-ready video jobs", () => {
+  const base = buildContentProject(
+    "meta-ready",
+    "Forest mystery",
+    { topic:"Forest mystery", format:"short", language:"en", targetDurationSeconds:20 },
+    "The path vanishes into fog."
+  );
+  const plan = buildAssetPlan(base);
+  assert.ok(base.scenes.every((scene) => Boolean(scene.videoPrompt)));
+  assert.equal(plan.jobs.filter((job) => job.kind === "video").length, base.scenes.length);
+});
