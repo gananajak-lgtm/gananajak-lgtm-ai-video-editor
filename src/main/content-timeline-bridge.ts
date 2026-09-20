@@ -78,7 +78,7 @@ export function buildGeneratedTimeline(project: ContentProject, narrationPath: s
     clips: bridge.visualPlan.shots.map((shot) => {
       const video = project.assetPlan?.assets.find((asset) => asset.sceneId === shot.sceneId && asset.kind === "video");
       const image = project.assetPlan?.assets.find((asset) => asset.sceneId === shot.sceneId && asset.kind === "image");
-      return { id:shot.id, imagePath:image?.filePath ?? shot.imagePath, videoPath:video?.filePath, start:shot.start, duration:shot.duration, motion:shot.motion };
+      return { id:shot.id, imagePath:image?.filePath ?? shot.imagePath, videoPath:video?.filePath, videoDuration:video?.duration, start:shot.start, duration:shot.duration, motion:shot.motion };
     }),
     audioLayers: bridge.sfxLayers,
     subtitles: bridge.subtitles,
