@@ -100,3 +100,26 @@ test("bridge falls back to estimated scene duration when voice duration is inval
   assert.equal(timeline.clips[0].duration,scene.estimatedDuration);
   assert.equal(timeline.duration,scene.estimatedDuration);
 });
+
+
+test("generated timeline prefers the latest asset when legacy duplicates exist", () => {
+  const project=buildContentProject({topic:"Legacy duplicate assets",format:"short",language:"en",targetDurationSeconds:30},"One scene.");
+  const scene=project.scenes[0];
+  project.assetPlan={
+    projectId:project.id,
+    jobs:[],
+    assets:[
+      {id:"image-old",projectId:project.id,sceneId:scene.id,kind:"image",filePath:"/tmp/old.png"},
+      {id:"image-new",projectId:project.id,sceneId:scene.id,kind:"image",filePath:"/tmp/new.png"},
+      {id:"voice-old",projectId:project.id,sceneId:scene.id,kind:"voice",filePath:"/tmp/old.mp3",duration:4},
+      {id:"voice-new",projectId:project.id,sceneId:scene.id,kind:"voice",filePath:"/tmp/new.mp3",duration:6},
+      {id:"video-old",projectId:project.id,sceneId:scene.id,kind:"video",filePath:"/tmp/old.mp4",duration:3},
+      {id:"video-new",projectId:project.id,sceneId:scene.id,kind:"video",filePath:"/tmp/new.mp4",duration:5}
+    ]
+  };
+  const timeline=buildGeneratedTimeline(project,"/tmp/narration.m4a");
+  assert.equal(timeline.clips[0].imagePath,"/tmp/new.png");
+  assert.equal(timeline.clips[0].videoPath,"/tmp/new.mp4");
+  assert.equal(timeline.clips[0].videoDuration,5);
+  assert.equal(timeline.clips[0].duration,6);
+});
