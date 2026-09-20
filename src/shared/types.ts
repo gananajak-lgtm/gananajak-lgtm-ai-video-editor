@@ -1,3 +1,10 @@
+import type {
+  ContentFactoryProject,
+  ContentScenePlan,
+  CreateContentProjectInput,
+  ScenePlannerInput
+} from "./contentFactory";
+
 export type ProjectMedia = {
   images: string[];
   narration: string | null;
@@ -277,6 +284,12 @@ export type RenderResult = {
 };
 
 export type DesktopApi = {
+  createContentProject: (
+    input: CreateContentProjectInput
+  ) => Promise<ContentFactoryProject>;
+  planContentScenes: (
+    input: ScenePlannerInput
+  ) => Promise<ContentScenePlan>;
   selectImages: () => Promise<string[]>;
   selectNarration: () => Promise<string | null>;
   readImagePreview: (filePath: string) => Promise<string | null>;
