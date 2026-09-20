@@ -7,6 +7,8 @@ import { transcribeLongNarration } from "./ai/transcription";
 import { buildEditingBrainPlan } from "./editing/editingBrain";
 import { assembleNarrationAndTimeline } from "./content-narration-runner";
 import { importMetaVideo } from "./providers/meta-manual-video-provider";
+import { createDefaultAssetProviderRegistry } from "./providers/default-provider-registry";
+import { runAssetPlan } from "./content-asset-runner";
 import {
   createPlaybackUrl,
   installMediaProtocol
@@ -187,6 +189,13 @@ ipcMain.handle("ai:save-openai-key", async (_event, apiKey: string) => {
 
 ipcMain.handle("content:generate-project", async (_event, brief: ContentBrief) => {
   return generateContentProject(brief);
+});
+
+ipcMain.handle("content:generate-assets", async (_event, project: import("../shared/content-factory").ContentProject) => {
+  if (!project.assetPlan) throw new Error("Content project has no asset plan.");
+  const workDir = path.join(app.getPath("userData"), "content-assets", project.id);
+  const assetPlan = await runAssetPlan(project.assetPlan, createDefaultAssetProviderRegistry(), workDir);
+  return { ...project, assetPlan, updatedAt: new Date().toISOString() };
 });
 
 ipcMain.handle("content:import-meta-video", async (_event, project: import("../shared/content-factory").ContentProject, sceneId: string) => {
