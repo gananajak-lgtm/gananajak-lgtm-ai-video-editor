@@ -13,6 +13,7 @@ export async function runAssetPlan(
   const runnableKinds = new Set(["image", "voice"]);
   const queue = new AssetJobQueue(plan.jobs.filter((job) => runnableKinds.has(job.kind)).map((job) => ({ ...job })));
   const assets: GeneratedAsset[] = [...plan.assets];
+  const assetIndexByJobId = new Map(plan.jobs.flatMap((job) => job.outputAssetId ? [[job.id, job.outputAssetId] as const] : []));
   const runnableJobs = plan.jobs.filter((job) => runnableKinds.has(job.kind));
   const total = runnableJobs.length;
   let completed = runnableJobs.filter((job) => job.status === "succeeded").length;
@@ -25,7 +26,15 @@ export async function runAssetPlan(
     try {
       const provider = registry.resolve(job.kind);
       const asset = await provider.generate(job, { projectId: job.projectId, sceneId: job.sceneId, workDir });
+      const previousAssetId = assetIndexByJobId.get(job.id);
+      if (previousAssetId) {
+        const previousIndex = assets.findIndex((item) => item.id === previousAssetId);
+        if (previousIndex >= 0) assets.splice(previousIndex, 1);
+      }
+      const duplicateIndex = assets.findIndex((item) => item.id === asset.id);
+      if (duplicateIndex >= 0) assets.splice(duplicateIndex, 1);
       assets.push(asset);
+      assetIndexByJobId.set(job.id, asset.id);
       queue.complete(job.id, asset);
     } catch (error) {
       queue.fail(job.id, error instanceof Error ? error.message : String(error));
