@@ -18,3 +18,23 @@ test("asset runner routes queued jobs through providers", async () => {
   assert.equal(result.jobs[0].status,"succeeded");
   assert.equal(result.assets.length,1);
 });
+
+
+test("asset runner preserves optional manual jobs while completing required assets", async () => {
+  const provider: AssetProvider = {
+    id: "fake-required",
+    supports: (kind) => kind === "image" || kind === "voice",
+    async generate(job) {
+      return { id:`asset-${job.id}`, projectId:job.projectId, sceneId:job.sceneId, kind:job.kind, filePath:`/tmp/${job.id}` };
+    }
+  };
+  const now=new Date().toISOString();
+  const makeJob=(id:string,kind:"image"|"voice"|"video"|"sfx") => ({id,projectId:"p",sceneId:"s",kind,prompt:"x",status:"queued" as const,attempts:0,createdAt:now,updatedAt:now});
+  const plan={projectId:"p",assets:[],jobs:[makeJob("img","image"),makeJob("voice","voice"),makeJob("video","video"),makeJob("sfx","sfx")]};
+  const result=await runAssetPlan(plan,new AssetProviderRegistry([provider]),"/tmp");
+  assert.equal(result.jobs.find((job)=>job.id==="img")?.status,"succeeded");
+  assert.equal(result.jobs.find((job)=>job.id==="voice")?.status,"succeeded");
+  assert.equal(result.jobs.find((job)=>job.id==="video")?.status,"queued");
+  assert.equal(result.jobs.find((job)=>job.id==="sfx")?.status,"queued");
+  assert.equal(result.assets.length,2);
+});
