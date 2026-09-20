@@ -34,8 +34,8 @@ export function buildAssetPlan(
   const includeVoice = options.includeVoice ?? true;
   // SFX stays optional until a provider/library is configured. Missing ambience must not block a render.
   const includeSfx = options.includeSfx ?? false;
-  // Video is a manual Meta AI workflow by default. Jobs remain available when explicitly requested.
-  const includeVideo = options.includeVideo ?? false;
+  // Video is a manual Meta AI workflow by default. Keep jobs in the plan so each scene can accept a Meta clip.
+  const includeVideo = options.includeVideo ?? true;
   const jobs: AssetJob[] = [];
 
   for (const scene of project.scenes) {
