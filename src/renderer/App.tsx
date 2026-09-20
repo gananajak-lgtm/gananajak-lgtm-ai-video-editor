@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import type { ContentProject } from "../shared/content-factory";
 import type { AudioLayer, AiSettingsStatus, EditingBrainPlan, FullEpisodeTestReport, ProjectDocument, ProjectLoadResult, ProjectRelinkResult, RenderProgress, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
 import AudioLayersPanel from "./AudioLayersPanel";
 import EditingBrainPanel from "./EditingBrainPanel";
@@ -43,6 +44,7 @@ export default function App() {
   const [transcript, setTranscript] = useState<TranscriptResult | null>(null);
   const [editingPlan, setEditingPlan] = useState<EditingBrainPlan | null>(null);
   const [audioLayers, setAudioLayers] = useState<AudioLayer[]>([]);
+  const [contentProject, setContentProject] = useState<ContentProject | null>(null);
   const [aiStatus, setAiStatus] = useState<AiSettingsStatus>({
     configured: false,
     persistedSecurely: false
@@ -76,6 +78,7 @@ export default function App() {
         : null
     );
     setAudioLayers(project.audioLayers);
+    setContentProject(project.contentProject ?? null);
     setRenderHistory(project.renderHistory ?? []);
     setMissingMedia(loaded.missingMedia);
 
@@ -139,6 +142,7 @@ export default function App() {
       editingPlan,
       timeline,
       audioLayers,
+      contentProject,
       renderHistory
     }),
     [
@@ -151,11 +155,13 @@ export default function App() {
       editingPlan,
       timeline,
       audioLayers,
+      contentProject,
       renderHistory
     ]
   );
 
   const hasProjectContent =
+    contentProject !== null ||
     images.length > 0 ||
     narration !== null ||
     transcript !== null ||
@@ -495,7 +501,9 @@ export default function App() {
 
       <ContentFactoryPanel
         aiConfigured={aiStatus.configured}
+        project={contentProject}
         onGenerated={(project) => {
+          setContentProject(project);
           setProjectTitle(project.title);
           setNotice(`AI Content Factory created ${project.scenes.length} planned scenes.`);
           setError(null);
