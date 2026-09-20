@@ -59,3 +59,23 @@ test("asset progress counts only automatically runnable jobs", async () => {
   assert.equal(progress.at(-1)?.completed,1);
   assert.equal(progress.at(-1)?.total,1);
 });
+
+
+test("asset runner replaces a previous job asset instead of duplicating it", async () => {
+  const provider: AssetProvider = {
+    id:"fake-retry",
+    supports:() => true,
+    async generate(job) {
+      return { id:`asset-${job.id}-new`, projectId:job.projectId, sceneId:job.sceneId, kind:job.kind, filePath:"/tmp/new.png" };
+    }
+  };
+  const now=new Date().toISOString();
+  const plan={projectId:"p",assets:[{id:"asset-img-old",projectId:"p",sceneId:"s",kind:"image" as const,filePath:"/tmp/old.png"}],jobs:[
+    {id:"img",projectId:"p",sceneId:"s",kind:"image" as const,prompt:"retry",status:"queued" as const,attempts:1,outputAssetId:"asset-img-old",createdAt:now,updatedAt:now}
+  ]};
+  const result=await runAssetPlan(plan,new AssetProviderRegistry([provider]),"/tmp");
+  assert.equal(result.assets.length,1);
+  assert.equal(result.assets[0].filePath,"/tmp/new.png");
+  assert.equal(result.jobs[0].status,"succeeded");
+  assert.equal(result.jobs[0].outputAssetId,"asset-img-new");
+});
