@@ -1,8 +1,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { AssetJob, GeneratedAsset } from "../shared/content-factory";
-import type { AssetGenerationContext, AssetProvider } from "./content-asset-provider";
-import { getReplicateApiToken } from "./settings";
+import type { AssetJob, GeneratedAsset } from "../../shared/content-factory";
+import type { AssetGenerationContext, AssetProvider } from "../content-asset-provider";
+import { getReplicateApiToken } from "../settings";
 
 type Prediction = { id:string; status:string; output?:unknown; error?:string; urls?:{get?:string} };
 
