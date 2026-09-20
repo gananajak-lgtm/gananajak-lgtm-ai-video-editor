@@ -14,7 +14,7 @@ import {
   createPlaybackUrl,
   installMediaProtocol
 } from "./mediaProtocol";
-import { getAiSettingsStatus, saveOpenAiApiKey } from "./settings";
+import { getAiSettingsStatus, saveOpenAiApiKey, getReplicateApiToken, saveReplicateApiToken, getElevenLabsApiKey, saveElevenLabsApiKey } from "./settings";
 import {
   autosaveProject,
   findMissingMedia,
@@ -186,6 +186,23 @@ ipcMain.handle("ai:settings-status", async () => {
 
 ipcMain.handle("ai:save-openai-key", async (_event, apiKey: string) => {
   return saveOpenAiApiKey(apiKey);
+});
+
+async function contentProviderStatus() {
+  return {
+    replicateConfigured: Boolean(await getReplicateApiToken()),
+    elevenLabsConfigured: Boolean(await getElevenLabsApiKey())
+  };
+}
+
+ipcMain.handle("content:provider-status", contentProviderStatus);
+ipcMain.handle("content:save-replicate-token", async (_event, token: string) => {
+  await saveReplicateApiToken(token);
+  return contentProviderStatus();
+});
+ipcMain.handle("content:save-elevenlabs-key", async (_event, apiKey: string) => {
+  await saveElevenLabsApiKey(apiKey);
+  return contentProviderStatus();
 });
 
 ipcMain.handle("content:generate-project", async (_event, brief: ContentBrief) => {
