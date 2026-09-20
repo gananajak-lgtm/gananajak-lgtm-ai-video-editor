@@ -191,7 +191,7 @@ export async function generateContentProject(
   const now = new Date().toISOString();
   const projectId = `content-${Date.now()}`;
 
-  return {
+  const project: ContentProject = {
     schemaVersion: 1,
     id: projectId,
     title: generated.title.trim(),
@@ -205,17 +205,11 @@ export async function generateContentProject(
     generation: {
       provider: "openai",
       model
-    },
-    assetPlan: buildAssetPlan({
-      schemaVersion: 1,
-      id: projectId,
-      title: generated.title.trim(),
-      brief,
-      script: generated.script.trim(),
-      scenes: generated.scenes.map((scene, index) => normalizeScene(projectId, scene, index)),
-      createdAt: now,
-      updatedAt: now,
-      generation: { provider: "openai", model }
-    })
+    }
+  };
+
+  return {
+    ...project,
+    assetPlan: buildAssetPlan(project)
   };
 }
