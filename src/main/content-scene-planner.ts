@@ -27,6 +27,7 @@ export function buildContentProject(
     narration,
     visualIntent: narration,
     imagePrompt: `Cinematic vertical documentary shot illustrating: ${narration}`,
+    videoPrompt: `10-second vertical cinematic documentary video illustrating: ${narration}. Natural motion, realistic lighting, no narration, no dialogue, no subtitles.`,
     sfxHints: [],
     estimatedDuration: estimateDuration(narration)
   }));
