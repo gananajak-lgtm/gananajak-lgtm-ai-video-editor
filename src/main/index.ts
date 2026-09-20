@@ -9,6 +9,7 @@ import { assembleNarrationAndTimeline } from "./content-narration-runner";
 import { importMetaVideo } from "./providers/meta-manual-video-provider";
 import { createDefaultAssetProviderRegistry } from "./providers/default-provider-registry";
 import { runAssetPlan } from "./content-asset-runner";
+import { buildAssetPlan } from "./content-asset-planner";
 import {
   createPlaybackUrl,
   installMediaProtocol
@@ -192,9 +193,9 @@ ipcMain.handle("content:generate-project", async (_event, brief: ContentBrief) =
 });
 
 ipcMain.handle("content:generate-assets", async (_event, project: import("../shared/content-factory").ContentProject) => {
-  if (!project.assetPlan) throw new Error("Content project has no asset plan.");
+  const planned = project.assetPlan ?? buildAssetPlan(project);
   const workDir = path.join(app.getPath("userData"), "content-assets", project.id);
-  const assetPlan = await runAssetPlan(project.assetPlan, createDefaultAssetProviderRegistry(), workDir);
+  const assetPlan = await runAssetPlan(planned, createDefaultAssetProviderRegistry(), workDir);
   return { ...project, assetPlan, updatedAt: new Date().toISOString() };
 });
 
