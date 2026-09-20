@@ -15,7 +15,7 @@ export async function runAssetPlan(
   const assets: GeneratedAsset[] = [...plan.assets];
   const runnableJobs = plan.jobs.filter((job) => runnableKinds.has(job.kind));
   const total = runnableJobs.length;
-  let completed = plan.jobs.filter((job) => job.status === "succeeded").length;
+  let completed = runnableJobs.filter((job) => job.status === "succeeded").length;
 
   while (true) {
     const job = queue.next();
