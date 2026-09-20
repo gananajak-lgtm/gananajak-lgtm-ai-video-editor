@@ -11,6 +11,7 @@ import EpisodeReadinessPanel from "./EpisodeReadinessPanel";
 import QuickPreviewPanel from "./QuickPreviewPanel";
 import EpisodeQcPackPanel from "./EpisodeQcPackPanel";
 import FullEpisodeTestPanel from "./FullEpisodeTestPanel";
+import ContentFactoryPanel from "./ContentFactoryPanel";
 
 function fileName(filePath: string) {
   return filePath.split(/[\\/]/).pop() ?? filePath;
@@ -491,6 +492,15 @@ export default function App() {
         </div>
         <div className="heroBadge">🎧</div>
       </section>
+
+      <ContentFactoryPanel
+        aiConfigured={aiStatus.configured}
+        onGenerated={(project) => {
+          setProjectTitle(project.title);
+          setNotice(`AI Content Factory created ${project.scenes.length} planned scenes.`);
+          setError(null);
+        }}
+      />
 
       <section className="grid">
         <article className="panel">
