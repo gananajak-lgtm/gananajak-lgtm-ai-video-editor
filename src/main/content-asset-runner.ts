@@ -10,9 +10,9 @@ export async function runAssetPlan(
   workDir: string,
   onProgress?: (progress: AssetRunProgress) => void
 ): Promise<AssetPlan> {
-  const queue = new AssetJobQueue(plan.jobs.map((job) => ({ ...job })));
-  const assets: GeneratedAsset[] = [...plan.assets];
   const runnableKinds = new Set(["image", "voice"]);
+  const queue = new AssetJobQueue(plan.jobs.filter((job) => runnableKinds.has(job.kind)).map((job) => ({ ...job })));
+  const assets: GeneratedAsset[] = [...plan.assets];
   const runnableJobs = plan.jobs.filter((job) => runnableKinds.has(job.kind));
   const total = runnableJobs.length;
   let completed = plan.jobs.filter((job) => job.status === "succeeded").length;
@@ -20,13 +20,6 @@ export async function runAssetPlan(
   while (true) {
     const job = queue.next();
     if (!job) break;
-    if (!runnableKinds.has(job.kind)) {
-      // Manual/optional jobs stay queued so they can be completed later (for example Meta video import).
-      const remainingRunnable = queue.snapshot().some((candidate) => candidate.status === "queued" && runnableKinds.has(candidate.kind));
-      if (!remainingRunnable) break;
-      queue.fail(job.id, `Optional ${job.kind} job deferred; no automatic provider configured.`);
-      continue;
-    }
     queue.markRunning(job.id);
     onProgress?.({ completed, total, currentJobId: job.id, kind: job.kind });
     try {
@@ -41,5 +34,7 @@ export async function runAssetPlan(
     onProgress?.({ completed, total, currentJobId: job.id, kind: job.kind });
   }
 
-  return { ...plan, jobs: queue.snapshot(), assets };
+  const runnableById = new Map(queue.snapshot().map((job) => [job.id, job]));
+  const jobs = plan.jobs.map((job) => runnableById.get(job.id) ?? job);
+  return { ...plan, jobs, assets };
 }
