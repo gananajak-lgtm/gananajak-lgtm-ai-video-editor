@@ -2,7 +2,8 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { AssetJob, GeneratedAsset } from "../shared/content-factory";
 import type { AssetGenerationContext, AssetProvider } from "./content-asset-provider";
-import { getElevenLabsApiKey } from "./settings";
+import { getElevenLabsApiKey } from "../settings";
+import { probeDuration } from "../video/probe";
 
 export class ElevenLabsVoiceProvider implements AssetProvider {
   readonly id = "elevenlabs-voice";
@@ -32,6 +33,7 @@ export class ElevenLabsVoiceProvider implements AssetProvider {
     await mkdir(context.workDir, { recursive: true });
     const filePath = path.join(context.workDir, `${job.id}.mp3`);
     await writeFile(filePath, Buffer.from(await response.arrayBuffer()));
+    const duration = await probeDuration(filePath);
     return {
       id: `asset-${job.id}`,
       projectId: job.projectId,
@@ -39,7 +41,8 @@ export class ElevenLabsVoiceProvider implements AssetProvider {
       kind: "voice",
       filePath,
       provider: this.id,
-      mimeType: "audio/mpeg"
+      mimeType: "audio/mpeg",
+      duration
     };
   }
 }
