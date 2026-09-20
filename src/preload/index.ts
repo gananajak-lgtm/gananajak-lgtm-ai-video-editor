@@ -31,6 +31,8 @@ const api: DesktopApi = {
   getAiSettingsStatus: () => ipcRenderer.invoke("ai:settings-status"),
   saveOpenAiApiKey: (apiKey) =>
     ipcRenderer.invoke("ai:save-openai-key", apiKey),
+  generateContentProject: (brief) =>
+    ipcRenderer.invoke("content:generate-project", brief),
   transcribeNarration: (narrationPath) =>
     ipcRenderer.invoke("ai:transcribe-narration", narrationPath),
   buildEditingBrainPlan: (transcript, sfxLibrary) =>
