@@ -78,6 +78,17 @@ export default function ContentFactoryPanel({
     }
   };
 
+  const importMetaVideoForScene = async (sceneId: string) => {
+    if (!project) return;
+    setError(null);
+    try {
+      const updated = await window.videoEditor.importMetaVideo(project, sceneId);
+      if (updated) onGenerated(updated);
+    } catch (importError) {
+      setError(importError instanceof Error ? importError.message : String(importError));
+    }
+  };
+
   const copyVideoPrompt = async (sceneId: string, prompt?: string) => {
     if (!prompt) return;
     await navigator.clipboard.writeText(prompt);
@@ -179,7 +190,14 @@ export default function ContentFactoryPanel({
                       <button onClick={() => copyVideoPrompt(scene.id, scene.videoPrompt)}>
                         {copiedSceneId === scene.id ? "Copied Meta prompt ✓" : "Copy Meta video prompt"}
                       </button>
-                      <span className="aiBadge">Waiting for Meta video</span>
+                      {project.assetPlan?.assets.some((asset) => asset.sceneId === scene.id && asset.kind === "video") ? (
+                        <span className="aiBadge readyBadge">Meta video Ready ✓</span>
+                      ) : (
+                        <>
+                          <button onClick={() => importMetaVideoForScene(scene.id)}>Import Meta Video</button>
+                          <span className="aiBadge">Waiting for Meta video</span>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
