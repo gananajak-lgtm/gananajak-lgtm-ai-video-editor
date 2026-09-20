@@ -22,6 +22,9 @@ export default function ContentFactoryPanel({
   const [duration, setDuration] = useState(60);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [rendering, setRendering] = useState(false);
+  const [renderProgress, setRenderProgress] = useState(0);
+  const [renderedPath, setRenderedPath] = useState<string | null>(null);
 
   const generate = async () => {
     if (!topic.trim() || !aiConfigured) return;
@@ -48,6 +51,29 @@ export default function ContentFactoryPanel({
       );
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const generateAndRender = async () => {
+    if (!project) return;
+    setRendering(true);
+    setRenderProgress(0);
+    setRenderedPath(null);
+    setError(null);
+    const unsubscribe = window.videoEditor.onRenderProgress((progress) => {
+      setRenderProgress(Math.max(0, Math.min(1, progress.progress)));
+    });
+    try {
+      const outputPath = await window.videoEditor.chooseOutput();
+      if (!outputPath) return;
+      const result = await window.videoEditor.assembleAndRenderContent(project, outputPath);
+      setRenderedPath(result.outputPath);
+      setRenderProgress(1);
+    } catch (renderError) {
+      setError(renderError instanceof Error ? renderError.message : String(renderError));
+    } finally {
+      unsubscribe();
+      setRendering(false);
     }
   };
 
@@ -118,6 +144,14 @@ export default function ContentFactoryPanel({
               <span>{project.brief.language}</span>
               <span>{project.brief.targetDurationSeconds}s target</span>
             </div>
+          </div>
+
+          <div className="keyRow">
+            <button className="primary" onClick={generateAndRender} disabled={rendering}>
+              {rendering ? `Rendering ${Math.round(renderProgress * 100)}%...` : "Generate & Render MP4"}
+            </button>
+            {rendering && <progress max={1} value={renderProgress} aria-label="Render progress" />}
+            {renderedPath && <span className="muted">Video ready: {renderedPath}</span>}
           </div>
 
           <p className="muted">{project.script}</p>
