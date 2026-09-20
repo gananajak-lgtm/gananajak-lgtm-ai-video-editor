@@ -33,6 +33,8 @@ const api: DesktopApi = {
     ipcRenderer.invoke("ai:save-openai-key", apiKey),
   generateContentProject: (brief) =>
     ipcRenderer.invoke("content:generate-project", brief),
+  importMetaVideo: (project, sceneId) =>
+    ipcRenderer.invoke("content:import-meta-video", project, sceneId),
   assembleAndRenderContent: (project, outputPath) =>
     ipcRenderer.invoke("content:assemble-and-render", project, outputPath),
   transcribeNarration: (narrationPath) =>
