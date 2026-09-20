@@ -1,4 +1,6 @@
-import type { ContentBrief, ContentProject } from "./content-factory";\n\nexport type ProjectMedia = {
+import type { ContentBrief, ContentProject } from "./content-factory";
+
+export type ProjectMedia = {
   images: string[];
   narration: string | null;
 };
