@@ -12,12 +12,18 @@ export async function runAssetPlan(
 ): Promise<AssetPlan> {
   const queue = new AssetJobQueue(plan.jobs.map((job) => ({ ...job })));
   const assets: GeneratedAsset[] = [...plan.assets];
-  const total = plan.jobs.length;
+  const runnableKinds = new Set(["image", "voice"]);
+  const runnableJobs = plan.jobs.filter((job) => runnableKinds.has(job.kind));
+  const total = runnableJobs.length;
   let completed = plan.jobs.filter((job) => job.status === "succeeded").length;
 
   while (true) {
     const job = queue.next();
     if (!job) break;
+    if (!runnableKinds.has(job.kind)) {
+      queue.fail(job.id, `No automatic provider configured for ${job.kind}; optional job skipped.`);
+      continue;
+    }
     queue.markRunning(job.id);
     onProgress?.({ completed, total, currentJobId: job.id, kind: job.kind });
     try {
