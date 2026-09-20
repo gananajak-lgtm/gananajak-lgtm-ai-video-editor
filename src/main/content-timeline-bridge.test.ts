@@ -24,7 +24,7 @@ test("bridge maps generated scene assets into the existing visual plan", () => {
   };
   const result = bridgeGeneratedAssets(project);
   assert.equal(result.visualPlan.shots.length, base.scenes.length);
-  assert.equal(result.voicePaths.length, base.scenes.length);
+  assert.equal(result.narrationSegments.length, base.scenes.length);
   assert.equal(result.missingSceneIds.length, 0);
   assert.equal(result.readyForNarrationAssembly, true);
   assert.equal(result.visualPlan.shots[1].start, base.scenes[0].estimatedDuration);
