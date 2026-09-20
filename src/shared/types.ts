@@ -205,6 +205,11 @@ export type AiSettingsStatus = {
   persistedSecurely: boolean;
 };
 
+export type ContentProviderStatus = {
+  replicateConfigured: boolean;
+  elevenLabsConfigured: boolean;
+};
+
 export type RenderProgress = {
   progress: number;
   elapsed: number;
@@ -308,6 +313,9 @@ export type DesktopApi = {
   ) => Promise<TimelinePlan>;
   getAiSettingsStatus: () => Promise<AiSettingsStatus>;
   saveOpenAiApiKey: (apiKey: string) => Promise<AiSettingsStatus>;
+  getContentProviderStatus: () => Promise<ContentProviderStatus>;
+  saveReplicateApiToken: (token: string) => Promise<ContentProviderStatus>;
+  saveElevenLabsApiKey: (apiKey: string) => Promise<ContentProviderStatus>;
   generateContentProject: (brief: ContentBrief) => Promise<ContentProject>;
   importMetaVideo: (project: ContentProject, sceneId: string) => Promise<ContentProject | null>;
   generateContentAssets: (project: ContentProject) => Promise<ContentProject>;
