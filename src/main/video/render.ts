@@ -61,7 +61,7 @@ function validateTimelinePlan(plan: TimelinePlan) {
   }
 }
 
-function transitionDurations(plan: TimelinePlan) {
+export function transitionDurations(plan: TimelinePlan) {
   return plan.clips.slice(0, -1).map((clip, index) => {
     const next = plan.clips[index + 1];
     return Math.max(
@@ -144,7 +144,7 @@ function escapeFilterPath(filePath: string) {
     .replace(/\]/g, "\\]");
 }
 
-function createVideoFilter(
+export function createVideoFilter(
   plan: TimelinePlan,
   subtitlePath: string | null
 ) {
