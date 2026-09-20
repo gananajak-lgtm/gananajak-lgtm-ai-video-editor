@@ -21,6 +21,40 @@ export type ContentScene = {
   estimatedDuration: number;
 };
 
+export type AssetKind = "image" | "video" | "voice" | "sfx";
+export type AssetJobStatus = "queued" | "running" | "succeeded" | "failed" | "cancelled";
+
+export type GeneratedAsset = {
+  id: string;
+  projectId: string;
+  sceneId: string;
+  kind: AssetKind;
+  filePath: string;
+  provider?: string;
+  mimeType?: string;
+  duration?: number;
+};
+
+export type AssetJob = {
+  id: string;
+  projectId: string;
+  sceneId: string;
+  kind: AssetKind;
+  prompt: string;
+  status: AssetJobStatus;
+  attempts: number;
+  outputAssetId?: string;
+  error?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AssetPlan = {
+  projectId: string;
+  jobs: AssetJob[];
+  assets: GeneratedAsset[];
+};
+
 export type ContentProject = {
   schemaVersion: 1;
   id: string;
@@ -34,4 +68,5 @@ export type ContentProject = {
     provider: "openai";
     model: string;
   };
+  assetPlan?: AssetPlan;
 };
