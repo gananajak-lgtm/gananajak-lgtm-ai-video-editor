@@ -1,6 +1,6 @@
 import { copyFile, mkdir } from "node:fs/promises";
 import path from "node:path";
-import type { AssetJob, GeneratedAsset } from "../shared/content-factory";
+import type { AssetJob, GeneratedAsset } from "../../shared/content-factory";
 
 export type MetaManualVideoTask = {
   jobId: string;
