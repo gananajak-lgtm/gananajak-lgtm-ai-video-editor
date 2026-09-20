@@ -55,7 +55,7 @@ function validateTimelinePlan(plan: TimelinePlan) {
   }
 
   for (const clip of plan.clips) {
-    if (!clip.imagePath || !Number.isFinite(clip.duration) || clip.duration <= 0) {
+    if ((!clip.imagePath && !clip.videoPath) || !Number.isFinite(clip.duration) || clip.duration <= 0) {
       throw new Error(`Invalid timeline clip: ${clip.id}`);
     }
   }
@@ -154,18 +154,21 @@ function createVideoFilter(
     const extra = transitions[index] ?? 0;
     const renderDuration = clip.duration + extra;
 
+    if (clip.videoPath) {
+      return [
+        `[${index}:v]`,
+        `scale=${plan.width}:${plan.height}:force_original_aspect_ratio=increase,`,
+        `crop=${plan.width}:${plan.height},setsar=1,`,
+        `trim=duration=${fixed(renderDuration)},setpts=PTS-STARTPTS,fps=${plan.fps},settb=AVTB,format=yuv420p[v${index}]`
+      ].join("");
+    }
+
     return [
       `[${index}:v]`,
       `scale=${plan.width}:${plan.height}:force_original_aspect_ratio=increase,`,
       `crop=${plan.width}:${plan.height},`,
       "setsar=1,",
-      motionFilter(
-        clip.motion,
-        renderDuration,
-        plan.width,
-        plan.height,
-        plan.fps
-      ),
+      motionFilter(clip.motion, renderDuration, plan.width, plan.height, plan.fps),
       ",",
       `trim=duration=${fixed(renderDuration)},setpts=PTS-STARTPTS,fps=${plan.fps},settb=AVTB,format=yuv420p[v${index}]`
     ].join("");
@@ -453,16 +456,27 @@ export async function renderTimeline(
 
     for (const [index, clip] of plan.clips.entries()) {
       const renderDuration = clip.duration + (transitions[index] ?? 0);
-      args.push(
-        "-loop",
-        "1",
-        "-framerate",
-        String(plan.fps),
-        "-t",
-        fixed(renderDuration),
-        "-i",
-        clip.imagePath
-      );
+      if (clip.videoPath) {
+        args.push(
+          "-stream_loop",
+          "-1",
+          "-t",
+          fixed(renderDuration),
+          "-i",
+          clip.videoPath
+        );
+      } else {
+        args.push(
+          "-loop",
+          "1",
+          "-framerate",
+          String(plan.fps),
+          "-t",
+          fixed(renderDuration),
+          "-i",
+          clip.imagePath
+        );
+      }
     }
 
     const narrationInput = plan.clips.length;
