@@ -21,12 +21,16 @@ test("narration assembly rejects duplicate or mismatched scene segments", () => 
   assert.ok(project.scenes.length >= 1);
   const first = project.scenes[0];
   const duplicate = project.scenes.map((scene, index) => ({
-    sceneId:index === project.scenes.length - 1 ? first.id : scene.id,
+    sceneId:scene.id,
     filePath:`/tmp/${index}.mp3`,
     start:index * 5,
     duration:5,
     text:scene.narration
   }));
+  duplicate[duplicate.length - 1] = {
+    ...duplicate[duplicate.length - 1],
+    sceneId:"unknown-scene"
+  };
   assert.throws(
     () => buildNarrationAssemblyPlan(project,duplicate,"/tmp/out.m4a"),
     /exactly one matching voice asset per scene/
