@@ -223,8 +223,10 @@ export default function ContentFactoryPanel({
                         {copiedSceneId === scene.id ? "Copied Meta prompt ✓" : "Copy Meta video prompt"}
                       </button>
                       {project.assetPlan?.assets.some((asset) => asset.sceneId === scene.id && asset.kind === "video") ? (
-                        <span className="aiBadge readyBadge">Meta video Ready ✓</span>
-                        <button onClick={() => importMetaVideoForScene(scene.id)}>Replace Meta Video</button>
+                        <>
+                          <span className="aiBadge readyBadge">Meta video Ready ✓</span>
+                          <button onClick={() => importMetaVideoForScene(scene.id)}>Replace Meta Video</button>
+                        </>
                       ) : (
                         <>
                           <button onClick={() => importMetaVideoForScene(scene.id)}>Import Meta Video</button>
