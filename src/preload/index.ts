@@ -35,6 +35,8 @@ const api: DesktopApi = {
     ipcRenderer.invoke("content:generate-project", brief),
   importMetaVideo: (project, sceneId) =>
     ipcRenderer.invoke("content:import-meta-video", project, sceneId),
+  generateContentAssets: (project) =>
+    ipcRenderer.invoke("content:generate-assets", project),
   assembleAndRenderContent: (project, outputPath) =>
     ipcRenderer.invoke("content:assemble-and-render", project, outputPath),
   transcribeNarration: (narrationPath) =>
