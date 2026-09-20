@@ -4,6 +4,7 @@ import type {
   ContentScene
 } from "../../shared/content-factory";
 import { getOpenAiApiKey } from "../settings";
+import { buildAssetPlan } from "../content-asset-planner";
 
 const DEFAULT_MODEL = "gpt-4o-mini";
 
@@ -204,6 +205,17 @@ export async function generateContentProject(
     generation: {
       provider: "openai",
       model
-    }
+    },
+    assetPlan: buildAssetPlan({
+      schemaVersion: 1,
+      id: projectId,
+      title: generated.title.trim(),
+      brief,
+      script: generated.script.trim(),
+      scenes: generated.scenes.map((scene, index) => normalizeScene(projectId, scene, index)),
+      createdAt: now,
+      updatedAt: now,
+      generation: { provider: "openai", model }
+    })
   };
 }
