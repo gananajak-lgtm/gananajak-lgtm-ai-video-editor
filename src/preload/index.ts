@@ -31,6 +31,9 @@ const api: DesktopApi = {
   getAiSettingsStatus: () => ipcRenderer.invoke("ai:settings-status"),
   saveOpenAiApiKey: (apiKey) =>
     ipcRenderer.invoke("ai:save-openai-key", apiKey),
+  getContentProviderStatus: () => ipcRenderer.invoke("content:provider-status"),
+  saveReplicateApiToken: (token) => ipcRenderer.invoke("content:save-replicate-token", token),
+  saveElevenLabsApiKey: (apiKey) => ipcRenderer.invoke("content:save-elevenlabs-key", apiKey),
   generateContentProject: (brief) =>
     ipcRenderer.invoke("content:generate-project", brief),
   importMetaVideo: (project, sceneId) =>
