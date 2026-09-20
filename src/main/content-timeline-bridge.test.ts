@@ -75,3 +75,28 @@ test("fallback scene planner creates Meta-ready video jobs", () => {
   assert.ok(base.scenes.every((scene) => Boolean(scene.videoPrompt)));
   assert.equal(plan.jobs.filter((job) => job.kind === "video").length, base.scenes.length);
 });
+
+
+test("bridge falls back to estimated scene duration when voice duration is invalid", () => {
+  const base = buildContentProject(
+    "duration-guard",
+    "Broken probe",
+    { topic:"Broken probe", format:"short", language:"en", targetDurationSeconds:12 },
+    "A single scene waits in silence."
+  );
+  const scene = base.scenes[0];
+  const project = {
+    ...base,
+    assetPlan: {
+      projectId: base.id,
+      jobs: [],
+      assets: [
+        { id:"img", projectId:base.id, sceneId:scene.id, kind:"image" as const, filePath:"/tmp/fallback.png" },
+        { id:"voice", projectId:base.id, sceneId:scene.id, kind:"voice" as const, filePath:"/tmp/voice.mp3", duration:0 }
+      ]
+    }
+  };
+  const timeline = buildGeneratedTimeline(project,"/tmp/narration.m4a");
+  assert.equal(timeline.clips[0].duration,scene.estimatedDuration);
+  assert.equal(timeline.duration,scene.estimatedDuration);
+});
