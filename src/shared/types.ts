@@ -310,6 +310,7 @@ export type DesktopApi = {
   saveOpenAiApiKey: (apiKey: string) => Promise<AiSettingsStatus>;
   generateContentProject: (brief: ContentBrief) => Promise<ContentProject>;
   importMetaVideo: (project: ContentProject, sceneId: string) => Promise<ContentProject | null>;
+  generateContentAssets: (project: ContentProject) => Promise<ContentProject>;
   assembleAndRenderContent: (project: ContentProject, outputPath: string) => Promise<RenderResult & { narrationPath: string; timeline: TimelinePlan }>;
   transcribeNarration: (narrationPath: string) => Promise<TranscriptResult>;
   buildEditingBrainPlan: (
