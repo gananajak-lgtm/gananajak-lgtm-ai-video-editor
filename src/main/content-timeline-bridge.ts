@@ -31,16 +31,19 @@ export function bridgeGeneratedAssets(project: ContentProject): ContentTimelineB
   for (const scene of project.scenes) {
     const sceneAssets = assets.filter((asset) => asset.sceneId === scene.id);
     const image = sceneAssets.find((asset) => asset.kind === "image");
+    const video = sceneAssets.find((asset) => asset.kind === "video");
     const voice = voiceFor(assets, scene.id);
     const duration = voice?.duration ?? scene.estimatedDuration;
     const start = cursor;
 
-    if (!image) missingSceneIds.push(scene.id);
+    if (!image && !video) missingSceneIds.push(scene.id);
     else {
+      // Keep an image fallback for the existing visual plan. The final timeline prefers imported Meta video.
+      const visual = image ?? video!;
       const imageId = `${scene.id}-generated-image`;
-      descriptors.push({ id:imageId, filePath:image.filePath, summary:scene.visualIntent, characters:[], actions:[], setting:[], mood:[], shotType:"unknown" });
+      descriptors.push({ id:imageId, filePath:visual.filePath, summary:scene.visualIntent, characters:[], actions:[], setting:[], mood:[], shotType:"unknown" });
       matches.push({ sceneId:scene.id, imageId, score:1, reason:"Generated specifically for this content scene." });
-      shots.push({ id:`${scene.id}-generated-shot`, sceneId:scene.id, imageId, imagePath:image.filePath, start, duration, motion:scene.order % 2 === 0 ? "slow-zoom-out" : "slow-zoom-in", reason:"Content Factory generated asset synced to narration." });
+      shots.push({ id:`${scene.id}-generated-shot`, sceneId:scene.id, imageId, imagePath:visual.filePath, start, duration, motion:scene.order % 2 === 0 ? "slow-zoom-out" : "slow-zoom-in", reason:"Content Factory generated asset synced to narration." });
     }
 
     if (voice) narrationSegments.push({ sceneId:scene.id, filePath:voice.filePath, start, duration, text:scene.narration });
@@ -65,14 +68,18 @@ export function bridgeGeneratedAssets(project: ContentProject): ContentTimelineB
 
 export function buildGeneratedTimeline(project: ContentProject, narrationPath: string): TimelinePlan {
   const bridge = bridgeGeneratedAssets(project);
-  if (!bridge.readyForNarrationAssembly) throw new Error("Generated content is missing required image or voice assets.");
+  if (!bridge.readyForNarrationAssembly) throw new Error("Generated content is missing required visual or voice assets.");
   return {
     duration: bridge.duration,
     narration: narrationPath,
     width: 1080,
     height: 1920,
     fps: 30,
-    clips: bridge.visualPlan.shots.map((shot) => ({ id:shot.id, imagePath:shot.imagePath, start:shot.start, duration:shot.duration, motion:shot.motion })),
+    clips: bridge.visualPlan.shots.map((shot) => {
+      const video = project.assetPlan?.assets.find((asset) => asset.sceneId === shot.sceneId && asset.kind === "video");
+      const image = project.assetPlan?.assets.find((asset) => asset.sceneId === shot.sceneId && asset.kind === "image");
+      return { id:shot.id, imagePath:image?.filePath ?? shot.imagePath, videoPath:video?.filePath, start:shot.start, duration:shot.duration, motion:shot.motion };
+    }),
     audioLayers: bridge.sfxLayers,
     subtitles: bridge.subtitles,
     transitionDuration: 0.25,
