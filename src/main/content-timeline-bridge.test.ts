@@ -50,7 +50,7 @@ test("generated timeline prefers imported Meta video and keeps image fallback", 
       jobs: [],
       assets: [
         { id:"img", projectId:base.id, sceneId:scene.id, kind:"image" as const, filePath:"/tmp/fallback.png" },
-        { id:"video", projectId:base.id, sceneId:scene.id, kind:"video" as const, filePath:"/tmp/meta.mp4", provider:"meta-ai-manual", source:"meta-manual" as const },
+        { id:"video", projectId:base.id, sceneId:scene.id, kind:"video" as const, filePath:"/tmp/meta.mp4", provider:"meta-ai-manual", source:"meta-manual" as const, duration:5 },
         { id:"voice", projectId:base.id, sceneId:scene.id, kind:"voice" as const, filePath:"/tmp/voice.mp3", duration:7.5 }
       ]
     }
@@ -58,6 +58,7 @@ test("generated timeline prefers imported Meta video and keeps image fallback", 
   const timeline = buildGeneratedTimeline(project, "/tmp/narration.m4a");
   assert.equal(timeline.clips[0].videoPath, "/tmp/meta.mp4");
   assert.equal(timeline.clips[0].imagePath, "/tmp/fallback.png");
+  assert.equal(timeline.clips[0].videoDuration, 5);
   assert.equal(timeline.clips[0].duration, 7.5);
   assert.equal(timeline.duration, 7.5);
 });
