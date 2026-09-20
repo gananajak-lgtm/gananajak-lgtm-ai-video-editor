@@ -25,7 +25,8 @@ export async function importMetaVideo(job: AssetJob, inputPath: string, workDir:
   const extension = path.extname(inputPath) || ".mp4";
   const filePath = path.join(workDir, `${job.id}-meta${extension}`);
   await copyFile(inputPath, filePath);
-  const duration = await probeDuration(filePath);
+  const probedDuration = await probeDuration(filePath);
+  const duration = Number.isFinite(probedDuration) && probedDuration > 0 ? probedDuration : undefined;
   return {
     id: `asset-${job.id}-meta`,
     projectId: job.projectId,
