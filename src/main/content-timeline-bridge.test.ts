@@ -103,7 +103,7 @@ test("bridge falls back to estimated scene duration when voice duration is inval
 
 
 test("generated timeline prefers the latest asset when legacy duplicates exist", () => {
-  const project=buildContentProject({topic:"Legacy duplicate assets",format:"short",language:"en",targetDurationSeconds:30},"One scene.");
+  const project=buildContentProject("legacy-duplicates","Legacy duplicate assets",{topic:"Legacy duplicate assets",format:"short",language:"en",targetDurationSeconds:30},"One scene.");
   const scene=project.scenes[0];
   project.assetPlan={
     projectId:project.id,
