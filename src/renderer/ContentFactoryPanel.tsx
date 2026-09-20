@@ -79,6 +79,7 @@ export default function ContentFactoryPanel({
     setRendering(true);
     setPipelineStage("assets");
     setRenderProgress(0);
+    setAssetProgress({ completed:0, total:0, kind:undefined });
     setRenderedPath(null);
     setError(null);
     const unsubscribeAssets = window.videoEditor.onContentAssetProgress((progress) => {
@@ -203,7 +204,7 @@ export default function ContentFactoryPanel({
             <button className="primary" onClick={generateAndRender} disabled={rendering || !providerStatus.replicateConfigured || !providerStatus.elevenLabsConfigured}>
               {rendering ? (pipelineStage === "assets" ? "Generating images + voices..." : `Rendering ${Math.round(renderProgress * 100)}%...`) : "Generate Assets & Render MP4"}
             </button>
-            {rendering && <progress max={1} value={pipelineStage === "assets" ? undefined : renderProgress} aria-label="Pipeline progress" />}
+            {rendering && <progress max={1} value={pipelineStage === "assets" ? (assetProgress.total > 0 ? assetProgress.completed / assetProgress.total : undefined) : renderProgress} aria-label="Pipeline progress" />}
             {(!providerStatus.replicateConfigured || !providerStatus.elevenLabsConfigured) && <span className="muted">Add Replicate + ElevenLabs credentials to enable rendering.</span>}
             {pipelineStage === "assets" && <span className="muted">Replicate + ElevenLabs: {assetProgress.completed}/{assetProgress.total || "?"}{assetProgress.kind ? ` · ${assetProgress.kind}` : ""}</span>}
             {pipelineStage === "ready" && <span className="aiBadge readyBadge">Pipeline complete ✓</span>}
