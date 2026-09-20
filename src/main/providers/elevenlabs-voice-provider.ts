@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { AssetJob, GeneratedAsset } from "../shared/content-factory";
-import type { AssetGenerationContext, AssetProvider } from "./content-asset-provider";
+import type { AssetJob, GeneratedAsset } from "../../shared/content-factory";
+import type { AssetGenerationContext, AssetProvider } from "../content-asset-provider";
 import { getElevenLabsApiKey } from "../settings";
 import { probeDuration } from "../video/probe";
 
