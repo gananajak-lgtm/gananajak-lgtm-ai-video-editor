@@ -25,6 +25,7 @@ export default function ContentFactoryPanel({
   const [rendering, setRendering] = useState(false);
   const [renderProgress, setRenderProgress] = useState(0);
   const [renderedPath, setRenderedPath] = useState<string | null>(null);
+  const [copiedSceneId, setCopiedSceneId] = useState<string | null>(null);
 
   const generate = async () => {
     if (!topic.trim() || !aiConfigured) return;
@@ -75,6 +76,13 @@ export default function ContentFactoryPanel({
       unsubscribe();
       setRendering(false);
     }
+  };
+
+  const copyVideoPrompt = async (sceneId: string, prompt?: string) => {
+    if (!prompt) return;
+    await navigator.clipboard.writeText(prompt);
+    setCopiedSceneId(sceneId);
+    window.setTimeout(() => setCopiedSceneId((current) => current === sceneId ? null : current), 1500);
   };
 
   return (
@@ -166,6 +174,14 @@ export default function ContentFactoryPanel({
                 <div>
                   <p>{scene.narration}</p>
                   <small>{scene.imagePrompt}</small>
+                  {scene.videoPrompt && (
+                    <div className="keyRow">
+                      <button onClick={() => copyVideoPrompt(scene.id, scene.videoPrompt)}>
+                        {copiedSceneId === scene.id ? "Copied Meta prompt ✓" : "Copy Meta video prompt"}
+                      </button>
+                      <span className="aiBadge">Waiting for Meta video</span>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
