@@ -209,10 +209,12 @@ ipcMain.handle("content:generate-project", async (_event, brief: ContentBrief) =
   return generateContentProject(brief);
 });
 
-ipcMain.handle("content:generate-assets", async (_event, project: import("../shared/content-factory").ContentProject) => {
+ipcMain.handle("content:generate-assets", async (event, project: import("../shared/content-factory").ContentProject) => {
   const planned = project.assetPlan ?? buildAssetPlan(project, { includeVideo: true, includeSfx: false });
   const workDir = path.join(app.getPath("userData"), "content-assets", project.id);
-  const assetPlan = await runAssetPlan(planned, createDefaultAssetProviderRegistry(), workDir);
+  const assetPlan = await runAssetPlan(planned, createDefaultAssetProviderRegistry(), workDir, (progress) => {
+    if (!event.sender.isDestroyed()) event.sender.send("content:asset-progress", progress);
+  });
   return { ...project, assetPlan, updatedAt: new Date().toISOString() };
 });
 
