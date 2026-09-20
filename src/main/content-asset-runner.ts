@@ -21,7 +21,10 @@ export async function runAssetPlan(
     const job = queue.next();
     if (!job) break;
     if (!runnableKinds.has(job.kind)) {
-      queue.fail(job.id, `No automatic provider configured for ${job.kind}; optional job skipped.`);
+      // Manual/optional jobs stay queued so they can be completed later (for example Meta video import).
+      const remainingRunnable = queue.snapshot().some((candidate) => candidate.status === "queued" && runnableKinds.has(candidate.kind));
+      if (!remainingRunnable) break;
+      queue.fail(job.id, `Optional ${job.kind} job deferred; no automatic provider configured.`);
       continue;
     }
     queue.markRunning(job.id);
