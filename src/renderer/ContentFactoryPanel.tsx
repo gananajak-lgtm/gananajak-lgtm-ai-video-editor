@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type {
   ContentFormat,
   ContentLanguage,
@@ -24,6 +24,18 @@ export default function ContentFactoryPanel({
   const [error, setError] = useState<string | null>(null);
   const [rendering, setRendering] = useState(false);
   const [pipelineStage, setPipelineStage] = useState<"idle" | "assets" | "render" | "ready">("idle");
+  const [providerStatus, setProviderStatus] = useState<ContentProviderStatus>({ replicateConfigured:false, elevenLabsConfigured:false });
+  const [replicateToken, setReplicateToken] = useState("");
+  const [elevenLabsKey, setElevenLabsKey] = useState("");
+
+  useEffect(() => { void window.videoEditor.getContentProviderStatus().then(setProviderStatus); }, []);
+
+  const saveProviderKeys = async () => {
+    let status = providerStatus;
+    if (replicateToken.trim()) status = await window.videoEditor.saveReplicateApiToken(replicateToken);
+    if (elevenLabsKey.trim()) status = await window.videoEditor.saveElevenLabsApiKey(elevenLabsKey);
+    setProviderStatus(status); setReplicateToken(""); setElevenLabsKey("");
+  };
   const [renderProgress, setRenderProgress] = useState(0);
   const [renderedPath, setRenderedPath] = useState<string | null>(null);
   const [copiedSceneId, setCopiedSceneId] = useState<string | null>(null);
@@ -156,7 +168,12 @@ export default function ContentFactoryPanel({
         </button>
       </div>
 
-      {error && <div className="message errorMessage">{error}</div>}
+      <div className="keyRow">
+        <input type="password" value={replicateToken} onChange={(e) => setReplicateToken(e.target.value)} placeholder={providerStatus.replicateConfigured ? "Replicate token saved ✓" : "Replicate API token"} />
+        <input type="password" value={elevenLabsKey} onChange={(e) => setElevenLabsKey(e.target.value)} placeholder={providerStatus.elevenLabsConfigured ? "ElevenLabs key saved ✓" : "ElevenLabs API key"} />
+        <button onClick={saveProviderKeys} disabled={!replicateToken.trim() && !elevenLabsKey.trim()}>Save provider keys</button>
+      </div>
+            {error && <div className="message errorMessage">{error}</div>}
 
       {project && (
         <div className="transcriptPanel">
