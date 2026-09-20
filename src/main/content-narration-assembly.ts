@@ -21,6 +21,11 @@ export function buildNarrationAssemblyPlan(
     throw new Error("Narration assembly requires one voice asset per scene.");
   }
   const ordered = [...segments].sort((a, b) => a.start - b.start);
+  const expectedSceneIds = new Set(project.scenes.map((scene) => scene.id));
+  const segmentSceneIds = new Set(ordered.map((segment) => segment.sceneId));
+  if (segmentSceneIds.size !== ordered.length || ordered.some((segment) => !expectedSceneIds.has(segment.sceneId))) {
+    throw new Error("Narration assembly requires exactly one matching voice asset per scene.");
+  }
   return {
     projectId: project.id,
     outputPath,
