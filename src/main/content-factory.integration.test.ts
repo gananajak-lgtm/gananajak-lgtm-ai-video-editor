@@ -33,6 +33,9 @@ test("content factory flows from topic project through generated assets into a r
   const firstScene = project.scenes[0];
   const videoJob = generated.jobs.find((job) => job.sceneId === firstScene.id && job.kind === "video");
   assert.ok(videoJob);
+  assert.equal(videoJob.status,"queued");
+  assert.ok(generated.jobs.filter((job) => job.kind === "image" || job.kind === "voice").every((job) => job.status === "succeeded"));
+  assert.ok(generated.jobs.filter((job) => job.kind === "video").every((job) => job.status === "queued"));
   const metaAsset = {
     id:`asset-${videoJob.id}-meta`,
     projectId:project.id,
@@ -53,4 +56,8 @@ test("content factory flows from topic project through generated assets into a r
   assert.equal(timeline.subtitles?.length,project.scenes.length);
   assert.equal(timeline.width,1080);
   assert.equal(timeline.height,1920);
+  assert.equal(timeline.duration,project.scenes.length * 6);
+  assert.ok(timeline.clips.every((clip) => clip.duration === 6));
+  assert.equal(timeline.subtitles?.[0]?.start,0);
+  assert.equal(timeline.subtitles?.at(-1)?.end,timeline.duration);
 });
