@@ -7,11 +7,13 @@ import type {
 
 type Props = {
   aiConfigured: boolean;
+  project: ContentProject | null;
   onGenerated: (project: ContentProject) => void;
 };
 
 export default function ContentFactoryPanel({
   aiConfigured,
+  project,
   onGenerated
 }: Props) {
   const [topic, setTopic] = useState("");
@@ -19,7 +21,6 @@ export default function ContentFactoryPanel({
   const [language, setLanguage] = useState<ContentLanguage>("th");
   const [duration, setDuration] = useState(60);
   const [generating, setGenerating] = useState(false);
-  const [project, setProject] = useState<ContentProject | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const generate = async () => {
@@ -38,7 +39,6 @@ export default function ContentFactoryPanel({
         audience: "general online video audience"
       });
 
-      setProject(result);
       onGenerated(result);
     } catch (generateError) {
       setError(
