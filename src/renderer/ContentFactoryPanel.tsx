@@ -4,6 +4,7 @@ import type {
   ContentLanguage,
   ContentProject
 } from "../shared/content-factory";
+import type { ContentProviderStatus } from "../shared/types";
 
 type Props = {
   aiConfigured: boolean;
