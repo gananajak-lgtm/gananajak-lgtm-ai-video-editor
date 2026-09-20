@@ -1,4 +1,5 @@
 import { copyFile, mkdir } from "node:fs/promises";
+import { probeDuration } from "../video/probe";
 import path from "node:path";
 import type { AssetJob, GeneratedAsset } from "../../shared/content-factory";
 
@@ -24,6 +25,7 @@ export async function importMetaVideo(job: AssetJob, inputPath: string, workDir:
   const extension = path.extname(inputPath) || ".mp4";
   const filePath = path.join(workDir, `${job.id}-meta${extension}`);
   await copyFile(inputPath, filePath);
+  const duration = await probeDuration(filePath);
   return {
     id: `asset-${job.id}-meta`,
     projectId: job.projectId,
@@ -32,6 +34,7 @@ export async function importMetaVideo(job: AssetJob, inputPath: string, workDir:
     filePath,
     provider: "meta-ai-manual",
     source: "meta-manual",
-    sourcePrompt: job.prompt
+    sourcePrompt: job.prompt,
+    duration
   };
 }
