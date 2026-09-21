@@ -61,6 +61,11 @@ const api: DesktopApi = {
   chooseOutput: () => ipcRenderer.invoke("render:choose-output"),
   renderTimeline: (plan: TimelinePlan, outputPath: string) =>
     ipcRenderer.invoke("render:timeline", plan, outputPath),
+  onContentBatchProgress: (listener) => {
+    const handler = (_event: IpcRendererEvent, progress: Parameters<typeof listener>[0]) => listener(progress);
+    ipcRenderer.on("content:batch-progress", handler);
+    return () => ipcRenderer.removeListener("content:batch-progress", handler);
+  },
   onContentAssetProgress: (listener) => {
     const handler = (
       _event: IpcRendererEvent,
