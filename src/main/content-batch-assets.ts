@@ -28,6 +28,7 @@ export async function generateBatchAssets(
     if (!item.project || item.status === "assets-ready" || (item.status !== "ready" && item.status !== "failed")) continue;
     item.status = "generating-assets";
     item.error = undefined;
+    item.failedStage = undefined;
     onProgress?.({ completed, total, item: { ...item } });
     try {
       const project: ContentProject = item.project;
@@ -40,12 +41,14 @@ export async function generateBatchAssets(
       if (failed.length) {
         item.status = "failed";
         item.error = failed.map((job) => job.error ?? `${job.kind} failed`).join("; ");
+        item.failedStage = "assets";
       } else {
         item.status = "assets-ready";
       }
     } catch (error) {
       item.status = "failed";
       item.error = error instanceof Error ? error.message : String(error);
+      item.failedStage = "assets";
     }
     completed += 1;
     onProgress?.({ completed, total, item: { ...item } });
