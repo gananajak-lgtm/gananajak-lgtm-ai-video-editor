@@ -27,6 +27,8 @@ export default function ContentFactoryPanel({
   const [batch, setBatch] = useState<ContentBatch | null>(null);
   const [batchGenerating, setBatchGenerating] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ completed:0, total:0 });
+  const [batchAssetsRunning, setBatchAssetsRunning] = useState(false);
+  const [batchAssetProgress, setBatchAssetProgress] = useState({ completed:0, total:0, assetCompleted:0, assetTotal:0 });
   const [error, setError] = useState<string | null>(null);
   const [rendering, setRendering] = useState(false);
   const [pipelineStage, setPipelineStage] = useState<"idle" | "assets" | "render" | "ready">("idle");
@@ -119,6 +121,24 @@ export default function ContentFactoryPanel({
     } finally {
       unsubscribeBatch();
       setBatchGenerating(false);
+    }
+  };
+
+  const generateBatchAssets = async () => {
+    if (!batch || batchAssetsRunning || !providerStatus.replicateConfigured || !providerStatus.elevenLabsConfigured) return;
+    setBatchAssetsRunning(true);
+    setError(null);
+    const unsubscribe = window.videoEditor.onContentBatchAssetProgress((progress) => {
+      setBatchAssetProgress({ completed:progress.completed, total:progress.total, assetCompleted:progress.assetCompleted ?? 0, assetTotal:progress.assetTotal ?? 0 });
+      setBatch((current) => current ? { ...current, items:current.items.map((item) => item.id === progress.item.id ? progress.item : item) } : current);
+    });
+    try {
+      setBatch(await window.videoEditor.generateContentBatchAssets(batch));
+    } catch (assetError) {
+      setError(assetError instanceof Error ? assetError.message : String(assetError));
+    } finally {
+      unsubscribe();
+      setBatchAssetsRunning(false);
     }
   };
 
@@ -247,7 +267,8 @@ export default function ContentFactoryPanel({
             {batchGenerating ? `Preparing ${batchProgress.completed}/${batchProgress.total}...` : "Create batch projects"}
           </button>
           {batchGenerating && <progress max={Math.max(1, batchProgress.total)} value={batchProgress.completed} aria-label="Batch project progress" />}
-          {batch?.items.some((item) => item.status === "failed") && <button disabled={batchGenerating} onClick={retryFailedBatch}>Retry failed only</button>}
+          {batch?.items.some((item) => item.status === "failed") && <button disabled={batchGenerating || batchAssetsRunning} onClick={retryFailedBatch}>Retry failed only</button>}
+          {batch?.items.some((item) => item.project && item.status === "ready") && <button className="primary" disabled={batchGenerating || batchAssetsRunning || !providerStatus.replicateConfigured || !providerStatus.elevenLabsConfigured} onClick={generateBatchAssets}>{batchAssetsRunning ? `Assets ${batchAssetProgress.completed}/${batchAssetProgress.total} · ${batchAssetProgress.assetCompleted}/${batchAssetProgress.assetTotal || "?"}` : "Generate batch assets"}</button>}
           <span className="muted">Up to 50 topics per batch</span>
         </div>
         {batch && (
@@ -257,7 +278,7 @@ export default function ContentFactoryPanel({
                 <span>#{String(index + 1).padStart(2, "0")}</span>
                 <div>
                   <strong>{item.brief.topic}</strong>
-                  <p className="muted">{item.status === "ready" ? `Ready · ${item.project?.scenes.length ?? 0} scenes` : item.status}{item.error ? ` · ${item.error}` : ""}</p>
+                  <p className="muted">{item.status === "ready" ? `Ready · ${item.project?.scenes.length ?? 0} scenes` : item.status === "assets-ready" ? `Assets ready · ${item.project?.scenes.length ?? 0} scenes` : item.status}{item.error ? ` · ${item.error}` : ""}</p>
                   {item.project && <button onClick={() => onGenerated(item.project!)}>Open project</button>}
                 </div>
               </div>
