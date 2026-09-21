@@ -74,7 +74,7 @@ export type ContentProject = {
   assetPlan?: AssetPlan;
 };
 
-export type ContentBatchStatus = "queued" | "preparing" | "ready" | "generating-assets" | "assets-ready" | "failed";
+export type ContentBatchStatus = "queued" | "preparing" | "ready" | "generating-assets" | "assets-ready" | "rendering" | "rendered" | "failed";
 
 export type ContentBatchItem = {
   id: string;
@@ -82,6 +82,7 @@ export type ContentBatchItem = {
   status: ContentBatchStatus;
   project?: ContentProject;
   error?: string;
+  outputPath?: string;
 };
 
 export type ContentBatch = {
