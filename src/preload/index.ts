@@ -38,6 +38,7 @@ const api: DesktopApi = {
     ipcRenderer.invoke("content:generate-project", brief),
   prepareContentBatch: (briefs) =>
     ipcRenderer.invoke("content:prepare-batch", briefs),
+  loadContentBatch: () => ipcRenderer.invoke("content:load-batch"),
   resumeContentBatch: (batch) =>
     ipcRenderer.invoke("content:resume-batch", batch),
   generateContentBatchAssets: (batch) =>
