@@ -21,13 +21,13 @@ export async function prepareContentBatch(
   onProgress?: (completed: number, total: number, item: ContentBatchItem) => void
 ): Promise<ContentBatch> {
   const items = batch.items.map((item) => ({ ...item }));
-  let completed = items.filter((item) => item.status === "ready").length;
+  let completed = items.filter((item) => item.status !== "queued" && !(item.status === "failed" && item.failedStage === "project")).length;
   const initialItem = items.find((item) => item.status !== "ready") ?? items[items.length - 1];
   if (initialItem) onProgress?.(completed, items.length, initialItem);
 
   for (let index = 0; index < items.length; index += 1) {
     const item = items[index];
-    if (item.status === "ready") continue;
+    if (item.status !== "queued" && !(item.status === "failed" && item.failedStage === "project")) continue;
     item.status = "preparing";
     item.error = undefined;
     item.failedStage = undefined;
