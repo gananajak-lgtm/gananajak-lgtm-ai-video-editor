@@ -12,6 +12,7 @@ import { runAssetPlan } from "./content-asset-runner";
 import { buildAssetPlan } from "./content-asset-planner";
 import { createContentBatch, prepareContentBatch } from "./content-batch";
 import { generateBatchAssets } from "./content-batch-assets";
+import { renderContentBatch } from "./content-batch-render";
 import {
   createPlaybackUrl,
   installMediaProtocol
@@ -221,6 +222,20 @@ ipcMain.handle("content:resume-batch", async (event, batch: import("../shared/co
   return prepareContentBatch(batch, generateContentProject, (completed, total, item) => {
     if (!event.sender.isDestroyed()) event.sender.send("content:batch-progress", { completed, total, item });
   });
+});
+
+ipcMain.handle("content:choose-batch-output", async () => {
+  const result = await dialog.showOpenDialog({ title:"Choose folder for batch videos", properties:["openDirectory","createDirectory"] });
+  return result.canceled ? null : result.filePaths[0] ?? null;
+});
+
+ipcMain.handle("content:render-batch", async (event, batch: import("../shared/content-factory").ContentBatch, outputDir:string) => {
+  const workRoot=path.join(app.getPath("temp"),"gananajak-content-factory","batch-render");
+  const result=await renderContentBatch(batch,outputDir,workRoot,(progress)=>{
+    if(!event.sender.isDestroyed()) event.sender.send("content:batch-render-progress",progress);
+  });
+  if(result.items.some(item=>item.status==="rendered")) await shell.openPath(outputDir);
+  return result;
 });
 
 ipcMain.handle("content:generate-batch-assets", async (event, batch: import("../shared/content-factory").ContentBatch) => {
