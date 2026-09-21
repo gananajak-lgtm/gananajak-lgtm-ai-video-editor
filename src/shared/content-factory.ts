@@ -83,6 +83,7 @@ export type ContentBatchItem = {
   project?: ContentProject;
   error?: string;
   outputPath?: string;
+  failedStage?: "project" | "assets" | "render";
 };
 
 export type ContentBatch = {
