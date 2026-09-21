@@ -1,21 +1,5 @@
-import type { ContentBrief, ContentProject } from "../shared/content-factory";
+import type { ContentBatch, ContentBatchItem, ContentBrief, ContentProject } from "../shared/content-factory";
 
-export type ContentBatchStatus = "queued" | "preparing" | "ready" | "failed";
-
-export type ContentBatchItem = {
-  id: string;
-  brief: ContentBrief;
-  status: ContentBatchStatus;
-  project?: ContentProject;
-  error?: string;
-};
-
-export type ContentBatch = {
-  id: string;
-  createdAt: string;
-  updatedAt: string;
-  items: ContentBatchItem[];
-};
 
 export function createContentBatch(briefs: ContentBrief[]): ContentBatch {
   const now = new Date().toISOString();
