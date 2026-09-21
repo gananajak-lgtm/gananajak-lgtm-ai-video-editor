@@ -30,12 +30,14 @@ export async function prepareContentBatch(
     if (item.status === "ready") continue;
     item.status = "preparing";
     item.error = undefined;
+    item.failedStage = undefined;
     try {
       item.project = await createProject(item.brief);
       item.status = "ready";
     } catch (error) {
       item.status = "failed";
       item.error = error instanceof Error ? error.message : String(error);
+      item.failedStage = "project";
     }
     completed += 1;
     onProgress?.(completed, items.length, item);
