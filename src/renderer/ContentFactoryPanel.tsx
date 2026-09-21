@@ -49,6 +49,7 @@ export default function ContentFactoryPanel({
   const [assetProgress, setAssetProgress] = useState({ completed:0, total:0, kind:undefined as string | undefined });
   const [renderProgress, setRenderProgress] = useState(0);
   const [renderedPath, setRenderedPath] = useState<string | null>(null);
+  const [oneClickRunning, setOneClickRunning] = useState(false);
   const [copiedSceneId, setCopiedSceneId] = useState<string | null>(null);
 
   const generate = async () => {
@@ -76,6 +77,32 @@ export default function ContentFactoryPanel({
       );
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const createVideoOneClick = async () => {
+    if (!topic.trim() || !aiConfigured || oneClickRunning) return;
+    if (!providerStatus.replicateConfigured || !providerStatus.elevenLabsConfigured) {
+      setError("Configure both Replicate and ElevenLabs before creating a video.");
+      return;
+    }
+    const outputPath = await window.videoEditor.chooseOutput();
+    if (!outputPath) return;
+    setOneClickRunning(true); setGenerating(true); setRendering(true); setError(null); setRenderedPath(null); setRenderProgress(0); setPipelineStage("assets");
+    const unsubscribeAssets = window.videoEditor.onContentAssetProgress((progress) => setAssetProgress({ completed:progress.completed, total:progress.total, kind:progress.kind }));
+    const unsubscribeRender = window.videoEditor.onRenderProgress((progress) => setRenderProgress(Math.max(0, Math.min(1, progress.progress))));
+    try {
+      const planned = await window.videoEditor.generateContentProject({ topic:topic.trim(), format, language, targetDurationSeconds:Math.max(10,duration), tone:"cinematic documentary", audience:"general online video audience" });
+      onGenerated(planned);
+      const prepared = await window.videoEditor.generateContentAssets(planned);
+      onGenerated(prepared);
+      setPipelineStage("render");
+      const result = await window.videoEditor.assembleAndRenderContent(prepared, outputPath);
+      setRenderedPath(result.outputPath); setRenderProgress(1); setPipelineStage("ready");
+    } catch (createError) {
+      setError(createError instanceof Error ? createError.message : String(createError)); setPipelineStage("idle");
+    } finally {
+      unsubscribeAssets(); unsubscribeRender(); setGenerating(false); setRendering(false); setOneClickRunning(false);
     }
   };
 
@@ -264,6 +291,9 @@ export default function ContentFactoryPanel({
           onClick={generate}
         >
           {generating ? "Planning video..." : "Create script + scenes"}
+        </button>
+        <button className="primary" disabled={!aiConfigured || !topic.trim() || oneClickRunning || !providerStatus.replicateConfigured || !providerStatus.elevenLabsConfigured} onClick={createVideoOneClick}>
+          {oneClickRunning ? (pipelineStage === "render" ? `Rendering ${Math.round(renderProgress * 100)}%...` : "Creating video...") : "Create Video (One Click)"}
         </button>
       </div>
 
