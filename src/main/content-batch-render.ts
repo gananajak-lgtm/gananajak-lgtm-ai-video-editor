@@ -43,7 +43,7 @@ export async function renderContentBatch(
       if(!report.passed) throw new Error(report.diagnostics.filter(d=>d.level==="error").map(d=>d.message).join("; ") || "Rendered output failed verification.");
       item.status="rendered"; item.outputPath=rendered;
     }catch(error){
-      item.status="failed"; item.error=error instanceof Error?error.message:String(error);
+      item.status="failed"; item.error=error instanceof Error?error.message:String(error); item.failedStage="render";
     }
     completed+=1;
     onProgress?.({completed,total,item:{...item},renderProgress:item.status==="rendered"?1:undefined});
