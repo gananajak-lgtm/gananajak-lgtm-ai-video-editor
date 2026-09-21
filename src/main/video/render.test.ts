@@ -53,10 +53,9 @@ test("image-only scene keeps image motion rendering", () => {
 
 
 test("video filter supports compact visual input bindings without dummy inputs", () => {
-  const plan = makePlan([
-    { id:"short-meta", imagePath:"/tmp/fallback.png", videoPath:"/tmp/meta.mp4", videoDuration:5, start:0, duration:7.5, motion:"hold" }
-  ]);
-  const result = createVideoFilter(plan,null,[{primary:0,fallback:1}]);
+  const value = plan();
+  value.clips[0] = { id:"short-meta", imagePath:"/tmp/fallback.png", videoPath:"/tmp/meta.mp4", videoDuration:5, start:0, duration:7.5, motion:"hold" };
+  const result = createVideoFilter(value,null,[{primary:0,fallback:1}]);
   assert.match(result.filters[0],/^\[0:v\]/);
   assert.match(result.filters[0],/\[1:v\]/);
   assert.doesNotMatch(result.filters[0],/\[2:v\]/);
