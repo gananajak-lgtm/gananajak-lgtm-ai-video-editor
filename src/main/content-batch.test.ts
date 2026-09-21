@@ -22,7 +22,9 @@ test("prepares multiple topics independently and keeps failures resumable", asyn
   assert.equal(first.items[1].error,"temporary failure");
 
   let calls=0;
-  const resumed=await prepareContentBatch(first,async (b)=>{calls+=1;return project(b);});
+  const progress:number[]=[];
+  const resumed=await prepareContentBatch(first,async (b)=>{calls+=1;return project(b);},(completed,total)=>{ assert.ok(completed<=total); progress.push(completed); });
   assert.equal(calls,1);
   assert.deepEqual(resumed.items.map(i=>i.status),["ready","ready","ready"]);
+  assert.deepEqual(progress,[2,3]);
 });
