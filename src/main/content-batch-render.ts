@@ -25,12 +25,12 @@ export async function renderContentBatch(
 ):Promise<ContentBatch>{
   await mkdir(outputDir,{recursive:true});
   const items=batch.items.map(item=>({...item}));
-  const runnable=items.filter(item=>item.project && (item.status==="assets-ready" || item.status==="failed"));
+  const runnable=items.filter(item=>item.project && (item.status==="assets-ready" || (item.status==="failed" && item.failedStage==="render")));
   let completed=items.filter(item=>item.status==="rendered").length;
   const total=completed+runnable.length;
   for(const item of items){
-    if(!item.project || item.status==="rendered" || (item.status!=="assets-ready" && item.status!=="failed")) continue;
-    item.status="rendering"; item.error=undefined;
+    if(!item.project || item.status==="rendered" || (item.status!=="assets-ready" && !(item.status==="failed" && item.failedStage==="render"))) continue;
+    item.status="rendering"; item.error=undefined; item.failedStage=undefined;
     onProgress?.({completed,total,item:{...item},renderProgress:0});
     try{
       const workDir=path.join(workRoot,item.project.id);
@@ -41,7 +41,7 @@ export async function renderContentBatch(
       });
       const report=await verifyRenderedOutput(assembled.timeline,rendered);
       if(!report.passed) throw new Error(report.diagnostics.filter(d=>d.level==="error").map(d=>d.message).join("; ") || "Rendered output failed verification.");
-      item.status="rendered"; item.outputPath=rendered;
+      item.status="rendered"; item.outputPath=rendered; item.failedStage=undefined;
     }catch(error){
       item.status="failed"; item.error=error instanceof Error?error.message:String(error); item.failedStage="render";
     }
