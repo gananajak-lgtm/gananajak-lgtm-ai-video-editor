@@ -103,6 +103,25 @@ export default function ContentFactoryPanel({
     }
   };
 
+  const retryFailedBatch = async () => {
+    if (!batch || batchGenerating || !batch.items.some((item) => item.status === "failed")) return;
+    setBatchGenerating(true);
+    setBatchProgress({ completed:batch.items.filter((item) => item.status === "ready").length, total:batch.items.length });
+    setError(null);
+    const unsubscribeBatch = window.videoEditor.onContentBatchProgress((progress) => {
+      setBatchProgress({ completed:progress.completed, total:progress.total });
+      setBatch((current) => current ? { ...current, items:current.items.map((item) => item.id === progress.item.id ? progress.item : item) } : current);
+    });
+    try {
+      setBatch(await window.videoEditor.resumeContentBatch(batch));
+    } catch (retryError) {
+      setError(retryError instanceof Error ? retryError.message : String(retryError));
+    } finally {
+      unsubscribeBatch();
+      setBatchGenerating(false);
+    }
+  };
+
   const generateAndRender = async () => {
     if (!project) return;
     if (!providerStatus.replicateConfigured || !providerStatus.elevenLabsConfigured) {
@@ -228,6 +247,7 @@ export default function ContentFactoryPanel({
             {batchGenerating ? `Preparing ${batchProgress.completed}/${batchProgress.total}...` : "Create batch projects"}
           </button>
           {batchGenerating && <progress max={Math.max(1, batchProgress.total)} value={batchProgress.completed} aria-label="Batch project progress" />}
+          {batch?.items.some((item) => item.status === "failed") && <button disabled={batchGenerating} onClick={retryFailedBatch}>Retry failed only</button>}
           <span className="muted">Up to 50 topics per batch</span>
         </div>
         {batch && (
