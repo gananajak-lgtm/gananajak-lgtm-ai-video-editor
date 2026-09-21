@@ -1,5 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell } from "electron";
 import path from "node:path";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import type { ContentBrief } from "../shared/content-factory";
 import type { AudioAsset, ProjectDocument, SceneBlock, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
 import { generateContentProject } from "./ai/contentGeneration";
@@ -212,14 +213,20 @@ ipcMain.handle("content:generate-project", async (_event, brief: ContentBrief) =
   return generateContentProject(brief);
 });
 
+const batchStatePath = () => path.join(app.getPath("userData"), "content-factory", "last-batch.json");
+async function saveBatchState(batch: import("../shared/content-factory").ContentBatch) { await mkdir(path.dirname(batchStatePath()), { recursive:true }); await writeFile(batchStatePath(), JSON.stringify(batch, null, 2), "utf8"); return batch; }
+async function loadBatchState() { try { return JSON.parse(await readFile(batchStatePath(), "utf8")) as import("../shared/content-factory").ContentBatch; } catch { return null; } }
+ipcMain.handle("content:load-batch", loadBatchState);
+
 ipcMain.handle("content:prepare-batch", async (event, briefs: ContentBrief[]) => {
-  return prepareContentBatch(createContentBatch(briefs), generateContentProject, (completed, total, item) => {
+  const result = await prepareContentBatch(createContentBatch(briefs), generateContentProject, (completed, total, item) => {
     if (!event.sender.isDestroyed()) event.sender.send("content:batch-progress", { completed, total, item });
   });
+  return saveBatchState(result);
 });
 
 ipcMain.handle("content:resume-batch", async (event, batch: import("../shared/content-factory").ContentBatch) => {
-  return prepareContentBatch(batch, generateContentProject, (completed, total, item) => {
+  const result = await prepareContentBatch(batch, generateContentProject, (completed, total, item) => {
     if (!event.sender.isDestroyed()) event.sender.send("content:batch-progress", { completed, total, item });
   });
 });
@@ -235,14 +242,15 @@ ipcMain.handle("content:render-batch", async (event, batch: import("../shared/co
     if(!event.sender.isDestroyed()) event.sender.send("content:batch-render-progress",progress);
   });
   if(result.items.some(item=>item.status==="rendered")) await shell.openPath(outputDir);
-  return result;
+  return saveBatchState(result);
 });
 
 ipcMain.handle("content:generate-batch-assets", async (event, batch: import("../shared/content-factory").ContentBatch) => {
   const rootDir = path.join(app.getPath("userData"), "content-assets");
-  return generateBatchAssets(batch, createDefaultAssetProviderRegistry(), rootDir, (progress) => {
+  const result = await generateBatchAssets(batch, createDefaultAssetProviderRegistry(), rootDir, (progress) => {
     if (!event.sender.isDestroyed()) event.sender.send("content:batch-asset-progress", progress);
   });
+  return saveBatchState(result);
 });
 
 ipcMain.handle("content:generate-assets", async (event, project: import("../shared/content-factory").ContentProject) => {
