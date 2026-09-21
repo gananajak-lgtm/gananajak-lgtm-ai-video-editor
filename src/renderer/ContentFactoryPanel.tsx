@@ -159,6 +159,29 @@ export default function ContentFactoryPanel({
     finally { unsubscribePlan(); unsubscribeAssets(); unsubscribeRender(); setBatchOneClickRunning(false); }
   };
 
+  const resumeBatchOneClick = async () => {
+    if (!batch || batchOneClickRunning) return;
+    if (!providerStatus.replicateConfigured || !providerStatus.elevenLabsConfigured) { setError("Configure both Replicate and ElevenLabs before resuming batch videos."); return; }
+    const needsRender = batch.items.some((item) => item.status === "assets-ready" || (item.status === "failed" && item.failedStage === "render"));
+    const outputDir = needsRender ? await window.videoEditor.chooseBatchOutputFolder() : null;
+    if (needsRender && !outputDir) return;
+    setBatchOneClickRunning(true); setError(null);
+    try {
+      let current = batch;
+      if (current.items.some((item) => item.status === "queued" || (item.status === "failed" && item.failedStage === "project"))) {
+        current = await window.videoEditor.resumeContentBatch(current); setBatch(current);
+      }
+      if (current.items.some((item) => item.status === "ready" || (item.status === "failed" && item.failedStage === "assets"))) {
+        current = await window.videoEditor.generateContentBatchAssets(current); setBatch(current);
+      }
+      if (current.items.some((item) => item.status === "assets-ready" || (item.status === "failed" && item.failedStage === "render"))) {
+        const dir = outputDir ?? await window.videoEditor.chooseBatchOutputFolder();
+        if (dir) { current = await window.videoEditor.renderContentBatch(current, dir); setBatch(current); }
+      }
+    } catch (resumeError) { setError(resumeError instanceof Error ? resumeError.message : String(resumeError)); }
+    finally { setBatchOneClickRunning(false); }
+  };
+
   const retryFailedBatch = async () => {
     if (!batch || batchGenerating || !batch.items.some((item) => item.status === "failed" && item.failedStage === "project")) return;
     setBatchGenerating(true);
@@ -338,7 +361,7 @@ export default function ContentFactoryPanel({
             {batchGenerating ? `Preparing ${batchProgress.completed}/${batchProgress.total}...` : "Create batch projects"}
           </button>
           {batchGenerating && <progress max={Math.max(1, batchProgress.total)} value={batchProgress.completed} aria-label="Batch project progress" />}
-          {batch?.items.some((item) => item.status === "failed" && item.failedStage === "project") && <button disabled={batchGenerating || batchAssetsRunning || batchRendering} onClick={retryFailedBatch}>Retry planning failures</button>}
+          {batch && batch.items.some((item) => item.status !== "rendered") && <button className="primary" disabled={batchGenerating || batchAssetsRunning || batchRendering || batchOneClickRunning} onClick={resumeBatchOneClick}>{batchOneClickRunning ? "Resuming remaining videos..." : "Resume Remaining (One Click)"}</button>}\n          {batch?.items.some((item) => item.status === "failed" && item.failedStage === "project") && <button disabled={batchGenerating || batchAssetsRunning || batchRendering} onClick={retryFailedBatch}>Retry planning failures</button>}
           {batch?.items.some((item) => item.status === "failed" && item.failedStage === "assets") && <button disabled={batchGenerating || batchAssetsRunning || batchRendering} onClick={generateBatchAssets}>Retry asset failures</button>}
           {batch?.items.some((item) => item.status === "failed" && item.failedStage === "render") && <button disabled={batchGenerating || batchAssetsRunning || batchRendering} onClick={renderBatch}>Retry render failures</button>}
           {batch?.items.some((item) => item.project && (item.status === "ready" || (item.status === "failed" && item.failedStage === "assets"))) && <button className="primary" disabled={batchGenerating || batchAssetsRunning || !providerStatus.replicateConfigured || !providerStatus.elevenLabsConfigured} onClick={generateBatchAssets}>{batchAssetsRunning ? `Assets ${batchAssetProgress.completed}/${batchAssetProgress.total} · ${batchAssetProgress.assetCompleted}/${batchAssetProgress.assetTotal || "?"}` : "Generate batch assets"}</button>}
