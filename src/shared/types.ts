@@ -1,4 +1,5 @@
 import type { ContentBrief, ContentProject } from "./content-factory";
+import type { ContentBatch } from "../main/content-batch";
 
 export type ProjectMedia = {
   images: string[];
@@ -318,6 +319,7 @@ export type DesktopApi = {
   saveReplicateApiToken: (token: string) => Promise<ContentProviderStatus>;
   saveElevenLabsApiKey: (apiKey: string) => Promise<ContentProviderStatus>;
   generateContentProject: (brief: ContentBrief) => Promise<ContentProject>;
+  prepareContentBatch: (briefs: ContentBrief[]) => Promise<ContentBatch>;
   importMetaVideo: (project: ContentProject, sceneId: string) => Promise<ContentProject | null>;
   generateContentAssets: (project: ContentProject) => Promise<ContentProject>;
   assembleAndRenderContent: (project: ContentProject, outputPath: string) => Promise<RenderResult & { narrationPath: string; timeline: TimelinePlan }>;
