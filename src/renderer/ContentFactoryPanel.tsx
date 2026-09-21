@@ -30,6 +30,7 @@ export default function ContentFactoryPanel({
   const [batchAssetsRunning, setBatchAssetsRunning] = useState(false);
   const [batchAssetProgress, setBatchAssetProgress] = useState({ completed:0, total:0, assetCompleted:0, assetTotal:0 });
   const [batchRendering, setBatchRendering] = useState(false);
+  const [batchOneClickRunning, setBatchOneClickRunning] = useState(false);
   const [batchRenderProgress, setBatchRenderProgress] = useState({ completed:0, total:0, renderProgress:0 });
   const [error, setError] = useState<string | null>(null);
   const [rendering, setRendering] = useState(false);
@@ -132,6 +133,27 @@ export default function ContentFactoryPanel({
       unsubscribeBatch();
       setBatchGenerating(false);
     }
+  };
+
+  const createBatchVideosOneClick = async () => {
+    const topics = batchTopics.split(/\\r?\\n/).map((value) => value.trim()).filter(Boolean).slice(0, 50);
+    if (!aiConfigured || topics.length === 0 || batchOneClickRunning) return;
+    if (!providerStatus.replicateConfigured || !providerStatus.elevenLabsConfigured) {
+      setError("Configure both Replicate and ElevenLabs before creating batch videos."); return;
+    }
+    const outputDir = await window.videoEditor.chooseBatchOutputFolder();
+    if (!outputDir) return;
+    setBatchOneClickRunning(true); setError(null);
+    const unsubscribePlan = window.videoEditor.onContentBatchProgress((progress) => { setBatchProgress({completed:progress.completed,total:progress.total}); setBatch((current)=>current?{...current,items:current.items.map((item)=>item.id===progress.item.id?progress.item:item)}:current); });
+    const unsubscribeAssets = window.videoEditor.onContentBatchAssetProgress((progress) => { setBatchAssetProgress({completed:progress.completed,total:progress.total,assetCompleted:progress.assetCompleted??0,assetTotal:progress.assetTotal??0}); setBatch((current)=>current?{...current,items:current.items.map((item)=>item.id===progress.item.id?progress.item:item)}:current); });
+    const unsubscribeRender = window.videoEditor.onContentBatchRenderProgress((progress) => { setBatchRenderProgress({completed:progress.completed,total:progress.total,renderProgress:progress.renderProgress??0}); setBatch((current)=>current?{...current,items:current.items.map((item)=>item.id===progress.item.id?progress.item:item)}:current); });
+    try {
+      const briefs = topics.map((batchTopic) => ({topic:batchTopic,format,language,targetDurationSeconds:Math.max(10,duration),tone:"cinematic documentary",audience:"general online video audience"}));
+      let current = await window.videoEditor.prepareContentBatch(briefs); setBatch(current);
+      current = await window.videoEditor.generateContentBatchAssets(current); setBatch(current);
+      current = await window.videoEditor.renderContentBatch(current, outputDir); setBatch(current);
+    } catch (batchError) { setError(batchError instanceof Error ? batchError.message : String(batchError)); }
+    finally { unsubscribePlan(); unsubscribeAssets(); unsubscribeRender(); setBatchOneClickRunning(false); }
   };
 
   const retryFailedBatch = async () => {
@@ -309,7 +331,7 @@ export default function ContentFactoryPanel({
         </div>
         <textarea value={batchTopics} onChange={(event) => setBatchTopics(event.target.value)} placeholder={"Island of the Dolls\\nAokigahara Forest\\nMary Celeste"} rows={6} />
         <div className="keyRow">
-          <button className="primary" disabled={!aiConfigured || !batchTopics.trim() || batchGenerating} onClick={generateBatch}>
+          <button className="primary" disabled={!aiConfigured || !batchTopics.trim() || batchOneClickRunning || !providerStatus.replicateConfigured || !providerStatus.elevenLabsConfigured} onClick={createBatchVideosOneClick}>{batchOneClickRunning ? "Creating batch videos..." : "Create Batch Videos (One Click)"}</button>\n          <button className="primary" disabled={!aiConfigured || !batchTopics.trim() || batchGenerating || batchOneClickRunning} onClick={generateBatch}>
             {batchGenerating ? `Preparing ${batchProgress.completed}/${batchProgress.total}...` : "Create batch projects"}
           </button>
           {batchGenerating && <progress max={Math.max(1, batchProgress.total)} value={batchProgress.completed} aria-label="Batch project progress" />}
