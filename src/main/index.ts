@@ -11,6 +11,7 @@ import { createDefaultAssetProviderRegistry } from "./providers/default-provider
 import { runAssetPlan } from "./content-asset-runner";
 import { buildAssetPlan } from "./content-asset-planner";
 import { createContentBatch, prepareContentBatch } from "./content-batch";
+import { generateBatchAssets } from "./content-batch-assets";
 import {
   createPlaybackUrl,
   installMediaProtocol
@@ -219,6 +220,13 @@ ipcMain.handle("content:prepare-batch", async (event, briefs: ContentBrief[]) =>
 ipcMain.handle("content:resume-batch", async (event, batch: import("../shared/content-factory").ContentBatch) => {
   return prepareContentBatch(batch, generateContentProject, (completed, total, item) => {
     if (!event.sender.isDestroyed()) event.sender.send("content:batch-progress", { completed, total, item });
+  });
+});
+
+ipcMain.handle("content:generate-batch-assets", async (event, batch: import("../shared/content-factory").ContentBatch) => {
+  const rootDir = path.join(app.getPath("userData"), "content-assets");
+  return generateBatchAssets(batch, createDefaultAssetProviderRegistry(), rootDir, (progress) => {
+    if (!event.sender.isDestroyed()) event.sender.send("content:batch-asset-progress", progress);
   });
 });
 
