@@ -10,6 +10,7 @@ import { importMetaVideo } from "./providers/meta-manual-video-provider";
 import { createDefaultAssetProviderRegistry } from "./providers/default-provider-registry";
 import { runAssetPlan } from "./content-asset-runner";
 import { buildAssetPlan } from "./content-asset-planner";
+import { createContentBatch, prepareContentBatch } from "./content-batch";
 import {
   createPlaybackUrl,
   installMediaProtocol
@@ -207,6 +208,10 @@ ipcMain.handle("content:save-elevenlabs-key", async (_event, apiKey: string) => 
 
 ipcMain.handle("content:generate-project", async (_event, brief: ContentBrief) => {
   return generateContentProject(brief);
+});
+
+ipcMain.handle("content:prepare-batch", async (_event, briefs: ContentBrief[]) => {
+  return prepareContentBatch(createContentBatch(briefs), generateContentProject);
 });
 
 ipcMain.handle("content:generate-assets", async (event, project: import("../shared/content-factory").ContentProject) => {
