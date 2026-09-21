@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type {
+  ContentBatch,
   ContentFormat,
   ContentLanguage,
   ContentProject
@@ -22,6 +23,9 @@ export default function ContentFactoryPanel({
   const [language, setLanguage] = useState<ContentLanguage>("th");
   const [duration, setDuration] = useState(60);
   const [generating, setGenerating] = useState(false);
+  const [batchTopics, setBatchTopics] = useState("");
+  const [batch, setBatch] = useState<ContentBatch | null>(null);
+  const [batchGenerating, setBatchGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rendering, setRendering] = useState(false);
   const [pipelineStage, setPipelineStage] = useState<"idle" | "assets" | "render" | "ready">("idle");
@@ -67,6 +71,28 @@ export default function ContentFactoryPanel({
       );
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const generateBatch = async () => {
+    const topics = batchTopics.split(/\\r?\\n/).map((value) => value.trim()).filter(Boolean).slice(0, 50);
+    if (!aiConfigured || topics.length === 0) return;
+    setBatchGenerating(true);
+    setError(null);
+    try {
+      const result = await window.videoEditor.prepareContentBatch(topics.map((batchTopic) => ({
+        topic: batchTopic,
+        format,
+        language,
+        targetDurationSeconds: Math.max(10, duration),
+        tone: "cinematic documentary",
+        audience: "general online video audience"
+      })));
+      setBatch(result);
+    } catch (batchError) {
+      setError(batchError instanceof Error ? batchError.message : String(batchError));
+    } finally {
+      setBatchGenerating(false);
     }
   };
 
@@ -177,6 +203,39 @@ export default function ContentFactoryPanel({
         >
           {generating ? "Planning video..." : "Create script + scenes"}
         </button>
+      </div>
+
+
+      <div className="transcriptPanel">
+        <div className="timelineHeader">
+          <div>
+            <p className="eyebrow">BATCH VIDEO FACTORY</p>
+            <h3>Create many projects from a topic list</h3>
+            <p className="muted">One topic per line. The current format, language, and duration settings apply to every item.</p>
+          </div>
+          <span className="aiBadge">{batchTopics.split(/\\r?\\n/).filter((value) => value.trim()).length} topics</span>
+        </div>
+        <textarea value={batchTopics} onChange={(event) => setBatchTopics(event.target.value)} placeholder={"Island of the Dolls\\nAokigahara Forest\\nMary Celeste"} rows={6} />
+        <div className="keyRow">
+          <button className="primary" disabled={!aiConfigured || !batchTopics.trim() || batchGenerating} onClick={generateBatch}>
+            {batchGenerating ? "Preparing batch..." : "Create batch projects"}
+          </button>
+          <span className="muted">Up to 50 topics per batch</span>
+        </div>
+        {batch && (
+          <div className="transcriptList">
+            {batch.items.map((item, index) => (
+              <div className="transcriptRow" key={item.id}>
+                <span>#{String(index + 1).padStart(2, "0")}</span>
+                <div>
+                  <strong>{item.brief.topic}</strong>
+                  <p className="muted">{item.status === "ready" ? `Ready · ${item.project?.scenes.length ?? 0} scenes` : item.status}{item.error ? ` · ${item.error}` : ""}</p>
+                  {item.project && <button onClick={() => onGenerated(item.project!)}>Open project</button>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="keyRow">
