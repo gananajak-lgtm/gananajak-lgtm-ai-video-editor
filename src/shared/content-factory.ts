@@ -73,3 +73,20 @@ export type ContentProject = {
   };
   assetPlan?: AssetPlan;
 };
+
+export type ContentBatchStatus = "queued" | "preparing" | "ready" | "failed";
+
+export type ContentBatchItem = {
+  id: string;
+  brief: ContentBrief;
+  status: ContentBatchStatus;
+  project?: ContentProject;
+  error?: string;
+};
+
+export type ContentBatch = {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  items: ContentBatchItem[];
+};
