@@ -40,6 +40,8 @@ const api: DesktopApi = {
     ipcRenderer.invoke("content:prepare-batch", briefs),
   resumeContentBatch: (batch) =>
     ipcRenderer.invoke("content:resume-batch", batch),
+  generateContentBatchAssets: (batch) =>
+    ipcRenderer.invoke("content:generate-batch-assets", batch),
   importMetaVideo: (project, sceneId) =>
     ipcRenderer.invoke("content:import-meta-video", project, sceneId),
   generateContentAssets: (project) =>
@@ -63,6 +65,11 @@ const api: DesktopApi = {
   chooseOutput: () => ipcRenderer.invoke("render:choose-output"),
   renderTimeline: (plan: TimelinePlan, outputPath: string) =>
     ipcRenderer.invoke("render:timeline", plan, outputPath),
+  onContentBatchAssetProgress: (listener) => {
+    const handler = (_event: IpcRendererEvent, progress: Parameters<typeof listener>[0]) => listener(progress);
+    ipcRenderer.on("content:batch-asset-progress", handler);
+    return () => ipcRenderer.removeListener("content:batch-asset-progress", handler);
+  },
   onContentBatchProgress: (listener) => {
     const handler = (_event: IpcRendererEvent, progress: Parameters<typeof listener>[0]) => listener(progress);
     ipcRenderer.on("content:batch-progress", handler);
