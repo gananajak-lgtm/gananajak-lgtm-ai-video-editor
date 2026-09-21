@@ -210,8 +210,10 @@ ipcMain.handle("content:generate-project", async (_event, brief: ContentBrief) =
   return generateContentProject(brief);
 });
 
-ipcMain.handle("content:prepare-batch", async (_event, briefs: ContentBrief[]) => {
-  return prepareContentBatch(createContentBatch(briefs), generateContentProject);
+ipcMain.handle("content:prepare-batch", async (event, briefs: ContentBrief[]) => {
+  return prepareContentBatch(createContentBatch(briefs), generateContentProject, (completed, total, item) => {
+    if (!event.sender.isDestroyed()) event.sender.send("content:batch-progress", { completed, total, item });
+  });
 });
 
 ipcMain.handle("content:generate-assets", async (event, project: import("../shared/content-factory").ContentProject) => {
