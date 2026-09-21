@@ -145,7 +145,7 @@ export default function ContentFactoryPanel({
   };
 
   const renderBatch = async () => {
-    if (!batch || batchRendering || !batch.items.some((item) => item.status === "assets-ready")) return;
+    if (!batch || batchRendering || !batch.items.some((item) => item.status === "assets-ready" || (item.status === "failed" && item.failedStage === "render"))) return;
     const outputDir = await window.videoEditor.chooseBatchOutputFolder();
     if (!outputDir) return;
     setBatchRendering(true); setError(null);
