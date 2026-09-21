@@ -36,6 +36,8 @@ const api: DesktopApi = {
   saveElevenLabsApiKey: (apiKey) => ipcRenderer.invoke("content:save-elevenlabs-key", apiKey),
   generateContentProject: (brief) =>
     ipcRenderer.invoke("content:generate-project", brief),
+  prepareContentBatch: (briefs) =>
+    ipcRenderer.invoke("content:prepare-batch", briefs),
   importMetaVideo: (project, sceneId) =>
     ipcRenderer.invoke("content:import-meta-video", project, sceneId),
   generateContentAssets: (project) =>
