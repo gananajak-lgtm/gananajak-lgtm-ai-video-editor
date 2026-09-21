@@ -38,6 +38,8 @@ const api: DesktopApi = {
     ipcRenderer.invoke("content:generate-project", brief),
   prepareContentBatch: (briefs) =>
     ipcRenderer.invoke("content:prepare-batch", briefs),
+  resumeContentBatch: (batch) =>
+    ipcRenderer.invoke("content:resume-batch", batch),
   importMetaVideo: (project, sceneId) =>
     ipcRenderer.invoke("content:import-meta-video", project, sceneId),
   generateContentAssets: (project) =>
