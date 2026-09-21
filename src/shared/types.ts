@@ -1,5 +1,4 @@
-import type { ContentBrief, ContentProject } from "./content-factory";
-import type { ContentBatch } from "../main/content-batch";
+import type { ContentBatch, ContentBrief, ContentProject } from "./content-factory";
 
 export type ProjectMedia = {
   images: string[];
