@@ -11,12 +11,14 @@ export async function runAssetPlan(
   onProgress?: (progress: AssetRunProgress) => void
 ): Promise<AssetPlan> {
   const runnableKinds = new Set(["image", "voice"]);
-  const queue = new AssetJobQueue(plan.jobs.filter((job) => runnableKinds.has(job.kind)).map((job) => ({ ...job })));
+  const queue = new AssetJobQueue(plan.jobs.filter((job) => runnableKinds.has(job.kind)).map((job) => ({ ...job, status: job.status === "failed" ? "queued" : job.status, error: job.status === "failed" ? undefined : job.error })));
   const assets: GeneratedAsset[] = [...plan.assets];
   const assetIndexByJobId = new Map(plan.jobs.flatMap((job) => job.outputAssetId ? [[job.id, job.outputAssetId] as const] : []));
   const runnableJobs = plan.jobs.filter((job) => runnableKinds.has(job.kind));
-  const total = runnableJobs.length;
-  let completed = runnableJobs.filter((job) => job.status === "succeeded").length;
+  const retryableJobs = runnableJobs.filter((job) => job.status === "queued" || job.status === "failed");
+  const alreadySucceeded = runnableJobs.filter((job) => job.status === "succeeded").length;
+  const total = alreadySucceeded + retryableJobs.length;
+  let completed = alreadySucceeded;
   onProgress?.({ completed, total });
 
   while (true) {
