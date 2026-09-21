@@ -10,16 +10,16 @@ const now=new Date(0).toISOString();
 const project:ContentProject={schemaVersion:1,id:"p1",title:"factory",brief,script:"x",createdAt:now,updatedAt:now,scenes:[{id:"s1",order:1,narration:"hello",visualIntent:"forest",imagePrompt:"forest",videoPrompt:"move",sfxHints:[],estimatedDuration:5}]};
 
 class FakeProvider {
-  constructor(private kind:"image"|"voice"){}
+  readonly id:string;
+  constructor(private kind:"image"|"voice"){this.id=`fake-${kind}`;}
+  supports(kind:AssetJob["kind"]){return kind===this.kind;}
   async generate(job:AssetJob):Promise<GeneratedAsset>{
     return {id:`asset-${job.id}`,projectId:job.projectId,sceneId:job.sceneId,kind:this.kind,filePath:`/tmp/${job.id}`,source:"generated"};
   }
 }
 
 test("generates required image and voice assets without blocking on manual video",async()=>{
-  const registry=new AssetProviderRegistry();
-  registry.register("image",new FakeProvider("image"));
-  registry.register("voice",new FakeProvider("voice"));
+  const registry=new AssetProviderRegistry([new FakeProvider("image"),new FakeProvider("voice")]);
   const batch=createContentBatch([brief]);
   batch.items[0].project=project; batch.items[0].status="ready";
   const result=await generateBatchAssets(batch,registry,"/tmp/factory");
