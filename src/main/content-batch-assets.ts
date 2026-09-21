@@ -20,12 +20,12 @@ export async function generateBatchAssets(
   onProgress?: (progress: BatchAssetProgress) => void
 ): Promise<ContentBatch> {
   const items = batch.items.map((item) => ({ ...item }));
-  const runnable = items.filter((item) => item.project && (item.status === "ready" || item.status === "failed"));
+  const runnable = items.filter((item) => item.project && (item.status === "ready" || (item.status === "failed" && item.failedStage === "assets")));
   let completed = items.filter((item) => item.status === "assets-ready").length;
   const total = completed + runnable.length;
 
   for (const item of items) {
-    if (!item.project || item.status === "assets-ready" || (item.status !== "ready" && item.status !== "failed")) continue;
+    if (!item.project || item.status === "assets-ready" || (item.status !== "ready" && !(item.status === "failed" && item.failedStage === "assets"))) continue;
     item.status = "generating-assets";
     item.error = undefined;
     item.failedStage = undefined;
