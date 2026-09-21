@@ -26,6 +26,7 @@ export default function ContentFactoryPanel({
   const [batchTopics, setBatchTopics] = useState("");
   const [batch, setBatch] = useState<ContentBatch | null>(null);
   const [batchGenerating, setBatchGenerating] = useState(false);
+  const [batchProgress, setBatchProgress] = useState({ completed:0, total:0 });
   const [error, setError] = useState<string | null>(null);
   const [rendering, setRendering] = useState(false);
   const [pipelineStage, setPipelineStage] = useState<"idle" | "assets" | "render" | "ready">("idle");
@@ -78,7 +79,12 @@ export default function ContentFactoryPanel({
     const topics = batchTopics.split(/\\r?\\n/).map((value) => value.trim()).filter(Boolean).slice(0, 50);
     if (!aiConfigured || topics.length === 0) return;
     setBatchGenerating(true);
+    setBatchProgress({ completed:0, total:topics.length });
     setError(null);
+    const unsubscribeBatch = window.videoEditor.onContentBatchProgress((progress) => {
+      setBatchProgress({ completed:progress.completed, total:progress.total });
+      setBatch((current) => current ? { ...current, items:current.items.map((item) => item.id === progress.item.id ? progress.item : item) } : current);
+    });
     try {
       const result = await window.videoEditor.prepareContentBatch(topics.map((batchTopic) => ({
         topic: batchTopic,
@@ -92,6 +98,7 @@ export default function ContentFactoryPanel({
     } catch (batchError) {
       setError(batchError instanceof Error ? batchError.message : String(batchError));
     } finally {
+      unsubscribeBatch();
       setBatchGenerating(false);
     }
   };
@@ -218,8 +225,9 @@ export default function ContentFactoryPanel({
         <textarea value={batchTopics} onChange={(event) => setBatchTopics(event.target.value)} placeholder={"Island of the Dolls\\nAokigahara Forest\\nMary Celeste"} rows={6} />
         <div className="keyRow">
           <button className="primary" disabled={!aiConfigured || !batchTopics.trim() || batchGenerating} onClick={generateBatch}>
-            {batchGenerating ? "Preparing batch..." : "Create batch projects"}
+            {batchGenerating ? `Preparing ${batchProgress.completed}/${batchProgress.total}...` : "Create batch projects"}
           </button>
+          {batchGenerating && <progress max={Math.max(1, batchProgress.total)} value={batchProgress.completed} aria-label="Batch project progress" />}
           <span className="muted">Up to 50 topics per batch</span>
         </div>
         {batch && (
