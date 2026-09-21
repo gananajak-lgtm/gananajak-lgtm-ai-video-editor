@@ -216,6 +216,12 @@ ipcMain.handle("content:prepare-batch", async (event, briefs: ContentBrief[]) =>
   });
 });
 
+ipcMain.handle("content:resume-batch", async (event, batch: import("../shared/content-factory").ContentBatch) => {
+  return prepareContentBatch(batch, generateContentProject, (completed, total, item) => {
+    if (!event.sender.isDestroyed()) event.sender.send("content:batch-progress", { completed, total, item });
+  });
+});
+
 ipcMain.handle("content:generate-assets", async (event, project: import("../shared/content-factory").ContentProject) => {
   const planned = project.assetPlan ?? buildAssetPlan(project, { includeVideo: true, includeSfx: false });
   const workDir = path.join(app.getPath("userData"), "content-assets", project.id);
