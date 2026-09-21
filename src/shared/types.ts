@@ -321,6 +321,8 @@ export type DesktopApi = {
   prepareContentBatch: (briefs: ContentBrief[]) => Promise<ContentBatch>;
   resumeContentBatch: (batch: ContentBatch) => Promise<ContentBatch>;
   generateContentBatchAssets: (batch: ContentBatch) => Promise<ContentBatch>;
+  chooseBatchOutputFolder: () => Promise<string | null>;
+  renderContentBatch: (batch: ContentBatch, outputDir: string) => Promise<ContentBatch>;
   importMetaVideo: (project: ContentProject, sceneId: string) => Promise<ContentProject | null>;
   generateContentAssets: (project: ContentProject) => Promise<ContentProject>;
   assembleAndRenderContent: (project: ContentProject, outputPath: string) => Promise<RenderResult & { narrationPath: string; timeline: TimelinePlan }>;
@@ -350,6 +352,9 @@ export type DesktopApi = {
   ) => Promise<QcPackResult | null>;
   chooseOutput: () => Promise<string | null>;
   renderTimeline: (plan: TimelinePlan, outputPath: string) => Promise<RenderResult>;
+  onContentBatchRenderProgress: (
+    listener: (progress: { completed: number; total: number; item: import("./content-factory").ContentBatchItem; renderProgress?: number }) => void
+  ) => () => void;
   onContentBatchAssetProgress: (
     listener: (progress: { completed: number; total: number; item: import("./content-factory").ContentBatchItem; assetCompleted?: number; assetTotal?: number; kind?: string }) => void
   ) => () => void;
