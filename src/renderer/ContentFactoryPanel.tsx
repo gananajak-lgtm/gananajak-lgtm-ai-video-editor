@@ -39,7 +39,10 @@ export default function ContentFactoryPanel({
   const [replicateToken, setReplicateToken] = useState("");
   const [elevenLabsKey, setElevenLabsKey] = useState("");
 
-  useEffect(() => { void window.videoEditor.getContentProviderStatus().then(setProviderStatus); }, []);
+  useEffect(() => {
+    void window.videoEditor.getContentProviderStatus().then(setProviderStatus);
+    void window.videoEditor.loadContentBatch().then((saved) => { if (saved) setBatch(saved); });
+  }, []);
 
   const saveProviderKeys = async () => {
     let status = providerStatus;
