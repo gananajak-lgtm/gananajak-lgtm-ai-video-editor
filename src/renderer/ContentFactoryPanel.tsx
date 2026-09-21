@@ -29,6 +29,8 @@ export default function ContentFactoryPanel({
   const [batchProgress, setBatchProgress] = useState({ completed:0, total:0 });
   const [batchAssetsRunning, setBatchAssetsRunning] = useState(false);
   const [batchAssetProgress, setBatchAssetProgress] = useState({ completed:0, total:0, assetCompleted:0, assetTotal:0 });
+  const [batchRendering, setBatchRendering] = useState(false);
+  const [batchRenderProgress, setBatchRenderProgress] = useState({ completed:0, total:0, renderProgress:0 });
   const [error, setError] = useState<string | null>(null);
   const [rendering, setRendering] = useState(false);
   const [pipelineStage, setPipelineStage] = useState<"idle" | "assets" | "render" | "ready">("idle");
@@ -140,6 +142,20 @@ export default function ContentFactoryPanel({
       unsubscribe();
       setBatchAssetsRunning(false);
     }
+  };
+
+  const renderBatch = async () => {
+    if (!batch || batchRendering || !batch.items.some((item) => item.status === "assets-ready")) return;
+    const outputDir = await window.videoEditor.chooseBatchOutputFolder();
+    if (!outputDir) return;
+    setBatchRendering(true); setError(null);
+    const unsubscribe = window.videoEditor.onContentBatchRenderProgress((progress) => {
+      setBatchRenderProgress({ completed:progress.completed, total:progress.total, renderProgress:progress.renderProgress ?? 0 });
+      setBatch((current) => current ? { ...current, items:current.items.map((item) => item.id === progress.item.id ? progress.item : item) } : current);
+    });
+    try { setBatch(await window.videoEditor.renderContentBatch(batch, outputDir)); }
+    catch (renderBatchError) { setError(renderBatchError instanceof Error ? renderBatchError.message : String(renderBatchError)); }
+    finally { unsubscribe(); setBatchRendering(false); }
   };
 
   const generateAndRender = async () => {
@@ -269,6 +285,7 @@ export default function ContentFactoryPanel({
           {batchGenerating && <progress max={Math.max(1, batchProgress.total)} value={batchProgress.completed} aria-label="Batch project progress" />}
           {batch?.items.some((item) => item.status === "failed") && <button disabled={batchGenerating || batchAssetsRunning} onClick={retryFailedBatch}>Retry failed only</button>}
           {batch?.items.some((item) => item.project && item.status === "ready") && <button className="primary" disabled={batchGenerating || batchAssetsRunning || !providerStatus.replicateConfigured || !providerStatus.elevenLabsConfigured} onClick={generateBatchAssets}>{batchAssetsRunning ? `Assets ${batchAssetProgress.completed}/${batchAssetProgress.total} · ${batchAssetProgress.assetCompleted}/${batchAssetProgress.assetTotal || "?"}` : "Generate batch assets"}</button>}
+          {batch?.items.some((item) => item.status === "assets-ready") && <button className="primary" disabled={batchGenerating || batchAssetsRunning || batchRendering} onClick={renderBatch}>{batchRendering ? `Rendering ${batchRenderProgress.completed}/${batchRenderProgress.total} · ${Math.round(batchRenderProgress.renderProgress * 100)}%` : "Render batch MP4s"}</button>}
           <span className="muted">Up to 50 topics per batch</span>
         </div>
         {batch && (
@@ -278,7 +295,7 @@ export default function ContentFactoryPanel({
                 <span>#{String(index + 1).padStart(2, "0")}</span>
                 <div>
                   <strong>{item.brief.topic}</strong>
-                  <p className="muted">{item.status === "ready" ? `Ready · ${item.project?.scenes.length ?? 0} scenes` : item.status === "assets-ready" ? `Assets ready · ${item.project?.scenes.length ?? 0} scenes` : item.status}{item.error ? ` · ${item.error}` : ""}</p>
+                  <p className="muted">{item.status === "ready" ? `Ready · ${item.project?.scenes.length ?? 0} scenes` : item.status === "assets-ready" ? `Assets ready · ${item.project?.scenes.length ?? 0} scenes` : item.status === "rendered" ? `Rendered ✓ · ${item.outputPath ?? ""}` : item.status}{item.error ? ` · ${item.error}` : ""}</p>
                   {item.project && <button onClick={() => onGenerated(item.project!)}>Open project</button>}
                 </div>
               </div>
