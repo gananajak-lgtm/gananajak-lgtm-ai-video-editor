@@ -348,6 +348,9 @@ export type DesktopApi = {
   ) => Promise<QcPackResult | null>;
   chooseOutput: () => Promise<string | null>;
   renderTimeline: (plan: TimelinePlan, outputPath: string) => Promise<RenderResult>;
+  onContentBatchProgress: (
+    listener: (progress: { completed: number; total: number; item: import("./content-factory").ContentBatchItem }) => void
+  ) => () => void;
   onContentAssetProgress: (
     listener: (progress: { completed: number; total: number; currentJobId?: string; kind?: string }) => void
   ) => () => void;
