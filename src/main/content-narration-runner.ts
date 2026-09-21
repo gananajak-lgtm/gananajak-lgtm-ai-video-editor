@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import ffmpegPath from "ffmpeg-static";
 import type { ContentProject } from "../shared/content-factory";
 import { buildNarrationAssemblyPlan, buildFfmpegConcatManifest, buildNarrationConcatArgs } from "./content-narration-assembly";
 import { bridgeGeneratedAssets, buildGeneratedTimeline } from "./content-timeline-bridge";
@@ -23,7 +24,7 @@ function run(command: string, args: string[]): Promise<void> {
 export async function assembleNarrationAndTimeline(
   project: ContentProject,
   workDir: string,
-  ffmpegCommand = process.env.FFMPEG_PATH?.trim() || "ffmpeg"
+  ffmpegCommand = process.env.FFMPEG_PATH?.trim() || ffmpegPath || "ffmpeg"
 ): Promise<NarrationAssemblyResult> {
   const bridge = bridgeGeneratedAssets(project);
   if (!bridge.readyForNarrationAssembly) {
