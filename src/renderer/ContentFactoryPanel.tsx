@@ -302,7 +302,9 @@ export default function ContentFactoryPanel({
             image prompts, video prompts, timing, and sound-effect hints.
           </p>
         </div>
-        <span className={generationMode === "local-test" || aiConfigured ? "aiBadge readyBadge" : "aiBadge"}>\n          {generationMode === "local-test" ? "Local Test · 0 API calls" : aiConfigured ? "Generator ready" : "API key required"}\n        </span>
+        <span className={generationMode === "local-test" || aiConfigured ? "aiBadge readyBadge" : "aiBadge"}>
+          {generationMode === "local-test" ? "Local Test · 0 API calls" : aiConfigured ? "Generator ready" : "API key required"}
+        </span>
       </div>
 
       <div className="keyRow">
@@ -311,7 +313,12 @@ export default function ContentFactoryPanel({
           onChange={(event) => setTopic(event.target.value)}
           placeholder="Topic, e.g. Island of the Dolls"
         />
-        <select value={generationMode} onChange={(event) => setGenerationMode(event.target.value as "cloud" | "local-test")} aria-label="Generation mode">\n          <option value="cloud">Cloud Quality</option>\n          <option value="local-test">Local Test · No API cost</option>\n        </select>\n        <select\n          value={format}
+        <select value={generationMode} onChange={(event) => setGenerationMode(event.target.value as "cloud" | "local-test")} aria-label="Generation mode">
+          <option value="cloud">Cloud Quality</option>
+          <option value="local-test">Local Test · No API cost</option>
+        </select>
+        <select
+          value={format}
           onChange={(event) => setFormat(event.target.value as ContentFormat)}
         >
           <option value="short">Short</option>
