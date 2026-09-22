@@ -42,6 +42,8 @@ const api: DesktopApi = {
     ipcRenderer.invoke("content:generate-local-test-assets", project),
   prepareContentBatch: (briefs) =>
     ipcRenderer.invoke("content:prepare-batch", briefs),
+  createLocalTestBatch: (briefs, outputDir) =>
+    ipcRenderer.invoke("content:create-local-test-batch", briefs, outputDir),
   loadContentBatch: () => ipcRenderer.invoke("content:load-batch"),
   resumeContentBatch: (batch) =>
     ipcRenderer.invoke("content:resume-batch", batch),
