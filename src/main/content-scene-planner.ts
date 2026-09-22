@@ -44,3 +44,16 @@ export function buildContentProject(
     updatedAt: now
   };
 }
+
+
+export function buildLocalTestProject(brief: ContentBrief): ContentProject {
+  const topic = brief.topic.trim() || "Untitled topic";
+  const target = Math.max(10, brief.targetDurationSeconds);
+  const sceneCount = Math.max(3, Math.min(12, Math.round(target / 10)));
+  const language = brief.language === "th" ? "th" : "en";
+  const lines = Array.from({ length: sceneCount }, (_, index) => language === "th"
+    ? `ฉากที่ ${index + 1}: สำรวจประเด็นสำคัญของ ${topic} จากมุมมองที่แตกต่างกัน`
+    : `Scene ${index + 1}: Explore an important aspect of ${topic} from a different perspective.`);
+  const script = lines.join("\n");
+  return buildContentProject(`local-${Date.now()}`, `[LOCAL TEST] ${topic}`, brief, script);
+}
