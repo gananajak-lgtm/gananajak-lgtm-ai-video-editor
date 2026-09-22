@@ -86,6 +86,24 @@ export default function ContentFactoryPanel({
     }
   };
 
+  const createLocalTestVideo = async () => {
+    if (!topic.trim() || oneClickRunning) return;
+    const outputPath = await window.videoEditor.chooseOutput();
+    if (!outputPath) return;
+    setOneClickRunning(true); setGenerating(true); setRendering(true); setError(null); setRenderedPath(null); setRenderProgress(0); setPipelineStage("assets");
+    const unsubscribeRender = window.videoEditor.onRenderProgress((progress) => setRenderProgress(Math.max(0, Math.min(1, progress.progress))));
+    try {
+      const planned = await window.videoEditor.generateLocalTestProject({ topic:topic.trim(), format, language, targetDurationSeconds:Math.max(10,duration), tone:"local pipeline test", audience:"test" });
+      onGenerated(planned);
+      const prepared = await window.videoEditor.generateLocalTestAssets(planned);
+      onGenerated(prepared);
+      setPipelineStage("render");
+      const result = await window.videoEditor.assembleAndRenderContent(prepared, outputPath);
+      setRenderedPath(result.outputPath); setRenderProgress(1); setPipelineStage("ready");
+    } catch (createError) { setError(createError instanceof Error ? createError.message : String(createError)); setPipelineStage("idle"); }
+    finally { unsubscribeRender(); setGenerating(false); setRendering(false); setOneClickRunning(false); }
+  };
+
   const createVideoOneClick = async () => {
     if (!topic.trim() || !aiConfigured || oneClickRunning) return;
     if (!providerStatus.replicateConfigured || !providerStatus.elevenLabsConfigured) {
@@ -346,9 +364,15 @@ export default function ContentFactoryPanel({
         >
           {generating ? "Planning video..." : generationMode === "local-test" ? "Create Local Test Project" : "Create script + scenes"}
         </button>
-        <button className="primary" disabled={!aiConfigured || !topic.trim() || oneClickRunning || !providerStatus.replicateConfigured || !providerStatus.elevenLabsConfigured} onClick={createVideoOneClick}>
-          {oneClickRunning ? (pipelineStage === "render" ? `Rendering ${Math.round(renderProgress * 100)}%...` : "Creating video...") : "Create Video (One Click)"}
-        </button>
+        {generationMode === "local-test" ? (
+          <button className="primary" disabled={!topic.trim() || oneClickRunning} onClick={createLocalTestVideo}>
+            {oneClickRunning ? (pipelineStage === "render" ? `Rendering Local Test ${Math.round(renderProgress * 100)}%...` : "Building Local Test...") : "Create Local Test MP4 (0 API)"}
+          </button>
+        ) : (
+          <button className="primary" disabled={!aiConfigured || !topic.trim() || oneClickRunning || !providerStatus.replicateConfigured || !providerStatus.elevenLabsConfigured} onClick={createVideoOneClick}>
+            {oneClickRunning ? (pipelineStage === "render" ? `Rendering ${Math.round(renderProgress * 100)}%...` : "Creating video...") : "Create Video (One Click)"}
+          </button>
+        )}
       </div>
 
 
