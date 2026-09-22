@@ -23,7 +23,13 @@ jobs:
       - run: npm run dist:win
       - name: Smoke test packaged Windows app
         shell: powershell
-        run: |\n          $exe = Get-ChildItem -Path release\\win-unpacked -Filter *.exe | Select-Object -First 1\n          if (-not $exe) { throw "Packaged app executable not found" }\n          $process = Start-Process -FilePath $exe.FullName -ArgumentList "--smoke-test" -PassThru\n          if (-not $process.WaitForExit(30000)) { $process.Kill(); throw "Packaged app smoke test timed out" }\n          if ($process.ExitCode -ne 0) { throw "Packaged app smoke test failed with exit code $($process.ExitCode)" }\n      - uses: actions/upload-artifact@v4
+        run: |
+          $exe = Get-ChildItem -Path release\\win-unpacked -Filter *.exe | Select-Object -First 1
+          if (-not $exe) { throw "Packaged app executable not found" }
+          $process = Start-Process -FilePath $exe.FullName -ArgumentList "--smoke-test" -PassThru
+          if (-not $process.WaitForExit(30000)) { $process.Kill(); throw "Packaged app smoke test timed out" }
+          if ($process.ExitCode -ne 0) { throw "Packaged app smoke test failed with exit code $($process.ExitCode)" }
+      - uses: actions/upload-artifact@v4
         with:
           name: gananajak-ai-video-editor-windows
           path: |
