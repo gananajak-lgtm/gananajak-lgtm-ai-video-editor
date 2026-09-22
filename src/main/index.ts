@@ -506,7 +506,7 @@ app.whenReady().then(async () => {
       proc.once("exit", (code) => code === 0 ? resolve() : reject(new Error(`Packaged FFmpeg smoke test failed (${code})`)));
     });
     await access(imagePath);
-    app.quit();
+    app.exit(0);
     return;
   }
   installMediaProtocol();
