@@ -11,6 +11,7 @@ import { importMetaVideo } from "./providers/meta-manual-video-provider";
 import { createDefaultAssetProviderRegistry } from "./providers/default-provider-registry";
 import { runAssetPlan } from "./content-asset-runner";
 import { buildAssetPlan } from "./content-asset-planner";
+import { buildLocalTestProject } from "./content-scene-planner";
 import { createContentBatch, prepareContentBatch } from "./content-batch";
 import { generateBatchAssets } from "./content-batch-assets";
 import { renderContentBatch } from "./content-batch-render";
@@ -212,6 +213,7 @@ ipcMain.handle("content:save-elevenlabs-key", async (_event, apiKey: string) => 
 ipcMain.handle("content:generate-project", async (_event, brief: ContentBrief) => {
   return generateContentProject(brief);
 });
+ipcMain.handle("content:generate-local-test-project", async (_event, brief: ContentBrief) => buildLocalTestProject(brief));
 
 const batchStatePath = () => path.join(app.getPath("userData"), "content-factory", "last-batch.json");
 async function saveBatchState(batch: import("../shared/content-factory").ContentBatch) { await mkdir(path.dirname(batchStatePath()), { recursive:true }); await writeFile(batchStatePath(), JSON.stringify(batch, null, 2), "utf8"); return batch; }
