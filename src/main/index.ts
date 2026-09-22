@@ -1,6 +1,8 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell } from "electron";
 import path from "node:path";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import ffmpegPath from "ffmpeg-static";
+import { spawn } from "node:child_process";
 import type { ContentBrief } from "../shared/content-factory";
 import type { AudioAsset, ProjectDocument, SceneBlock, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
 import { generateContentProject } from "./ai/contentGeneration";
@@ -214,6 +216,29 @@ ipcMain.handle("content:generate-project", async (_event, brief: ContentBrief) =
   return generateContentProject(brief);
 });
 ipcMain.handle("content:generate-local-test-project", async (_event, brief: ContentBrief) => buildLocalTestProject(brief));
+ipcMain.handle("content:generate-local-test-assets", async (_event, project: import("../shared/content-factory").ContentProject) => {
+  const root = path.join(app.getPath("userData"), "content-assets", project.id, "local-test");
+  await mkdir(root, { recursive:true });
+  const assets: import("../shared/content-factory").GeneratedAsset[] = [];
+  for (const scene of project.scenes) {
+    const imagePath = path.join(root, `scene-${scene.order}.png`);
+    const audioPath = path.join(root, `scene-${scene.order}.wav`);
+    const seconds = Math.max(2.5, scene.estimatedDuration);
+    await new Promise<void>((resolve, reject) => {
+      const proc = spawn(ffmpegPath || "ffmpeg", ["-y","-f","lavfi","-i","color=c=0x182033:s=1080x1920:r=30","-frames:v","1",imagePath]);
+      proc.once("error", reject); proc.once("exit", code => code === 0 ? resolve() : reject(new Error(`Local placeholder image failed (${code})`)));
+    });
+    await new Promise<void>((resolve, reject) => {
+      const proc = spawn(ffmpegPath || "ffmpeg", ["-y","-f","lavfi","-i","anullsrc=r=44100:cl=stereo","-t",String(seconds),audioPath]);
+      proc.once("error", reject); proc.once("exit", code => code === 0 ? resolve() : reject(new Error(`Local test audio failed (${code})`)));
+    });
+    assets.push({ id:`local-image-${scene.id}`, projectId:project.id, sceneId:scene.id, kind:"image", filePath:imagePath, provider:"local-test", mimeType:"image/png", source:"generated" });
+    assets.push({ id:`local-voice-${scene.id}`, projectId:project.id, sceneId:scene.id, kind:"voice", filePath:audioPath, provider:"local-test-silence", mimeType:"audio/wav", duration:seconds, source:"generated" });
+  }
+  const now = new Date().toISOString();
+  const jobs = assets.map((asset) => ({ id:`job-${asset.id}`, projectId:project.id, sceneId:asset.sceneId, kind:asset.kind, prompt:"Local test placeholder", status:"succeeded" as const, attempts:1, outputAssetId:asset.id, createdAt:now, updatedAt:now }));
+  return { ...project, assetPlan:{ projectId:project.id, jobs, assets }, updatedAt:now };
+});
 
 const batchStatePath = () => path.join(app.getPath("userData"), "content-factory", "last-batch.json");
 async function saveBatchState(batch: import("../shared/content-factory").ContentBatch) { await mkdir(path.dirname(batchStatePath()), { recursive:true }); await writeFile(batchStatePath(), JSON.stringify(batch, null, 2), "utf8"); return batch; }
