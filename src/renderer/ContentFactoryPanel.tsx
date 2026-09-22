@@ -22,6 +22,7 @@ export default function ContentFactoryPanel({
   const [format, setFormat] = useState<ContentFormat>("short");
   const [language, setLanguage] = useState<ContentLanguage>("th");
   const [duration, setDuration] = useState(60);
+  const [generationMode, setGenerationMode] = useState<"cloud" | "local-test">("cloud");
   const [generating, setGenerating] = useState(false);
   const [batchTopics, setBatchTopics] = useState("");
   const [batch, setBatch] = useState<ContentBatch | null>(null);
@@ -57,13 +58,14 @@ export default function ContentFactoryPanel({
   const [copiedSceneId, setCopiedSceneId] = useState<string | null>(null);
 
   const generate = async () => {
-    if (!topic.trim() || !aiConfigured) return;
+    if (!topic.trim() || (generationMode === "cloud" && !aiConfigured)) return;
 
     setGenerating(true);
     setError(null);
 
     try {
-      const result = await window.videoEditor.generateContentProject({
+      const generator = generationMode === "local-test" ? window.videoEditor.generateLocalTestProject : window.videoEditor.generateContentProject;
+      const result = await generator({
         topic: topic.trim(),
         format,
         language,
@@ -300,9 +302,7 @@ export default function ContentFactoryPanel({
             image prompts, video prompts, timing, and sound-effect hints.
           </p>
         </div>
-        <span className={aiConfigured ? "aiBadge readyBadge" : "aiBadge"}>
-          {aiConfigured ? "Generator ready" : "API key required"}
-        </span>
+        <span className={generationMode === "local-test" || aiConfigured ? "aiBadge readyBadge" : "aiBadge"}>\n          {generationMode === "local-test" ? "Local Test · 0 API calls" : aiConfigured ? "Generator ready" : "API key required"}\n        </span>
       </div>
 
       <div className="keyRow">
@@ -311,8 +311,7 @@ export default function ContentFactoryPanel({
           onChange={(event) => setTopic(event.target.value)}
           placeholder="Topic, e.g. Island of the Dolls"
         />
-        <select
-          value={format}
+        <select value={generationMode} onChange={(event) => setGenerationMode(event.target.value as "cloud" | "local-test")} aria-label="Generation mode">\n          <option value="cloud">Cloud Quality</option>\n          <option value="local-test">Local Test · No API cost</option>\n        </select>\n        <select\n          value={format}
           onChange={(event) => setFormat(event.target.value as ContentFormat)}
         >
           <option value="short">Short</option>
@@ -335,10 +334,10 @@ export default function ContentFactoryPanel({
         />
         <button
           className="primary"
-          disabled={!aiConfigured || !topic.trim() || generating}
+          disabled={(generationMode === "cloud" && !aiConfigured) || !topic.trim() || generating}
           onClick={generate}
         >
-          {generating ? "Planning video..." : "Create script + scenes"}
+          {generating ? "Planning video..." : generationMode === "local-test" ? "Create Local Test Project" : "Create script + scenes"}
         </button>
         <button className="primary" disabled={!aiConfigured || !topic.trim() || oneClickRunning || !providerStatus.replicateConfigured || !providerStatus.elevenLabsConfigured} onClick={createVideoOneClick}>
           {oneClickRunning ? (pipelineStage === "render" ? `Rendering ${Math.round(renderProgress * 100)}%...` : "Creating video...") : "Create Video (One Click)"}
