@@ -318,6 +318,7 @@ export type DesktopApi = {
   saveReplicateApiToken: (token: string) => Promise<ContentProviderStatus>;
   saveElevenLabsApiKey: (apiKey: string) => Promise<ContentProviderStatus>;
   generateContentProject: (brief: ContentBrief) => Promise<ContentProject>;
+  generateLocalTestProject: (brief: ContentBrief) => Promise<ContentProject>;
   prepareContentBatch: (briefs: ContentBrief[]) => Promise<ContentBatch>;
   loadContentBatch: () => Promise<ContentBatch | null>;
   resumeContentBatch: (batch: ContentBatch) => Promise<ContentBatch>;
