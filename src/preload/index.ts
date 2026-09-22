@@ -36,6 +36,8 @@ const api: DesktopApi = {
   saveElevenLabsApiKey: (apiKey) => ipcRenderer.invoke("content:save-elevenlabs-key", apiKey),
   generateContentProject: (brief) =>
     ipcRenderer.invoke("content:generate-project", brief),
+  generateLocalTestProject: (brief) =>
+    ipcRenderer.invoke("content:generate-local-test-project", brief),
   prepareContentBatch: (briefs) =>
     ipcRenderer.invoke("content:prepare-batch", briefs),
   loadContentBatch: () => ipcRenderer.invoke("content:load-batch"),
