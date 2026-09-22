@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell } from "electron";
 import path from "node:path";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import ffmpegPath from "ffmpeg-static";
 import { spawn } from "node:child_process";
 import type { ContentBrief } from "../shared/content-factory";
@@ -495,7 +495,20 @@ ipcMain.handle(
   }
 );
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  if (process.argv.includes("--smoke-test")) {
+    const smokeRoot = path.join(app.getPath("temp"), "gananajak-packaged-smoke");
+    await mkdir(smokeRoot, { recursive: true });
+    const imagePath = path.join(smokeRoot, "frame.png");
+    await new Promise<void>((resolve, reject) => {
+      const proc = spawn(ffmpegPath || "ffmpeg", ["-y", "-f", "lavfi", "-i", "color=c=0x182033:s=320x568:r=30", "-frames:v", "1", imagePath]);
+      proc.once("error", reject);
+      proc.once("exit", (code) => code === 0 ? resolve() : reject(new Error(`Packaged FFmpeg smoke test failed (${code})`)));
+    });
+    await access(imagePath);
+    app.quit();
+    return;
+  }
   installMediaProtocol();
   createWindow();
 
