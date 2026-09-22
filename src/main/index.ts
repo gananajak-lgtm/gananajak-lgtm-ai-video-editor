@@ -270,7 +270,6 @@ ipcMain.handle("content:create-local-test-batch", async (event, briefs: ContentB
       const project = buildLocalTestProject(item.brief);
       item.project = project;
       item.status = "generating-assets";
-      const prepared = await ipcMain.emit;
       const root = path.join(app.getPath("userData"), "content-assets", project.id, "local-test");
       await mkdir(root, { recursive:true });
       const assets: import("../shared/content-factory").GeneratedAsset[] = [];
