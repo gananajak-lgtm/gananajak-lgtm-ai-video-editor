@@ -219,7 +219,7 @@ async function loadBatchState() { try { return JSON.parse(await readFile(batchSt
 ipcMain.handle("content:load-batch", loadBatchState);
 
 ipcMain.handle("content:prepare-batch", async (event, briefs: ContentBrief[]) => {
-  const result = await prepareContentBatch(createContentBatch(briefs), generateContentProject, (completed, total, item) => {
+  const result = await prepareContentBatch(createContentBatch(briefs), generateContentProject, async (completed, total, item) => {
     if (!event.sender.isDestroyed()) event.sender.send("content:batch-progress", { completed, total, item });
   });
   return saveBatchState(result);
@@ -228,6 +228,7 @@ ipcMain.handle("content:prepare-batch", async (event, briefs: ContentBrief[]) =>
 ipcMain.handle("content:resume-batch", async (event, batch: import("../shared/content-factory").ContentBatch) => {
   const result = await prepareContentBatch(batch, generateContentProject, (completed, total, item) => {
     if (!event.sender.isDestroyed()) event.sender.send("content:batch-progress", { completed, total, item });
+    void saveBatchState({ ...batch, items: batch.items.map((existing) => existing.id === item.id ? item : existing), updatedAt:new Date().toISOString() });
   });
 });
 
@@ -240,6 +241,7 @@ ipcMain.handle("content:render-batch", async (event, batch: import("../shared/co
   const workRoot=path.join(app.getPath("temp"),"gananajak-content-factory","batch-render");
   const result=await renderContentBatch(batch,outputDir,workRoot,(progress)=>{
     if(!event.sender.isDestroyed()) event.sender.send("content:batch-render-progress",progress);
+    void saveBatchState({ ...batch, items: batch.items.map((existing) => existing.id === progress.item.id ? progress.item : existing), updatedAt:new Date().toISOString() });
   });
   if(result.items.some(item=>item.status==="rendered")) await shell.openPath(outputDir);
   return saveBatchState(result);
@@ -249,6 +251,7 @@ ipcMain.handle("content:generate-batch-assets", async (event, batch: import("../
   const rootDir = path.join(app.getPath("userData"), "content-assets");
   const result = await generateBatchAssets(batch, createDefaultAssetProviderRegistry(), rootDir, (progress) => {
     if (!event.sender.isDestroyed()) event.sender.send("content:batch-asset-progress", progress);
+    void saveBatchState({ ...batch, items: batch.items.map((existing) => existing.id === progress.item.id ? progress.item : existing), updatedAt:new Date().toISOString() });
   });
   return saveBatchState(result);
 });
