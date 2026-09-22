@@ -288,6 +288,7 @@ ipcMain.handle("content:create-local-test-batch", async (event, briefs: ContentB
     items[index]=item; batch={...batch,items,updatedAt:new Date().toISOString()}; await saveBatchState(batch);
     if(!event.sender.isDestroyed()) event.sender.send("content:batch-progress",{completed:index+1,total:items.length,item});
   }
+  if (batch.items.some((item) => item.status === "rendered")) await shell.openPath(outputDir);
   return batch;
 });
 
