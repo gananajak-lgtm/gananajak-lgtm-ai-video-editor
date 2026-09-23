@@ -322,6 +322,7 @@ export type DesktopApi = {
   generateLocalTestAssets: (project: ContentProject) => Promise<ContentProject>;
   prepareContentBatch: (briefs: ContentBrief[]) => Promise<ContentBatch>;
   createLocalTestBatch: (briefs: ContentBrief[], outputDir: string) => Promise<ContentBatch>;
+  resumeLocalTestBatch: (batch: ContentBatch, outputDir: string) => Promise<ContentBatch>;
   loadContentBatch: () => Promise<ContentBatch | null>;
   resumeContentBatch: (batch: ContentBatch) => Promise<ContentBatch>;
   generateContentBatchAssets: (batch: ContentBatch) => Promise<ContentBatch>;
