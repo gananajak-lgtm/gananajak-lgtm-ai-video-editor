@@ -265,6 +265,39 @@ ipcMain.handle("content:create-local-test-batch", async (event, briefs: ContentB
   return batch;
 });
 
+ipcMain.handle("content:resume-local-test-batch", async (event, savedBatch: import("../shared/content-factory").ContentBatch, outputDir:string) => {
+  let batch = { ...savedBatch, items:[...savedBatch.items], updatedAt:new Date().toISOString() };
+  const items = [...batch.items];
+  const workRoot = path.join(app.getPath("temp"), "gananajak-content-factory", "local-test-batch-resume");
+  const pendingIndexes = items.map((item,index)=>({item,index})).filter(({item})=>item.status !== "rendered").map(({index})=>index);
+  let completed = items.length - pendingIndexes.length;
+  for (const index of pendingIndexes) {
+    const item = { ...items[index], error:undefined, failedStage:undefined };
+    try {
+      item.status = "preparing";
+      const project = item.project ?? buildLocalTestProject(item.brief);
+      item.project = project;
+      item.status = "generating-assets";
+      const root = path.join(app.getPath("userData"), "content-assets", project.id, "local-test");
+      item.project = await generateLocalTestAssets(project, root);
+      item.status = "assets-ready";
+      const rendered = await renderContentBatch({ ...batch, items:[item] }, outputDir, workRoot);
+      Object.assign(item, rendered.items[0]);
+    } catch (error) {
+      item.status = "failed";
+      item.failedStage = item.project?.assetPlan ? "render" : item.project ? "assets" : "project";
+      item.error = error instanceof Error ? error.message : String(error);
+    }
+    items[index] = item;
+    completed += 1;
+    batch = { ...batch, items, updatedAt:new Date().toISOString() };
+    await saveBatchState(batch);
+    if (!event.sender.isDestroyed()) event.sender.send("content:batch-progress", { completed, total:items.length, item });
+  }
+  if (batch.items.some((item) => item.status === "rendered")) await shell.openPath(outputDir);
+  return batch;
+});
+
 ipcMain.handle("content:choose-batch-output", async () => {
   const result = await dialog.showOpenDialog({ title:"Choose folder for batch videos", properties:["openDirectory","createDirectory"] });
   return result.canceled ? null : result.filePaths[0] ?? null;
