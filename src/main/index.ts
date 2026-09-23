@@ -14,6 +14,7 @@ import { createDefaultAssetProviderRegistry } from "./providers/default-provider
 import { runAssetPlan } from "./content-asset-runner";
 import { buildAssetPlan } from "./content-asset-planner";
 import { buildLocalTestProject } from "./content-scene-planner";
+import { generateLocalTestAssets } from "./content-local-test-assets";
 import { createContentBatch, prepareContentBatch } from "./content-batch";
 import { generateBatchAssets } from "./content-batch-assets";
 import { renderContentBatch } from "./content-batch-render";
@@ -218,26 +219,7 @@ ipcMain.handle("content:generate-project", async (_event, brief: ContentBrief) =
 ipcMain.handle("content:generate-local-test-project", async (_event, brief: ContentBrief) => buildLocalTestProject(brief));
 ipcMain.handle("content:generate-local-test-assets", async (_event, project: import("../shared/content-factory").ContentProject) => {
   const root = path.join(app.getPath("userData"), "content-assets", project.id, "local-test");
-  await mkdir(root, { recursive:true });
-  const assets: import("../shared/content-factory").GeneratedAsset[] = [];
-  for (const scene of project.scenes) {
-    const imagePath = path.join(root, `scene-${scene.order}.png`);
-    const audioPath = path.join(root, `scene-${scene.order}.wav`);
-    const seconds = Math.max(2.5, scene.estimatedDuration);
-    await new Promise<void>((resolve, reject) => {
-      const proc = spawn(ffmpegPath || "ffmpeg", ["-y","-f","lavfi","-i","color=c=0x182033:s=1080x1920:r=30","-frames:v","1",imagePath]);
-      proc.once("error", reject); proc.once("exit", code => code === 0 ? resolve() : reject(new Error(`Local placeholder image failed (${code})`)));
-    });
-    await new Promise<void>((resolve, reject) => {
-      const proc = spawn(ffmpegPath || "ffmpeg", ["-y","-f","lavfi","-i","anullsrc=r=44100:cl=stereo","-t",String(seconds),audioPath]);
-      proc.once("error", reject); proc.once("exit", code => code === 0 ? resolve() : reject(new Error(`Local test audio failed (${code})`)));
-    });
-    assets.push({ id:`local-image-${scene.id}`, projectId:project.id, sceneId:scene.id, kind:"image", filePath:imagePath, provider:"local-test", mimeType:"image/png", source:"generated" });
-    assets.push({ id:`local-voice-${scene.id}`, projectId:project.id, sceneId:scene.id, kind:"voice", filePath:audioPath, provider:"local-test-silence", mimeType:"audio/wav", duration:seconds, source:"generated" });
-  }
-  const now = new Date().toISOString();
-  const jobs = assets.map((asset) => ({ id:`job-${asset.id}`, projectId:project.id, sceneId:asset.sceneId, kind:asset.kind, prompt:"Local test placeholder", status:"succeeded" as const, attempts:1, outputAssetId:asset.id, createdAt:now, updatedAt:now }));
-  return { ...project, assetPlan:{ projectId:project.id, jobs, assets }, updatedAt:now };
+  return generateLocalTestAssets(project, root);
 });
 
 const batchStatePath = () => path.join(app.getPath("userData"), "content-factory", "last-batch.json");
@@ -271,16 +253,7 @@ ipcMain.handle("content:create-local-test-batch", async (event, briefs: ContentB
       item.project = project;
       item.status = "generating-assets";
       const root = path.join(app.getPath("userData"), "content-assets", project.id, "local-test");
-      await mkdir(root, { recursive:true });
-      const assets: import("../shared/content-factory").GeneratedAsset[] = [];
-      for (const scene of project.scenes) {
-        const imagePath=path.join(root,`scene-${scene.order}.png`), audioPath=path.join(root,`scene-${scene.order}.wav`), seconds=Math.max(2.5,scene.estimatedDuration);
-        await new Promise<void>((resolve,reject)=>{ const p=spawn(ffmpegPath||"ffmpeg",["-y","-f","lavfi","-i","color=c=0x182033:s=1080x1920:r=30","-frames:v","1",imagePath]); p.once("error",reject); p.once("exit",code=>code===0?resolve():reject(new Error(`Local image failed (${code})`))); });
-        await new Promise<void>((resolve,reject)=>{ const p=spawn(ffmpegPath||"ffmpeg",["-y","-f","lavfi","-i","anullsrc=r=44100:cl=stereo","-t",String(seconds),audioPath]); p.once("error",reject); p.once("exit",code=>code===0?resolve():reject(new Error(`Local audio failed (${code})`))); });
-        assets.push({id:`local-image-${scene.id}`,projectId:project.id,sceneId:scene.id,kind:"image",filePath:imagePath,provider:"local-test",mimeType:"image/png",source:"generated"},{id:`local-voice-${scene.id}`,projectId:project.id,sceneId:scene.id,kind:"voice",filePath:audioPath,provider:"local-test-silence",mimeType:"audio/wav",duration:seconds,source:"generated"});
-      }
-      const now=new Date().toISOString();
-      item.project={...project,assetPlan:{projectId:project.id,jobs:assets.map(asset=>({id:`job-${asset.id}`,projectId:project.id,sceneId:asset.sceneId,kind:asset.kind,prompt:"Local test placeholder",status:"succeeded" as const,attempts:1,outputAssetId:asset.id,createdAt:now,updatedAt:now})),assets},updatedAt:now};
+      item.project = await generateLocalTestAssets(project, root);
       item.status="assets-ready";
       const rendered=await renderContentBatch({...batch,items:[item]},outputDir,workRoot);
       Object.assign(item, rendered.items[0]);
