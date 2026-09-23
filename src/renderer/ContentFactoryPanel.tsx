@@ -172,6 +172,20 @@ export default function ContentFactoryPanel({
     finally { unsubscribe(); setBatchOneClickRunning(false); }
   };
 
+  const resumeLocalTestBatch = async () => {
+    if (!batch || batchOneClickRunning || !batch.items.some((item) => item.status !== "rendered")) return;
+    const outputDir = await window.videoEditor.chooseBatchOutputFolder();
+    if (!outputDir) return;
+    setBatchOneClickRunning(true); setError(null);
+    const unsubscribe = window.videoEditor.onContentBatchProgress((progress) => {
+      setBatchProgress({completed:progress.completed,total:progress.total});
+      setBatch((current)=>current?{...current,items:current.items.map((item)=>item.id===progress.item.id?progress.item:item)}:current);
+    });
+    try { setBatch(await window.videoEditor.resumeLocalTestBatch(batch, outputDir)); }
+    catch (resumeError) { setError(resumeError instanceof Error ? resumeError.message : String(resumeError)); }
+    finally { unsubscribe(); setBatchOneClickRunning(false); }
+  };
+
   const createBatchVideosOneClick = async () => {
     const topics = batchTopics.split(/\\r?\\n/).map((value) => value.trim()).filter(Boolean).slice(0, 50);
     if (!aiConfigured || topics.length === 0 || batchOneClickRunning) return;
@@ -420,6 +434,7 @@ export default function ContentFactoryPanel({
               {batch?.items.some((item) => item.status === "assets-ready" || (item.status === "failed" && item.failedStage === "render")) && <button className="primary" disabled={batchGenerating || batchAssetsRunning || batchRendering} onClick={renderBatch}>{batchRendering ? `Rendering ${batchRenderProgress.completed}/${batchRenderProgress.total} · ${Math.round(batchRenderProgress.renderProgress * 100)}%` : "Render batch MP4s"}</button>}
             </>
           )}
+          {generationMode === "local-test" && batch && batch.items.some((item) => item.status !== "rendered") && <button className="primary" disabled={batchOneClickRunning} onClick={resumeLocalTestBatch}>{batchOneClickRunning ? `Resuming Local Batch ${batchProgress.completed}/${batchProgress.total}...` : "Resume Local Batch (0 API)"}</button>}
           {generationMode === "local-test" && <span className="muted">Local Test uses placeholder visuals and silent audio only. Cloud API actions are disabled in this mode.</span>}
           <span className="muted">Up to 50 topics per batch</span>
         </div>
