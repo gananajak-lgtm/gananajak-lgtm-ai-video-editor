@@ -406,15 +406,21 @@ export default function ContentFactoryPanel({
           ) : (
             <button className="primary" disabled={!aiConfigured || !batchTopics.trim() || batchOneClickRunning || !providerStatus.replicateConfigured || !providerStatus.elevenLabsConfigured} onClick={createBatchVideosOneClick}>{batchOneClickRunning ? "Creating batch videos..." : "Create Batch Videos (One Click)"}</button>
           )}
-          <button className="primary" disabled={!aiConfigured || !batchTopics.trim() || batchGenerating || batchOneClickRunning} onClick={generateBatch}>
-            {batchGenerating ? `Preparing ${batchProgress.completed}/${batchProgress.total}...` : "Create batch projects"}
-          </button>
-          {batchGenerating && <progress max={Math.max(1, batchProgress.total)} value={batchProgress.completed} aria-label="Batch project progress" />}
-          {batch && batch.items.some((item) => item.status !== "rendered") && <button className="primary" disabled={batchGenerating || batchAssetsRunning || batchRendering || batchOneClickRunning} onClick={resumeBatchOneClick}>{batchOneClickRunning ? "Resuming remaining videos..." : "Resume Remaining (One Click)"}</button>}\n          {batch?.items.some((item) => item.status === "failed" && item.failedStage === "project") && <button disabled={batchGenerating || batchAssetsRunning || batchRendering} onClick={retryFailedBatch}>Retry planning failures</button>}
-          {batch?.items.some((item) => item.status === "failed" && item.failedStage === "assets") && <button disabled={batchGenerating || batchAssetsRunning || batchRendering} onClick={generateBatchAssets}>Retry asset failures</button>}
-          {batch?.items.some((item) => item.status === "failed" && item.failedStage === "render") && <button disabled={batchGenerating || batchAssetsRunning || batchRendering} onClick={renderBatch}>Retry render failures</button>}
-          {batch?.items.some((item) => item.project && (item.status === "ready" || (item.status === "failed" && item.failedStage === "assets"))) && <button className="primary" disabled={batchGenerating || batchAssetsRunning || !providerStatus.replicateConfigured || !providerStatus.elevenLabsConfigured} onClick={generateBatchAssets}>{batchAssetsRunning ? `Assets ${batchAssetProgress.completed}/${batchAssetProgress.total} · ${batchAssetProgress.assetCompleted}/${batchAssetProgress.assetTotal || "?"}` : "Generate batch assets"}</button>}
-          {batch?.items.some((item) => item.status === "assets-ready" || (item.status === "failed" && item.failedStage === "render")) && <button className="primary" disabled={batchGenerating || batchAssetsRunning || batchRendering} onClick={renderBatch}>{batchRendering ? `Rendering ${batchRenderProgress.completed}/${batchRenderProgress.total} · ${Math.round(batchRenderProgress.renderProgress * 100)}%` : "Render batch MP4s"}</button>}
+          {generationMode === "cloud" && (
+            <>
+              <button className="primary" disabled={!aiConfigured || !batchTopics.trim() || batchGenerating || batchOneClickRunning} onClick={generateBatch}>
+                {batchGenerating ? `Preparing ${batchProgress.completed}/${batchProgress.total}...` : "Create batch projects"}
+              </button>
+              {batchGenerating && <progress max={Math.max(1, batchProgress.total)} value={batchProgress.completed} aria-label="Batch project progress" />}
+              {batch && batch.items.some((item) => item.status !== "rendered") && <button className="primary" disabled={batchGenerating || batchAssetsRunning || batchRendering || batchOneClickRunning} onClick={resumeBatchOneClick}>{batchOneClickRunning ? "Resuming remaining videos..." : "Resume Remaining (One Click)"}</button>}
+              {batch?.items.some((item) => item.status === "failed" && item.failedStage === "project") && <button disabled={batchGenerating || batchAssetsRunning || batchRendering} onClick={retryFailedBatch}>Retry planning failures</button>}
+              {batch?.items.some((item) => item.status === "failed" && item.failedStage === "assets") && <button disabled={batchGenerating || batchAssetsRunning || batchRendering} onClick={generateBatchAssets}>Retry asset failures</button>}
+              {batch?.items.some((item) => item.status === "failed" && item.failedStage === "render") && <button disabled={batchGenerating || batchAssetsRunning || batchRendering} onClick={renderBatch}>Retry render failures</button>}
+              {batch?.items.some((item) => item.project && (item.status === "ready" || (item.status === "failed" && item.failedStage === "assets"))) && <button className="primary" disabled={batchGenerating || batchAssetsRunning || !providerStatus.replicateConfigured || !providerStatus.elevenLabsConfigured} onClick={generateBatchAssets}>{batchAssetsRunning ? `Assets ${batchAssetProgress.completed}/${batchAssetProgress.total} · ${batchAssetProgress.assetCompleted}/${batchAssetProgress.assetTotal || "?"}` : "Generate batch assets"}</button>}
+              {batch?.items.some((item) => item.status === "assets-ready" || (item.status === "failed" && item.failedStage === "render")) && <button className="primary" disabled={batchGenerating || batchAssetsRunning || batchRendering} onClick={renderBatch}>{batchRendering ? `Rendering ${batchRenderProgress.completed}/${batchRenderProgress.total} · ${Math.round(batchRenderProgress.renderProgress * 100)}%` : "Render batch MP4s"}</button>}
+            </>
+          )}
+          {generationMode === "local-test" && <span className="muted">Local Test uses placeholder visuals and silent audio only. Cloud API actions are disabled in this mode.</span>}
           <span className="muted">Up to 50 topics per batch</span>
         </div>
         {batch && (
