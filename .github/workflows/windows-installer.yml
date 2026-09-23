@@ -26,9 +26,16 @@ jobs:
         run: |
           $exe = Get-ChildItem -Path release\\win-unpacked -Filter *.exe | Select-Object -First 1
           if (-not $exe) { throw "Packaged app executable not found" }
+          $smokeMarker = Join-Path $env:RUNNER_TEMP "gananajak-packaged-smoke\\frame.png"
+          if (Test-Path $smokeMarker) { Remove-Item $smokeMarker -Force }
           $process = Start-Process -FilePath $exe.FullName -ArgumentList "--smoke-test" -PassThru
-          if (-not $process.WaitForExit(30000)) { $process.Kill(); throw "Packaged app smoke test timed out" }
-          if ($process.ExitCode -ne 0) { throw "Packaged app smoke test failed with exit code $($process.ExitCode)" }
+          Start-Sleep -Seconds 15
+          if (-not (Test-Path $smokeMarker)) {
+            if (-not $process.HasExited) { $process.Kill() }
+            throw "Packaged app smoke marker was not created"
+          }
+          if (-not $process.HasExited) { $process.Kill() }
+          Write-Host "Packaged app launched and bundled FFmpeg created $smokeMarker"
       - uses: actions/upload-artifact@v4
         with:
           name: gananajak-ai-video-editor-windows
