@@ -353,6 +353,16 @@ export default function ContentFactoryPanel({
         </span>
       </div>
 
+      {generationMode === "local-test" && (
+        <div className="transcriptRow" role="note">
+          <span>LOCAL</span>
+          <div>
+            <strong>Safe pipeline test · zero external API calls</strong>
+            <p className="muted">Creates dark placeholder images and silent narration audio with bundled FFmpeg. Use this to verify Topic → scenes → assets → MP4 before spending cloud credits.</p>
+          </div>
+        </div>
+      )}
+
       <div className="keyRow">
         <input
           value={topic}
