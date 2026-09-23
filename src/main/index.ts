@@ -272,7 +272,7 @@ ipcMain.handle("content:resume-local-test-batch", async (event, savedBatch: impo
   const pendingIndexes = items.map((item,index)=>({item,index})).filter(({item})=>item.status !== "rendered").map(({index})=>index);
   let completed = items.length - pendingIndexes.length;
   for (const index of pendingIndexes) {
-    const item = { ...items[index], error:undefined, failedStage:undefined };
+    const item: import("../shared/content-factory").ContentBatchItem = { ...items[index], error:undefined, failedStage:undefined };
     try {
       item.status = "preparing";
       const project = item.project ?? buildLocalTestProject(item.brief);
