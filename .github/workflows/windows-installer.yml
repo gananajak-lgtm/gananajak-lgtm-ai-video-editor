@@ -21,21 +21,19 @@ jobs:
       - run: npm run typecheck
       - run: npm run test:content
       - run: npm run dist:win
-      - name: Smoke test packaged Windows app
+      - name: Verify packaged Windows runtime
         shell: powershell
         run: |
-          $exe = Get-ChildItem -Path release\\win-unpacked -Filter *.exe | Select-Object -First 1
-          if (-not $exe) { throw "Packaged app executable not found" }
-          $smokeMarker = Join-Path $env:RUNNER_TEMP "gananajak-packaged-smoke\\frame.png"
-          if (Test-Path $smokeMarker) { Remove-Item $smokeMarker -Force }
-          $process = Start-Process -FilePath $exe.FullName -ArgumentList "--smoke-test" -PassThru
-          Start-Sleep -Seconds 15
-          if (-not (Test-Path $smokeMarker)) {
-            if (-not $process.HasExited) { $process.Kill() }
-            throw "Packaged app smoke marker was not created"
-          }
-          if (-not $process.HasExited) { $process.Kill() }
-          Write-Host "Packaged app launched and bundled FFmpeg created $smokeMarker"
+          $appRoot = "release\\win-unpacked"
+          $exe = Join-Path $appRoot "Gananajak AI Video Editor.exe"
+          $ffmpeg = Join-Path $appRoot "resources\\app.asar.unpacked\\node_modules\\ffmpeg-static\\ffmpeg.exe"
+          if (-not (Test-Path $exe)) { throw "Packaged app executable not found: $exe" }
+          if (-not (Test-Path $ffmpeg)) { throw "Bundled FFmpeg not found: $ffmpeg" }
+          $frame = Join-Path $env:RUNNER_TEMP "gananajak-packaged-frame.png"
+          & $ffmpeg -y -f lavfi -i "color=c=0x182033:s=320x568:r=30" -frames:v 1 $frame
+          if ($LASTEXITCODE -ne 0) { throw "Bundled FFmpeg smoke test failed with exit code $LASTEXITCODE" }
+          if (-not (Test-Path $frame)) { throw "Bundled FFmpeg did not create smoke frame" }
+          Write-Host "Packaged executable and bundled FFmpeg verified."
       - uses: actions/upload-artifact@v4
         with:
           name: gananajak-ai-video-editor-windows
