@@ -74,6 +74,22 @@ export type ContentProject = {
   assetPlan?: AssetPlan;
 };
 
+export type PublishStatus = "draft" | "ready" | "scheduled" | "publishing" | "published" | "failed";
+
+export type PublishPlatform = "youtube" | "tiktok" | "facebook" | "instagram";
+
+export type PublishPlan = {
+  status: PublishStatus;
+  title?: string;
+  description?: string;
+  caption?: string;
+  hashtags?: string[];
+  platforms?: PublishPlatform[];
+  scheduledAt?: string;
+  publishedAt?: string;
+  error?: string;
+};
+
 export type ContentBatchStatus = "queued" | "preparing" | "ready" | "generating-assets" | "assets-ready" | "rendering" | "rendered" | "failed";
 
 export type ContentBatchItem = {
@@ -84,6 +100,7 @@ export type ContentBatchItem = {
   error?: string;
   outputPath?: string;
   failedStage?: "project" | "assets" | "render";
+  publish?: PublishPlan;
 };
 
 export type ContentBatch = {
