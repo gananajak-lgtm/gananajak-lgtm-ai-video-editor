@@ -18,6 +18,7 @@ import { generateLocalTestAssets } from "./content-local-test-assets";
 import { createContentBatch, prepareContentBatch } from "./content-batch";
 import { generateBatchAssets } from "./content-batch-assets";
 import { renderContentBatch } from "./content-batch-render";
+import { ensurePublishPlan } from "./content-publish-planner";
 import {
   createPlaybackUrl,
   installMediaProtocol
@@ -256,7 +257,7 @@ ipcMain.handle("content:create-local-test-batch", async (event, briefs: ContentB
       item.project = await generateLocalTestAssets(project, root);
       item.status="assets-ready";
       const rendered=await renderContentBatch({...batch,items:[item]},outputDir,workRoot);
-      Object.assign(item, rendered.items[0]);
+      Object.assign(item, ensurePublishPlan(rendered.items[0]));
     } catch(error) { item.status="failed"; item.failedStage=item.project?.assetPlan?"render":item.project?"assets":"project"; item.error=error instanceof Error?error.message:String(error); }
     items[index]=item; batch={...batch,items,updatedAt:new Date().toISOString()}; await saveBatchState(batch);
     if(!event.sender.isDestroyed()) event.sender.send("content:batch-progress",{completed:index+1,total:items.length,item});
@@ -282,7 +283,7 @@ ipcMain.handle("content:resume-local-test-batch", async (event, savedBatch: impo
       item.project = await generateLocalTestAssets(project, root);
       item.status = "assets-ready";
       const rendered = await renderContentBatch({ ...batch, items:[item] }, outputDir, workRoot);
-      Object.assign(item, rendered.items[0]);
+      Object.assign(item, ensurePublishPlan(rendered.items[0]));
     } catch (error) {
       item.status = "failed";
       item.failedStage = item.project?.assetPlan ? "render" : item.project ? "assets" : "project";
@@ -305,10 +306,11 @@ ipcMain.handle("content:choose-batch-output", async () => {
 
 ipcMain.handle("content:render-batch", async (event, batch: import("../shared/content-factory").ContentBatch, outputDir:string) => {
   const workRoot=path.join(app.getPath("temp"),"gananajak-content-factory","batch-render");
-  const result=await renderContentBatch(batch,outputDir,workRoot,(progress)=>{
+  const rendered=await renderContentBatch(batch,outputDir,workRoot,(progress)=>{
     if(!event.sender.isDestroyed()) event.sender.send("content:batch-render-progress",progress);
     void saveBatchState({ ...batch, items: batch.items.map((existing) => existing.id === progress.item.id ? progress.item : existing), updatedAt:new Date().toISOString() });
   });
+  const result = { ...rendered, items: rendered.items.map((item) => item.status === "rendered" ? ensurePublishPlan(item) : item), updatedAt:new Date().toISOString() };
   if(result.items.some(item=>item.status==="rendered")) await shell.openPath(outputDir);
   return saveBatchState(result);
 });
