@@ -471,9 +471,9 @@ export default function ContentFactoryPanel({
       </div>
             {error && <div className="message errorMessage">{error}</div>}
 
-      {project && (
         {batch && (
-        <div className="transcriptPanel">
+        {project && (
+      <div className="transcriptPanel">
           <div className="timelineHeader">
             <div>
               <p className="eyebrow">PUBLISH QUEUE</p>
