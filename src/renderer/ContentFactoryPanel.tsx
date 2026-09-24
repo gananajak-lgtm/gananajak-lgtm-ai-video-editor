@@ -472,7 +472,26 @@ export default function ContentFactoryPanel({
             {error && <div className="message errorMessage">{error}</div>}
 
       {project && (
+        {batch && (
         <div className="transcriptPanel">
+          <div className="timelineHeader">
+            <div>
+              <p className="eyebrow">PUBLISH QUEUE</p>
+              <h3>Rendered videos ready for publishing</h3>
+              <p className="muted">Create → Produce → Publish. Platform connections and scheduling will plug into this queue without changing the render pipeline.</p>
+            </div>
+            <span className="aiBadge">{batch.items.filter((item) => item.status === "rendered").length} ready</span>
+          </div>
+          {batch.items.filter((item) => item.status === "rendered").map((item) => (
+            <div className="transcriptRow" key={`publish-${item.id}`}>
+              <span>{item.publish?.status ?? "draft"}</span>
+              <div><strong>{item.project?.title ?? item.brief.topic}</strong><p className="muted">{item.outputPath ?? "Rendered output"}</p></div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="transcriptPanel">
           <div className="timelineHeader">
             <div>
               <p className="eyebrow">CONTENT PROJECT</p>
