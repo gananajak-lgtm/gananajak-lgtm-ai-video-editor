@@ -47,7 +47,7 @@ import { exchangeYouTubeAuthorizationCode } from "./youtube-oauth";
 import { loadYouTubeTokens, saveYouTubeTokens, loadYouTubeOAuthConfig, saveYouTubeOAuthConfig } from "./youtube-token-store";
 import { createAffiliateProduct } from "./affiliate-product-import";
 import { createAffiliateContentJobs } from "./affiliate-content-jobs";
-import { affiliateJobToContentBrief } from "./affiliate-content-planner";
+import { affiliateJobToContentBrief } from "./affiliate-content-planner";\nimport { loadAffiliateQueue, saveAffiliateQueue } from "./affiliate-queue-store";
 
 const isDev = !app.isPackaged;
 
@@ -73,6 +73,9 @@ function createWindow() {
     void window.loadFile(path.join(__dirname, "../../dist/index.html"));
   }
 }
+
+ipcMain.handle("affiliate:load-queue", async () => loadAffiliateQueue());
+ipcMain.handle("affiliate:save-queue", async (_event, products:import("../shared/affiliate-factory").AffiliateProduct[], jobs:import("../shared/affiliate-factory").AffiliateContentJob[]) => saveAffiliateQueue({products,jobs}));
 
 ipcMain.handle("affiliate:prepare-batch", async (event, jobs:import("../shared/affiliate-factory").AffiliateContentJob[], language:import("../shared/content-factory").ContentLanguage="th", duration=30) => {
   const briefs=jobs.map((job)=>affiliateJobToContentBrief(job,{language,duration}));
