@@ -14,3 +14,12 @@ export async function exchangeYouTubeAuthorizationCode(input:{ clientId:string; 
   if (!response.ok || !data.access_token) throw new Error(data.error_description || data.error || "YouTube token exchange failed.");
   return data as YouTubeTokenResponse;
 }
+
+export async function refreshYouTubeAccessToken(input:{clientId:string;clientSecret?:string;refreshToken:string}):Promise<YouTubeTokenResponse>{
+  const body=new URLSearchParams({client_id:input.clientId,refresh_token:input.refreshToken,grant_type:"refresh_token"});
+  if(input.clientSecret) body.set("client_secret",input.clientSecret);
+  const response=await fetch("https://oauth2.googleapis.com/token",{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body});
+  const data=await response.json() as Partial<YouTubeTokenResponse>&{error?:string;error_description?:string};
+  if(!response.ok || !data.access_token) throw new Error(data.error_description || data.error || "YouTube token refresh failed.");
+  return {...data,refresh_token:data.refresh_token ?? input.refreshToken} as YouTubeTokenResponse;
+}
