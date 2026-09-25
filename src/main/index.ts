@@ -299,6 +299,20 @@ ipcMain.handle("content:resume-local-test-batch", async (event, savedBatch: impo
   return batch;
 });
 
+let youtubeOAuthConfig: { clientId:string; clientSecret?:string } | null = null;
+
+ipcMain.handle("content:configure-youtube-oauth", async (_event, clientId:string, clientSecret?:string): Promise<import("../shared/content-factory").PublishAccount[]> => {
+  const normalizedClientId = clientId.trim();
+  if (!normalizedClientId) throw new Error("YouTube OAuth client ID is required.");
+  youtubeOAuthConfig = { clientId:normalizedClientId, clientSecret:clientSecret?.trim() || undefined };
+  return [
+    { platform:"youtube", status:"disconnected", displayName:"OAuth configured · authorization required" },
+    { platform:"tiktok", status:"disconnected" },
+    { platform:"facebook", status:"disconnected" },
+    { platform:"instagram", status:"disconnected" }
+  ];
+});
+
 ipcMain.handle("content:get-publish-accounts", async (): Promise<import("../shared/content-factory").PublishAccount[]> => [
   { platform:"youtube", status:"disconnected" },
   { platform:"tiktok", status:"disconnected" },
