@@ -12,7 +12,7 @@
     "build:electron": "tsc -p tsconfig.electron.json",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.electron.json --noEmit",
     "smoke:render": "node scripts/render-smoke.cjs",
-    "test:content": "npm run build:electron && node --test dist-electron/main/content-publish-planner.test.js dist-electron/main/content-local-test-assets.test.js dist-electron/main/content-asset-runner.test.js dist-electron/main/content-narration-runner.test.js dist-electron/main/content-timeline-bridge.test.js dist-electron/main/content-factory.integration.test.js dist-electron/main/video/render.test.js dist-electron/main/content-batch.test.js dist-electron/main/content-batch-assets.test.js dist-electron/main/content-batch-render.test.js",
+    "test:content": "npm run build:electron && node --test dist-electron/main/affiliate-content-planner.test.js dist-electron/main/content-publish-planner.test.js dist-electron/main/content-local-test-assets.test.js dist-electron/main/content-asset-runner.test.js dist-electron/main/content-narration-runner.test.js dist-electron/main/content-timeline-bridge.test.js dist-electron/main/content-factory.integration.test.js dist-electron/main/video/render.test.js dist-electron/main/content-batch.test.js dist-electron/main/content-batch-assets.test.js dist-electron/main/content-batch-render.test.js",
     "dist:win": "npm run build && electron-builder --win nsis"
   },
   "dependencies": {
