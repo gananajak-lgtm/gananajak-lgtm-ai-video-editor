@@ -325,6 +325,7 @@ export type DesktopApi = {
   resumeLocalTestBatch: (batch: ContentBatch, outputDir: string) => Promise<ContentBatch>;
   loadContentBatch: () => Promise<ContentBatch | null>;
   updatePublishPlan: (batch: ContentBatch, itemId: string, publish: import("./content-factory").PublishPlan) => Promise<ContentBatch>;
+  getPublishAccounts: () => Promise<import("./content-factory").PublishAccount[]>;
   resumeContentBatch: (batch: ContentBatch) => Promise<ContentBatch>;
   generateContentBatchAssets: (batch: ContentBatch) => Promise<ContentBatch>;
   chooseBatchOutputFolder: () => Promise<string | null>;
