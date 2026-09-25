@@ -47,6 +47,7 @@ const api: DesktopApi = {
   resumeLocalTestBatch: (batch, outputDir) =>
     ipcRenderer.invoke("content:resume-local-test-batch", batch, outputDir),
   loadContentBatch: () => ipcRenderer.invoke("content:load-batch"),
+  updatePublishPlan: (batch, itemId, publish) => ipcRenderer.invoke("content:update-publish-plan", batch, itemId, publish),
   resumeContentBatch: (batch) =>
     ipcRenderer.invoke("content:resume-batch", batch),
   generateContentBatchAssets: (batch) =>
