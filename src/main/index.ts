@@ -46,6 +46,7 @@ import { createOAuthState, waitForOAuthCallback } from "./oauth-loopback";
 import { exchangeYouTubeAuthorizationCode } from "./youtube-oauth";
 import { loadYouTubeTokens, saveYouTubeTokens } from "./youtube-token-store";
 import { createAffiliateProduct } from "./affiliate-product-import";
+import { createAffiliateContentJobs } from "./affiliate-content-jobs";
 
 const isDev = !app.isPackaged;
 
@@ -71,6 +72,8 @@ function createWindow() {
     void window.loadFile(path.join(__dirname, "../../dist/index.html"));
   }
 }
+
+ipcMain.handle("affiliate:create-jobs", async (_event, products:import("../shared/affiliate-factory").AffiliateProduct[]) => createAffiliateContentJobs(products));
 
 ipcMain.handle("affiliate:import-product", async (_event, sourceUrl:string) => createAffiliateProduct({sourceUrl}));
 
