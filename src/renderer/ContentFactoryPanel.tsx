@@ -3,7 +3,9 @@ import type {
   ContentBatch,
   ContentFormat,
   ContentLanguage,
-  ContentProject
+  ContentProject,
+  PublishPlatform,
+  PublishPlan
 } from "../shared/content-factory";
 import type { ContentProviderStatus } from "../shared/types";
 
@@ -44,6 +46,22 @@ export default function ContentFactoryPanel({
     void window.videoEditor.getContentProviderStatus().then(setProviderStatus);
     void window.videoEditor.loadContentBatch().then((saved) => { if (saved) setBatch(saved); });
   }, []);
+
+  const updatePublish = async (itemId: string, patch: Partial<PublishPlan>) => {
+    if (!batch) return;
+    const item = batch.items.find((entry) => entry.id === itemId);
+    if (!item) return;
+    const publish: PublishPlan = { status:item.publish?.status ?? "draft", ...item.publish, ...patch };
+    const next = await window.videoEditor.updatePublishPlan(batch, itemId, publish);
+    setBatch(next);
+  };
+
+  const togglePublishPlatform = async (itemId:string, platform:PublishPlatform) => {
+    const item = batch?.items.find((entry) => entry.id === itemId);
+    if (!item) return;
+    const current = item.publish?.platforms ?? [];
+    await updatePublish(itemId, { platforms:current.includes(platform) ? current.filter((value) => value !== platform) : [...current, platform] });
+  };
 
   const saveProviderKeys = async () => {
     let status = providerStatus;
@@ -484,7 +502,16 @@ export default function ContentFactoryPanel({
           {batch.items.filter((item) => item.status === "rendered").map((item) => (
             <div className="transcriptRow" key={`publish-${item.id}`}>
               <span>{item.publish?.status ?? "draft"}</span>
-              <div><strong>{item.project?.title ?? item.brief.topic}</strong><p className="muted">{item.outputPath ?? "Rendered output"}</p></div>
+              <div>
+                <input value={item.publish?.title ?? item.project?.title ?? item.brief.topic} onChange={(event) => void updatePublish(item.id, { title:event.target.value })} aria-label="Publish title" />
+                <textarea value={item.publish?.description ?? ""} onChange={(event) => void updatePublish(item.id, { description:event.target.value })} placeholder="Description" aria-label="Publish description" />
+                <input value={(item.publish?.hashtags ?? []).join(" ")} onChange={(event) => void updatePublish(item.id, { hashtags:event.target.value.split(/\\s+/).map((tag) => tag.replace(/^#/, "")).filter(Boolean) })} placeholder="#hashtags" aria-label="Publish hashtags" />
+                <div className="keyRow">
+                  {(["youtube","tiktok","facebook","instagram"] as PublishPlatform[]).map((platform) => <label key={platform}><input type="checkbox" checked={item.publish?.platforms?.includes(platform) ?? false} onChange={() => void togglePublishPlatform(item.id, platform)} /> {platform}</label>)}
+                  <input type="datetime-local" value={item.publish?.scheduledAt?.slice(0,16) ?? ""} onChange={(event) => void updatePublish(item.id, { scheduledAt:event.target.value || undefined, status:event.target.value ? "scheduled" : "ready" })} aria-label="Publish schedule" />
+                </div>
+                <p className="muted">{item.outputPath ?? "Rendered output"}</p>
+              </div>
             </div>
           ))}
         </div>
