@@ -329,6 +329,7 @@ export type DesktopApi = {
   configureYouTubeOAuth: (clientId: string, clientSecret?: string) => Promise<import("./content-factory").PublishAccount[]>;
   connectYouTube: () => Promise<import("./content-factory").PublishAccount[]>;
   importAffiliateProduct: (sourceUrl: string) => Promise<import("./affiliate-factory").AffiliateProduct>;
+  createAffiliateJobs: (products: import("./affiliate-factory").AffiliateProduct[]) => Promise<import("./affiliate-factory").AffiliateContentJob[]>;
   resumeContentBatch: (batch: ContentBatch) => Promise<ContentBatch>;
   generateContentBatchAssets: (batch: ContentBatch) => Promise<ContentBatch>;
   chooseBatchOutputFolder: () => Promise<string | null>;
