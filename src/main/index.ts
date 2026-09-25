@@ -313,6 +313,25 @@ ipcMain.handle("content:configure-youtube-oauth", async (_event, clientId:string
   ];
 });
 
+ipcMain.handle("content:connect-youtube", async (): Promise<import("../shared/content-factory").PublishAccount[]> => {
+  if (!youtubeOAuthConfig) throw new Error("Configure YouTube OAuth before connecting.");
+  const params = new URLSearchParams({
+    client_id:youtubeOAuthConfig.clientId,
+    redirect_uri:"http://127.0.0.1",
+    response_type:"code",
+    scope:"https://www.googleapis.com/auth/youtube.upload",
+    access_type:"offline",
+    prompt:"consent"
+  });
+  await shell.openExternal(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+  return [
+    { platform:"youtube", status:"disconnected", displayName:"Authorization opened in browser · callback pending" },
+    { platform:"tiktok", status:"disconnected" },
+    { platform:"facebook", status:"disconnected" },
+    { platform:"instagram", status:"disconnected" }
+  ];
+});
+
 ipcMain.handle("content:get-publish-accounts", async (): Promise<import("../shared/content-factory").PublishAccount[]> => [
   { platform:"youtube", status:"disconnected" },
   { platform:"tiktok", status:"disconnected" },
