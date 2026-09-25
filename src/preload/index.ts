@@ -51,6 +51,7 @@ const api: DesktopApi = {
   getPublishAccounts: () => ipcRenderer.invoke("content:get-publish-accounts"),
   configureYouTubeOAuth: (clientId, clientSecret) => ipcRenderer.invoke("content:configure-youtube-oauth", clientId, clientSecret),
   connectYouTube: () => ipcRenderer.invoke("content:connect-youtube"),
+  importAffiliateProduct: (sourceUrl) => ipcRenderer.invoke("affiliate:import-product", sourceUrl),
   resumeContentBatch: (batch) =>
     ipcRenderer.invoke("content:resume-batch", batch),
   generateContentBatchAssets: (batch) =>
