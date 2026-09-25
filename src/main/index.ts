@@ -44,6 +44,7 @@ import { renderQcPack } from "./video/qcPack";
 import { buildAutomaticTimeline } from "./video/timeline";
 import { createOAuthState, waitForOAuthCallback } from "./oauth-loopback";
 import { exchangeYouTubeAuthorizationCode } from "./youtube-oauth";
+import { loadYouTubeTokens, saveYouTubeTokens } from "./youtube-token-store";
 
 const isDev = !app.isPackaged;
 
@@ -327,19 +328,23 @@ ipcMain.handle("content:connect-youtube", async (): Promise<import("../shared/co
     }); });
   });
   const callback=await callbackPromise;
-  await exchangeYouTubeAuthorizationCode({ clientId:youtubeOAuthConfig.clientId, clientSecret:youtubeOAuthConfig.clientSecret, code:callback.code, redirectUri:callback.redirectUri });
+  const tokens=await exchangeYouTubeAuthorizationCode({ clientId:youtubeOAuthConfig.clientId, clientSecret:youtubeOAuthConfig.clientSecret, code:callback.code, redirectUri:callback.redirectUri });
+  await saveYouTubeTokens(tokens);
   return [
     { platform:"youtube", status:"connected", displayName:"YouTube authorized" },
     { platform:"tiktok", status:"disconnected" }, { platform:"facebook", status:"disconnected" }, { platform:"instagram", status:"disconnected" }
   ];
 });
 
-ipcMain.handle("content:get-publish-accounts", async (): Promise<import("../shared/content-factory").PublishAccount[]> => [
-  { platform:"youtube", status:"disconnected" },
-  { platform:"tiktok", status:"disconnected" },
-  { platform:"facebook", status:"disconnected" },
-  { platform:"instagram", status:"disconnected" }
-]);
+ipcMain.handle("content:get-publish-accounts", async (): Promise<import("../shared/content-factory").PublishAccount[]> => {
+  const youtubeTokens=await loadYouTubeTokens();
+  return [
+    { platform:"youtube", status:youtubeTokens?.refresh_token || youtubeTokens?.access_token ? "connected" : "disconnected", displayName:youtubeTokens ? "YouTube authorized" : undefined },
+    { platform:"tiktok", status:"disconnected" },
+    { platform:"facebook", status:"disconnected" },
+    { platform:"instagram", status:"disconnected" }
+  ];
+});
 
 ipcMain.handle("content:update-publish-plan", async (_event, batch: import("../shared/content-factory").ContentBatch, itemId:string, publish: import("../shared/content-factory").PublishPlan) => {
   const result = { ...batch, items: batch.items.map((item) => item.id === itemId ? { ...item, publish } : item), updatedAt:new Date().toISOString() };
