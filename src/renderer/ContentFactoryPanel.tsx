@@ -5,7 +5,8 @@ import type {
   ContentLanguage,
   ContentProject,
   PublishPlatform,
-  PublishPlan
+  PublishPlan,
+  PublishAccount
 } from "../shared/content-factory";
 import type { ContentProviderStatus } from "../shared/types";
 
@@ -41,10 +42,12 @@ export default function ContentFactoryPanel({
   const [providerStatus, setProviderStatus] = useState<ContentProviderStatus>({ replicateConfigured:false, elevenLabsConfigured:false });
   const [replicateToken, setReplicateToken] = useState("");
   const [elevenLabsKey, setElevenLabsKey] = useState("");
+  const [publishAccounts, setPublishAccounts] = useState<PublishAccount[]>([]);
 
   useEffect(() => {
     void window.videoEditor.getContentProviderStatus().then(setProviderStatus);
     void window.videoEditor.loadContentBatch().then((saved) => { if (saved) setBatch(saved); });
+    void window.videoEditor.getPublishAccounts().then(setPublishAccounts);
   }, []);
 
   const updatePublish = async (itemId: string, patch: Partial<PublishPlan>) => {
@@ -488,6 +491,20 @@ export default function ContentFactoryPanel({
         <button onClick={saveProviderKeys} disabled={!replicateToken.trim() && !elevenLabsKey.trim()}>Save provider keys</button>
       </div>
             {error && <div className="message errorMessage">{error}</div>}
+
+      <div className="transcriptPanel">
+        <div className="timelineHeader">
+          <div><p className="eyebrow">PUBLISH ACCOUNTS</p><h3>Connect publishing channels</h3><p className="muted">OAuth connection comes next. Status stays disconnected until a real provider authorization succeeds.</p></div>
+        </div>
+        <div className="transcriptList">
+          {publishAccounts.map((account) => (
+            <div className="transcriptRow" key={account.platform}>
+              <span>{account.status}</span>
+              <div><strong>{account.platform}</strong><p className="muted">{account.status === "connected" ? account.displayName ?? "Connected" : "Not connected"}</p><button disabled>{account.status === "connected" ? "Connected" : "Connect account"}</button></div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {batch && (
         <div className="transcriptPanel">
