@@ -47,7 +47,8 @@ import { exchangeYouTubeAuthorizationCode } from "./youtube-oauth";
 import { loadYouTubeTokens, saveYouTubeTokens, loadYouTubeOAuthConfig, saveYouTubeOAuthConfig } from "./youtube-token-store";
 import { createAffiliateProduct } from "./affiliate-product-import";
 import { createAffiliateContentJobs } from "./affiliate-content-jobs";
-import { affiliateJobToContentBrief } from "./affiliate-content-planner";\nimport { loadAffiliateQueue, saveAffiliateQueue } from "./affiliate-queue-store";
+import { affiliateJobToContentBrief } from "./affiliate-content-planner";
+import { loadAffiliateQueue, saveAffiliateQueue } from "./affiliate-queue-store";
 
 const isDev = !app.isPackaged;
 
