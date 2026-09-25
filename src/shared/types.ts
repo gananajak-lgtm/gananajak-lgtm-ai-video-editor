@@ -327,6 +327,7 @@ export type DesktopApi = {
   updatePublishPlan: (batch: ContentBatch, itemId: string, publish: import("./content-factory").PublishPlan) => Promise<ContentBatch>;
   getPublishAccounts: () => Promise<import("./content-factory").PublishAccount[]>;
   configureYouTubeOAuth: (clientId: string, clientSecret?: string) => Promise<import("./content-factory").PublishAccount[]>;
+  connectYouTube: () => Promise<import("./content-factory").PublishAccount[]>;
   resumeContentBatch: (batch: ContentBatch) => Promise<ContentBatch>;
   generateContentBatchAssets: (batch: ContentBatch) => Promise<ContentBatch>;
   chooseBatchOutputFolder: () => Promise<string | null>;
