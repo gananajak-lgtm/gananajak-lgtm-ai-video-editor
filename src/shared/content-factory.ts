@@ -78,6 +78,14 @@ export type PublishStatus = "draft" | "ready" | "scheduled" | "publishing" | "pu
 
 export type PublishPlatform = "youtube" | "tiktok" | "facebook" | "instagram";
 
+export type PublishAccount = {
+  platform: PublishPlatform;
+  status: "disconnected" | "connected" | "error";
+  displayName?: string;
+  connectedAt?: string;
+  error?: string;
+};
+
 export type PublishPlan = {
   status: PublishStatus;
   title?: string;
