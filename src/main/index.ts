@@ -47,6 +47,7 @@ import { exchangeYouTubeAuthorizationCode } from "./youtube-oauth";
 import { loadYouTubeTokens, saveYouTubeTokens } from "./youtube-token-store";
 import { createAffiliateProduct } from "./affiliate-product-import";
 import { createAffiliateContentJobs } from "./affiliate-content-jobs";
+import { affiliateJobToContentBrief } from "./affiliate-content-planner";
 
 const isDev = !app.isPackaged;
 
@@ -72,6 +73,14 @@ function createWindow() {
     void window.loadFile(path.join(__dirname, "../../dist/index.html"));
   }
 }
+
+ipcMain.handle("affiliate:prepare-batch", async (event, jobs:import("../shared/affiliate-factory").AffiliateContentJob[], language:import("../shared/content-factory").ContentLanguage="th", duration=30) => {
+  const briefs=jobs.map((job)=>affiliateJobToContentBrief(job,{language,duration}));
+  const result=await prepareContentBatch(createContentBatch(briefs), generateContentProject, async (completed,total,item)=>{
+    if (!event.sender.isDestroyed()) event.sender.send("content:batch-progress",{completed,total,item});
+  });
+  return saveBatchState(result);
+});
 
 ipcMain.handle("affiliate:create-jobs", async (_event, products:import("../shared/affiliate-factory").AffiliateProduct[]) => createAffiliateContentJobs(products));
 
