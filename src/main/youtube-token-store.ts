@@ -8,7 +8,9 @@ export type StoredYouTubeTokens=YouTubeTokenResponse & { obtainedAt:number; expi
 const tokenPath=()=>path.join(app.getPath("userData"),"publish","youtube-token.bin");
 const configPath=()=>path.join(app.getPath("userData"),"publish","youtube-oauth-config.bin");
 
-export async function saveYouTubeTokens(tokens:YouTubeTokenResponse) {\n  const now=Date.now();\n  const stored:StoredYouTubeTokens={...tokens,obtainedAt:now,expiresAt:now+Math.max(0,tokens.expires_in-60)*1000};
+export async function saveYouTubeTokens(tokens:YouTubeTokenResponse) {
+  const now=Date.now();
+  const stored:StoredYouTubeTokens={...tokens,obtainedAt:now,expiresAt:now+Math.max(0,tokens.expires_in-60)*1000};
   if (!safeStorage.isEncryptionAvailable()) throw new Error("Secure token storage is not available on this system.");
   const encrypted=safeStorage.encryptString(JSON.stringify(stored));
   await mkdir(path.dirname(tokenPath()),{recursive:true});
