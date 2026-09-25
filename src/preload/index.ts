@@ -53,7 +53,7 @@ const api: DesktopApi = {
   connectYouTube: () => ipcRenderer.invoke("content:connect-youtube"),
   importAffiliateProduct: (sourceUrl) => ipcRenderer.invoke("affiliate:import-product", sourceUrl),
   createAffiliateJobs: (products) => ipcRenderer.invoke("affiliate:create-jobs", products),
-  prepareAffiliateBatch: (jobs, language, duration) => ipcRenderer.invoke("affiliate:prepare-batch", jobs, language, duration),
+  prepareAffiliateBatch: (jobs, language, duration) => ipcRenderer.invoke("affiliate:prepare-batch", jobs, language, duration),\n  createLocalAffiliateBatch: (jobs, outputDir, language, duration) => ipcRenderer.invoke("affiliate:create-local-batch", jobs, outputDir, language, duration),
   resumeContentBatch: (batch) =>
     ipcRenderer.invoke("content:resume-batch", batch),
   generateContentBatchAssets: (batch) =>
