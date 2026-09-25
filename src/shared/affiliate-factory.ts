@@ -46,3 +46,7 @@ export type AffiliateAccount = {
   grantedScopes?:string[];
   error?:string;
 };
+
+export type AffiliateProductFactSource="manual"|"official-api"|"browser-assisted";
+export type AffiliateProductFactField="title"|"description"|"price"|"currency"|"images"|"commissionRate"|"affiliateUrl"|"sellerName"|"rating"|"soldCount";
+export type AffiliateProductProvenance={ source:AffiliateProductFactSource; verifiedFields:AffiliateProductFactField[]; capturedAt:string };
