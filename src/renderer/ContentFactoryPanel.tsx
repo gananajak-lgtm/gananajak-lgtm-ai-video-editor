@@ -9,6 +9,7 @@ import type {
   PublishAccount
 } from "../shared/content-factory";
 import type { ContentProviderStatus } from "../shared/types";
+import type { AffiliateProduct } from "../shared/affiliate-factory";
 
 type Props = {
   aiConfigured: boolean;
@@ -43,12 +44,24 @@ export default function ContentFactoryPanel({
   const [replicateToken, setReplicateToken] = useState("");
   const [elevenLabsKey, setElevenLabsKey] = useState("");
   const [publishAccounts, setPublishAccounts] = useState<PublishAccount[]>([]);
+  const [affiliateUrls, setAffiliateUrls] = useState("");
+  const [affiliateProducts, setAffiliateProducts] = useState<AffiliateProduct[]>([]);
+  const [affiliateImporting, setAffiliateImporting] = useState(false);
 
   useEffect(() => {
     void window.videoEditor.getContentProviderStatus().then(setProviderStatus);
     void window.videoEditor.loadContentBatch().then((saved) => { if (saved) setBatch(saved); });
     void window.videoEditor.getPublishAccounts().then(setPublishAccounts);
   }, []);
+
+  const importAffiliateProducts = async () => {
+    const urls=affiliateUrls.split(/\\r?\\n/).map((value)=>value.trim()).filter(Boolean).slice(0,100);
+    if (!urls.length || affiliateImporting) return;
+    setAffiliateImporting(true); setError(null);
+    try { const products:AffiliateProduct[]=[]; for (const url of urls) products.push(await window.videoEditor.importAffiliateProduct(url)); setAffiliateProducts(products); }
+    catch (importError) { setError(importError instanceof Error ? importError.message : String(importError)); }
+    finally { setAffiliateImporting(false); }
+  };
 
   const updatePublish = async (itemId: string, patch: Partial<PublishPlan>) => {
     if (!batch) return;
@@ -491,6 +504,13 @@ export default function ContentFactoryPanel({
         <button onClick={saveProviderKeys} disabled={!replicateToken.trim() && !elevenLabsKey.trim()}>Save provider keys</button>
       </div>
             {error && <div className="message errorMessage">{error}</div>}
+
+      <div className="transcriptPanel">
+        <div className="timelineHeader"><div><p className="eyebrow">AFFILIATE FACTORY</p><h3>Import marketplace products</h3><p className="muted">Paste one Shopee, Lazada, or TikTok Shop product URL per line. Up to 100 products per batch.</p></div></div>
+        <textarea value={affiliateUrls} onChange={(event)=>setAffiliateUrls(event.target.value)} placeholder={"https://...\\nhttps://..."} rows={5} />
+        <button onClick={importAffiliateProducts} disabled={affiliateImporting || !affiliateUrls.trim()}>{affiliateImporting ? "Importing..." : "Import Products"}</button>
+        {affiliateProducts.length > 0 && <div className="transcriptList">{affiliateProducts.map((product)=><div className="transcriptRow" key={product.id}><span>{product.platform}</span><div><strong>{product.title}</strong><p className="muted">{product.sourceUrl}</p></div></div>)}</div>}
+      </div>
 
       <div className="transcriptPanel">
         <div className="timelineHeader">
