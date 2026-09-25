@@ -60,8 +60,7 @@ export default function ContentFactoryPanel({
   }, []);
 
   const importAffiliateProducts = async () => {
-    const urls=affiliateUrls.split(/\\r?\
-/).map((value)=>value.trim()).filter(Boolean).slice(0,100);
+    const urls=affiliateUrls.split(String.fromCharCode(10)).map((value)=>value.replace(/\\r$/,"").trim()).filter(Boolean).slice(0,100);
     if (!urls.length || affiliateImporting) return;
     setAffiliateImporting(true); setError(null); setAffiliateImportErrors([]);
     try {
