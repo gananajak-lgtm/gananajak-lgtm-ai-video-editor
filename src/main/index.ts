@@ -322,7 +322,8 @@ let youtubeOAuthConfig: { clientId:string; clientSecret?:string } | null = null;
 ipcMain.handle("content:configure-youtube-oauth", async (_event, clientId:string, clientSecret?:string): Promise<import("../shared/content-factory").PublishAccount[]> => {
   const normalizedClientId = clientId.trim();
   if (!normalizedClientId) throw new Error("YouTube OAuth client ID is required.");
-  youtubeOAuthConfig = { clientId:normalizedClientId, clientSecret:clientSecret?.trim() || undefined };\n  await saveYouTubeOAuthConfig(youtubeOAuthConfig);
+  youtubeOAuthConfig = { clientId:normalizedClientId, clientSecret:clientSecret?.trim() || undefined };
+  await saveYouTubeOAuthConfig(youtubeOAuthConfig);
   return [
     { platform:"youtube", status:"disconnected", displayName:"OAuth configured · authorization required" },
     { platform:"tiktok", status:"disconnected" },
@@ -332,7 +333,8 @@ ipcMain.handle("content:configure-youtube-oauth", async (_event, clientId:string
 });
 
 ipcMain.handle("content:connect-youtube", async (): Promise<import("../shared/content-factory").PublishAccount[]> => {
-  if (!youtubeOAuthConfig) youtubeOAuthConfig=await loadYouTubeOAuthConfig();\n  if (!youtubeOAuthConfig) throw new Error("Configure YouTube OAuth before connecting.");
+  if (!youtubeOAuthConfig) youtubeOAuthConfig=await loadYouTubeOAuthConfig();
+  if (!youtubeOAuthConfig) throw new Error("Configure YouTube OAuth before connecting.");
   const state=createOAuthState();
   const loopback=await startOAuthLoopback(state);
   try {
