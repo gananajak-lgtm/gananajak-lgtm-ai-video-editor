@@ -299,6 +299,11 @@ ipcMain.handle("content:resume-local-test-batch", async (event, savedBatch: impo
   return batch;
 });
 
+ipcMain.handle("content:update-publish-plan", async (_event, batch: import("../shared/content-factory").ContentBatch, itemId:string, publish: import("../shared/content-factory").PublishPlan) => {
+  const result = { ...batch, items: batch.items.map((item) => item.id === itemId ? { ...item, publish } : item), updatedAt:new Date().toISOString() };
+  return saveBatchState(result);
+});
+
 ipcMain.handle("content:choose-batch-output", async () => {
   const result = await dialog.showOpenDialog({ title:"Choose folder for batch videos", properties:["openDirectory","createDirectory"] });
   return result.canceled ? null : result.filePaths[0] ?? null;
