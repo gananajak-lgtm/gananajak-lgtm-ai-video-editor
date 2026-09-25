@@ -36,3 +36,13 @@ export type AffiliateProductConnector = {
   canCreateAffiliateLink:boolean;
   canAttachProduct:boolean;
 };
+
+export type AffiliateAccountStatus = "disconnected"|"connected"|"error";
+export type AffiliateAccount = {
+  platform:AffiliatePlatform;
+  role:"creator"|"seller";
+  status:AffiliateAccountStatus;
+  displayName?:string;
+  grantedScopes?:string[];
+  error?:string;
+};
