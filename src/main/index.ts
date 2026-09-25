@@ -42,7 +42,7 @@ import { analyzeRenderPlan } from "./video/renderDiagnostics";
 import { createPreviewTimeline } from "./video/previewPlan";
 import { renderQcPack } from "./video/qcPack";
 import { buildAutomaticTimeline } from "./video/timeline";
-import { createOAuthState, waitForOAuthCallback } from "./oauth-loopback";
+import { createOAuthState, startOAuthLoopback } from "./oauth-loopback";
 import { exchangeYouTubeAuthorizationCode } from "./youtube-oauth";
 import { loadYouTubeTokens, saveYouTubeTokens } from "./youtube-token-store";
 import { createAffiliateProduct } from "./affiliate-product-import";
@@ -334,21 +334,15 @@ ipcMain.handle("content:configure-youtube-oauth", async (_event, clientId:string
 ipcMain.handle("content:connect-youtube", async (): Promise<import("../shared/content-factory").PublishAccount[]> => {
   if (!youtubeOAuthConfig) throw new Error("Configure YouTube OAuth before connecting.");
   const state=createOAuthState();
-  const callbackPromise=waitForOAuthCallback(state);
-  await new Promise<void>((resolve,reject) => {
-    const probe=require("node:http").createServer();
-    probe.listen(0,"127.0.0.1",() => { const a=probe.address(); if (!a || typeof a==="string") { probe.close(); reject(new Error("Could not allocate OAuth callback port.")); return; } const redirectUri=`http://127.0.0.1:${a.port}`; probe.close(async () => {
-      const params=new URLSearchParams({ client_id:youtubeOAuthConfig!.clientId, redirect_uri:redirectUri, response_type:"code", scope:"https://www.googleapis.com/auth/youtube.upload", access_type:"offline", prompt:"consent", state });
-      await shell.openExternal(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`); resolve();
-    }); });
-  });
-  const callback=await callbackPromise;
-  const tokens=await exchangeYouTubeAuthorizationCode({ clientId:youtubeOAuthConfig.clientId, clientSecret:youtubeOAuthConfig.clientSecret, code:callback.code, redirectUri:callback.redirectUri });
-  await saveYouTubeTokens(tokens);
-  return [
-    { platform:"youtube", status:"connected", displayName:"YouTube authorized" },
-    { platform:"tiktok", status:"disconnected" }, { platform:"facebook", status:"disconnected" }, { platform:"instagram", status:"disconnected" }
-  ];
+  const loopback=await startOAuthLoopback(state);
+  try {
+    const params=new URLSearchParams({ client_id:youtubeOAuthConfig.clientId, redirect_uri:loopback.redirectUri, response_type:"code", scope:"https://www.googleapis.com/auth/youtube.upload", access_type:"offline", prompt:"consent", state });
+    await shell.openExternal(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+    const callback=await loopback.callback;
+    const tokens=await exchangeYouTubeAuthorizationCode({ clientId:youtubeOAuthConfig.clientId, clientSecret:youtubeOAuthConfig.clientSecret, code:callback.code, redirectUri:loopback.redirectUri });
+    await saveYouTubeTokens(tokens);
+    return [{ platform:"youtube", status:"connected", displayName:"YouTube authorized" },{ platform:"tiktok", status:"disconnected" },{ platform:"facebook", status:"disconnected" },{ platform:"instagram", status:"disconnected" }];
+  } finally { loopback.close(); }
 });
 
 ipcMain.handle("content:get-publish-accounts", async (): Promise<import("../shared/content-factory").PublishAccount[]> => {
