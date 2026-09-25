@@ -48,6 +48,7 @@ export default function ContentFactoryPanel({
   const [affiliateProducts, setAffiliateProducts] = useState<AffiliateProduct[]>([]);
   const [affiliateImporting, setAffiliateImporting] = useState(false);
   const [affiliateJobs, setAffiliateJobs] = useState<AffiliateContentJob[]>([]);
+  const [affiliatePlanning, setAffiliatePlanning] = useState(false);
 
   useEffect(() => {
     void window.videoEditor.getContentProviderStatus().then(setProviderStatus);
@@ -62,6 +63,14 @@ export default function ContentFactoryPanel({
     try { const products:AffiliateProduct[]=[]; for (const url of urls) products.push(await window.videoEditor.importAffiliateProduct(url)); setAffiliateProducts(products); setAffiliateJobs(await window.videoEditor.createAffiliateJobs(products)); }
     catch (importError) { setError(importError instanceof Error ? importError.message : String(importError)); }
     finally { setAffiliateImporting(false); }
+  };
+
+  const planAffiliateVideos = async () => {
+    if (!affiliateJobs.length || affiliatePlanning || !aiConfigured) return;
+    setAffiliatePlanning(true); setError(null);
+    try { setBatch(await window.videoEditor.prepareAffiliateBatch(affiliateJobs, language, Math.max(10,duration))); }
+    catch (planError) { setError(planError instanceof Error ? planError.message : String(planError)); }
+    finally { setAffiliatePlanning(false); }
   };
 
   const updatePublish = async (itemId: string, patch: Partial<PublishPlan>) => {
@@ -510,7 +519,7 @@ export default function ContentFactoryPanel({
         <div className="timelineHeader"><div><p className="eyebrow">AFFILIATE FACTORY</p><h3>Import marketplace products</h3><p className="muted">Paste one Shopee, Lazada, or TikTok Shop product URL per line. Up to 100 products per batch.</p></div></div>
         <textarea value={affiliateUrls} onChange={(event)=>setAffiliateUrls(event.target.value)} placeholder={"https://...\\nhttps://..."} rows={5} />
         <button onClick={importAffiliateProducts} disabled={affiliateImporting || !affiliateUrls.trim()}>{affiliateImporting ? "Importing..." : "Import Products"}</button>
-        {affiliateProducts.length > 0 && <div className="transcriptList">{affiliateProducts.map((product)=><div className="transcriptRow" key={product.id}><span>{product.platform}</span><div><strong>{product.title}</strong><p className="muted">{product.sourceUrl}</p></div></div>)}</div>}\n        {affiliateJobs.length > 0 && <p className="muted">Affiliate queue ready: {affiliateJobs.length} product{affiliateJobs.length === 1 ? "" : "s"} · product attachment requested where supported.</p>}
+        {affiliateProducts.length > 0 && <div className="transcriptList">{affiliateProducts.map((product)=><div className="transcriptRow" key={product.id}><span>{product.platform}</span><div><strong>{product.title}</strong><p className="muted">{product.sourceUrl}</p></div></div>)}</div>}\n        {affiliateJobs.length > 0 && <p className="muted">Affiliate queue ready: {affiliateJobs.length} product{affiliateJobs.length === 1 ? "" : "s"} · product attachment requested where supported.</p>}\n        {affiliateJobs.length > 0 && <button onClick={planAffiliateVideos} disabled={affiliatePlanning || !aiConfigured}>{affiliatePlanning ? "Planning affiliate videos..." : "Plan Affiliate Videos"}</button>}
       </div>
 
       <div className="transcriptPanel">
