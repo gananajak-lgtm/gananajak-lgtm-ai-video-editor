@@ -45,6 +45,7 @@ import { buildAutomaticTimeline } from "./video/timeline";
 import { createOAuthState, waitForOAuthCallback } from "./oauth-loopback";
 import { exchangeYouTubeAuthorizationCode } from "./youtube-oauth";
 import { loadYouTubeTokens, saveYouTubeTokens } from "./youtube-token-store";
+import { createAffiliateProduct } from "./affiliate-product-import";
 
 const isDev = !app.isPackaged;
 
@@ -70,6 +71,8 @@ function createWindow() {
     void window.loadFile(path.join(__dirname, "../../dist/index.html"));
   }
 }
+
+ipcMain.handle("affiliate:import-product", async (_event, sourceUrl:string) => createAffiliateProduct({sourceUrl}));
 
 ipcMain.handle("media:select-images", async () => {
   const result = await dialog.showOpenDialog({
