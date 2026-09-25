@@ -328,7 +328,9 @@ export type DesktopApi = {
   getPublishAccounts: () => Promise<import("./content-factory").PublishAccount[]>;
   configureYouTubeOAuth: (clientId: string, clientSecret?: string) => Promise<import("./content-factory").PublishAccount[]>;
   connectYouTube: () => Promise<import("./content-factory").PublishAccount[]>;
-  importAffiliateProduct: (sourceUrl: string) => Promise<import("./affiliate-factory").AffiliateProduct>;\n  loadAffiliateQueue: () => Promise<{ products: import("./affiliate-factory").AffiliateProduct[]; jobs: import("./affiliate-factory").AffiliateContentJob[]; updatedAt: string }>;\n  saveAffiliateQueue: (products: import("./affiliate-factory").AffiliateProduct[], jobs: import("./affiliate-factory").AffiliateContentJob[]) => Promise<{ products: import("./affiliate-factory").AffiliateProduct[]; jobs: import("./affiliate-factory").AffiliateContentJob[]; updatedAt: string }>;
+  importAffiliateProduct: (sourceUrl: string) => Promise<import("./affiliate-factory").AffiliateProduct>;
+  loadAffiliateQueue: () => Promise<{ products: import("./affiliate-factory").AffiliateProduct[]; jobs: import("./affiliate-factory").AffiliateContentJob[]; updatedAt: string }>;
+  saveAffiliateQueue: (products: import("./affiliate-factory").AffiliateProduct[], jobs: import("./affiliate-factory").AffiliateContentJob[]) => Promise<{ products: import("./affiliate-factory").AffiliateProduct[]; jobs: import("./affiliate-factory").AffiliateContentJob[]; updatedAt: string }>;
   createAffiliateJobs: (products: import("./affiliate-factory").AffiliateProduct[]) => Promise<import("./affiliate-factory").AffiliateContentJob[]>;
   prepareAffiliateBatch: (jobs: import("./affiliate-factory").AffiliateContentJob[], language?: import("./content-factory").ContentLanguage, duration?: number) => Promise<import("./content-factory").ContentBatch>;
   createLocalAffiliateBatch: (jobs: import("./affiliate-factory").AffiliateContentJob[], outputDir: string, language?: import("./content-factory").ContentLanguage, duration?: number) => Promise<import("./content-factory").ContentBatch>;
