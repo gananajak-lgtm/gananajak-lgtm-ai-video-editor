@@ -330,7 +330,7 @@ export type DesktopApi = {
   connectYouTube: () => Promise<import("./content-factory").PublishAccount[]>;
   importAffiliateProduct: (sourceUrl: string) => Promise<import("./affiliate-factory").AffiliateProduct>;
   createAffiliateJobs: (products: import("./affiliate-factory").AffiliateProduct[]) => Promise<import("./affiliate-factory").AffiliateContentJob[]>;
-  prepareAffiliateBatch: (jobs: import("./affiliate-factory").AffiliateContentJob[], language?: import("./content-factory").ContentLanguage, duration?: number) => Promise<import("./content-factory").ContentBatch>;
+  prepareAffiliateBatch: (jobs: import("./affiliate-factory").AffiliateContentJob[], language?: import("./content-factory").ContentLanguage, duration?: number) => Promise<import("./content-factory").ContentBatch>;\n  createLocalAffiliateBatch: (jobs: import("./affiliate-factory").AffiliateContentJob[], outputDir: string, language?: import("./content-factory").ContentLanguage, duration?: number) => Promise<import("./content-factory").ContentBatch>;
   resumeContentBatch: (batch: ContentBatch) => Promise<ContentBatch>;
   generateContentBatchAssets: (batch: ContentBatch) => Promise<ContentBatch>;
   chooseBatchOutputFolder: () => Promise<string | null>;
