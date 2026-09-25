@@ -299,6 +299,13 @@ ipcMain.handle("content:resume-local-test-batch", async (event, savedBatch: impo
   return batch;
 });
 
+ipcMain.handle("content:get-publish-accounts", async (): Promise<import("../shared/content-factory").PublishAccount[]> => [
+  { platform:"youtube", status:"disconnected" },
+  { platform:"tiktok", status:"disconnected" },
+  { platform:"facebook", status:"disconnected" },
+  { platform:"instagram", status:"disconnected" }
+]);
+
 ipcMain.handle("content:update-publish-plan", async (_event, batch: import("../shared/content-factory").ContentBatch, itemId:string, publish: import("../shared/content-factory").PublishPlan) => {
   const result = { ...batch, items: batch.items.map((item) => item.id === itemId ? { ...item, publish } : item), updatedAt:new Date().toISOString() };
   return saveBatchState(result);
