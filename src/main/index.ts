@@ -42,6 +42,7 @@ import { analyzeRenderPlan } from "./video/renderDiagnostics";
 import { createPreviewTimeline } from "./video/previewPlan";
 import { renderQcPack } from "./video/qcPack";
 import { buildAutomaticTimeline } from "./video/timeline";
+import { createOAuthState, waitForOAuthCallback } from "./oauth-loopback";
 
 const isDev = !app.isPackaged;
 
@@ -315,20 +316,19 @@ ipcMain.handle("content:configure-youtube-oauth", async (_event, clientId:string
 
 ipcMain.handle("content:connect-youtube", async (): Promise<import("../shared/content-factory").PublishAccount[]> => {
   if (!youtubeOAuthConfig) throw new Error("Configure YouTube OAuth before connecting.");
-  const params = new URLSearchParams({
-    client_id:youtubeOAuthConfig.clientId,
-    redirect_uri:"http://127.0.0.1",
-    response_type:"code",
-    scope:"https://www.googleapis.com/auth/youtube.upload",
-    access_type:"offline",
-    prompt:"consent"
+  const state=createOAuthState();
+  const callbackPromise=waitForOAuthCallback(state);
+  await new Promise<void>((resolve,reject) => {
+    const probe=require("node:http").createServer();
+    probe.listen(0,"127.0.0.1",() => { const a=probe.address(); if (!a || typeof a==="string") { probe.close(); reject(new Error("Could not allocate OAuth callback port.")); return; } const redirectUri=`http://127.0.0.1:${a.port}`; probe.close(async () => {
+      const params=new URLSearchParams({ client_id:youtubeOAuthConfig!.clientId, redirect_uri:redirectUri, response_type:"code", scope:"https://www.googleapis.com/auth/youtube.upload", access_type:"offline", prompt:"consent", state });
+      await shell.openExternal(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`); resolve();
+    }); });
   });
-  await shell.openExternal(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+  await callbackPromise;
   return [
-    { platform:"youtube", status:"disconnected", displayName:"Authorization opened in browser · callback pending" },
-    { platform:"tiktok", status:"disconnected" },
-    { platform:"facebook", status:"disconnected" },
-    { platform:"instagram", status:"disconnected" }
+    { platform:"youtube", status:"disconnected", displayName:"Authorization callback received · token exchange pending" },
+    { platform:"tiktok", status:"disconnected" }, { platform:"facebook", status:"disconnected" }, { platform:"instagram", status:"disconnected" }
   ];
 });
 
