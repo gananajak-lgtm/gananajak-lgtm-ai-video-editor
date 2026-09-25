@@ -43,6 +43,7 @@ import { createPreviewTimeline } from "./video/previewPlan";
 import { renderQcPack } from "./video/qcPack";
 import { buildAutomaticTimeline } from "./video/timeline";
 import { createOAuthState, waitForOAuthCallback } from "./oauth-loopback";
+import { exchangeYouTubeAuthorizationCode } from "./youtube-oauth";
 
 const isDev = !app.isPackaged;
 
@@ -325,9 +326,10 @@ ipcMain.handle("content:connect-youtube", async (): Promise<import("../shared/co
       await shell.openExternal(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`); resolve();
     }); });
   });
-  await callbackPromise;
+  const callback=await callbackPromise;
+  await exchangeYouTubeAuthorizationCode({ clientId:youtubeOAuthConfig.clientId, clientSecret:youtubeOAuthConfig.clientSecret, code:callback.code, redirectUri:callback.redirectUri });
   return [
-    { platform:"youtube", status:"disconnected", displayName:"Authorization callback received · token exchange pending" },
+    { platform:"youtube", status:"connected", displayName:"YouTube authorized" },
     { platform:"tiktok", status:"disconnected" }, { platform:"facebook", status:"disconnected" }, { platform:"instagram", status:"disconnected" }
   ];
 });
