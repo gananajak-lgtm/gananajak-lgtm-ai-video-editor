@@ -1,10 +1,13 @@
 import type { AffiliateProductConnector } from "../shared/affiliate-factory";
+import { AFFILIATE_CONNECTOR_CAPABILITIES } from "./affiliate-platform-capabilities";
 
-export const AFFILIATE_CONNECTORS: AffiliateProductConnector[] = [
-  { platform:"shopee", mode:"manual-import", canImportProduct:true, canCreateAffiliateLink:false, canAttachProduct:false },
-  { platform:"lazada", mode:"official-api", canImportProduct:true, canCreateAffiliateLink:false, canAttachProduct:false },
-  { platform:"tiktok-shop", mode:"official-api", canImportProduct:true, canCreateAffiliateLink:true, canAttachProduct:false }
-];
+export const AFFILIATE_CONNECTORS:AffiliateProductConnector[]=AFFILIATE_CONNECTOR_CAPABILITIES.map((capability)=>({
+  platform:capability.platform,
+  mode:capability.productImport,
+  canImportProduct:true,
+  canCreateAffiliateLink:capability.affiliateData,
+  canAttachProduct:capability.productAttachment==="verified"
+}));
 
 export function getAffiliateConnector(platform:AffiliateProductConnector["platform"]) {
   return AFFILIATE_CONNECTORS.find((connector) => connector.platform === platform);
