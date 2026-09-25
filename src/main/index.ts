@@ -82,6 +82,28 @@ ipcMain.handle("affiliate:prepare-batch", async (event, jobs:import("../shared/a
   return saveBatchState(result);
 });
 
+ipcMain.handle("affiliate:create-local-batch", async (event, jobs:import("../shared/affiliate-factory").AffiliateContentJob[], outputDir:string, language:import("../shared/content-factory").ContentLanguage="th", duration=30) => {
+  const briefs=jobs.map((job)=>affiliateJobToContentBrief(job,{language,duration}));
+  let batch=createContentBatch(briefs);
+  const items=[...batch.items];
+  const workRoot=path.join(app.getPath("temp"),"gananajak-content-factory","affiliate-local-test");
+  for(let index=0;index<items.length;index+=1){
+    const item:import("../shared/content-factory").ContentBatchItem={...items[index]};
+    try{
+      item.status="preparing";
+      const project=buildLocalTestProject(item.brief); item.project=project; item.status="generating-assets";
+      const root=path.join(app.getPath("userData"),"content-assets",project.id,"affiliate-local-test");
+      item.project=await generateLocalTestAssets(project,root); item.status="assets-ready";
+      const rendered=await renderContentBatch({...batch,items:[item]},outputDir,workRoot);
+      Object.assign(item,ensurePublishPlan(rendered.items[0]));
+    }catch(error){item.status="failed";item.failedStage=item.project?.assetPlan?"render":item.project?"assets":"project";item.error=error instanceof Error?error.message:String(error);}
+    items[index]=item;batch={...batch,items,updatedAt:new Date().toISOString()};await saveBatchState(batch);
+    if(!event.sender.isDestroyed()) event.sender.send("content:batch-progress",{completed:index+1,total:items.length,item});
+  }
+  if(batch.items.some((item)=>item.status==="rendered")) await shell.openPath(outputDir);
+  return batch;
+});
+
 ipcMain.handle("affiliate:create-jobs", async (_event, products:import("../shared/affiliate-factory").AffiliateProduct[]) => createAffiliateContentJobs(products));
 
 ipcMain.handle("affiliate:import-product", async (_event, sourceUrl:string) => createAffiliateProduct({sourceUrl}));
