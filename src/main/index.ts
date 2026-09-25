@@ -44,7 +44,7 @@ import { renderQcPack } from "./video/qcPack";
 import { buildAutomaticTimeline } from "./video/timeline";
 import { createOAuthState, startOAuthLoopback } from "./oauth-loopback";
 import { exchangeYouTubeAuthorizationCode } from "./youtube-oauth";
-import { loadYouTubeTokens, saveYouTubeTokens } from "./youtube-token-store";
+import { loadYouTubeTokens, saveYouTubeTokens, loadYouTubeOAuthConfig, saveYouTubeOAuthConfig } from "./youtube-token-store";
 import { createAffiliateProduct } from "./affiliate-product-import";
 import { createAffiliateContentJobs } from "./affiliate-content-jobs";
 import { affiliateJobToContentBrief } from "./affiliate-content-planner";
@@ -322,7 +322,7 @@ let youtubeOAuthConfig: { clientId:string; clientSecret?:string } | null = null;
 ipcMain.handle("content:configure-youtube-oauth", async (_event, clientId:string, clientSecret?:string): Promise<import("../shared/content-factory").PublishAccount[]> => {
   const normalizedClientId = clientId.trim();
   if (!normalizedClientId) throw new Error("YouTube OAuth client ID is required.");
-  youtubeOAuthConfig = { clientId:normalizedClientId, clientSecret:clientSecret?.trim() || undefined };
+  youtubeOAuthConfig = { clientId:normalizedClientId, clientSecret:clientSecret?.trim() || undefined };\n  await saveYouTubeOAuthConfig(youtubeOAuthConfig);
   return [
     { platform:"youtube", status:"disconnected", displayName:"OAuth configured · authorization required" },
     { platform:"tiktok", status:"disconnected" },
@@ -332,7 +332,7 @@ ipcMain.handle("content:configure-youtube-oauth", async (_event, clientId:string
 });
 
 ipcMain.handle("content:connect-youtube", async (): Promise<import("../shared/content-factory").PublishAccount[]> => {
-  if (!youtubeOAuthConfig) throw new Error("Configure YouTube OAuth before connecting.");
+  if (!youtubeOAuthConfig) youtubeOAuthConfig=await loadYouTubeOAuthConfig();\n  if (!youtubeOAuthConfig) throw new Error("Configure YouTube OAuth before connecting.");
   const state=createOAuthState();
   const loopback=await startOAuthLoopback(state);
   try {
