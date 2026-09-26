@@ -14,7 +14,9 @@ export type TikTokPublishStatus = { status:string; failReason?:string; postIds:s
 type TikTokEnvelope<T> = { data?:T; error?:{ code?:string; message?:string; log_id?:string } };
 
 const API="https://open.tiktokapis.com";
+const MIN_CHUNK=5*1024*1024;
 const MAX_CHUNK=64*1024*1024;
+const MAX_VIDEO_SIZE=4*1024*1024*1024;
 
 function apiError(action:string,status:number,envelope?:TikTokEnvelope<unknown>) {
   const detail=envelope?.error?.message || envelope?.error?.code;
@@ -45,12 +47,26 @@ export function buildTikTokCaption(item:ContentBatchItem) {
 
 export function planTikTokChunks(videoSize:number) {
   if(!Number.isSafeInteger(videoSize) || videoSize<=0) throw new Error("TikTok video file is empty.");
+  if(videoSize>MAX_VIDEO_SIZE) throw new Error("TikTok video must be 4 GB or smaller.");
   if(videoSize<=MAX_CHUNK) return {chunkSize:videoSize,totalChunkCount:1};
-  const totalChunkCount=Math.ceil(videoSize/MAX_CHUNK);
-  if(totalChunkCount>1000) throw new Error("TikTok video requires too many upload chunks.");
-  const chunkSize=Math.floor(videoSize/totalChunkCount);
+  const chunkSize=MAX_CHUNK;
+  const totalChunkCount=Math.floor(videoSize/chunkSize);
+  if(totalChunkCount<1 || totalChunkCount>1000) throw new Error("TikTok video requires an unsupported number of upload chunks.");
+  const finalChunkSize=videoSize-chunkSize*(totalChunkCount-1);
+  if(chunkSize<MIN_CHUNK || finalChunkSize>128*1024*1024) throw new Error("TikTok video cannot be split into valid upload chunks.");
   return {chunkSize,totalChunkCount};
 }
+
+export function validateTikTokMedia(input:{duration:number;sizeBytes:number;streams:Array<{codecType:string|null;width:number|null;height:number|null;fps:number|null}>;maxDurationSec?:number}) {
+  if(input.sizeBytes<=0 || input.sizeBytes>MAX_VIDEO_SIZE) throw new Error("TikTok video must be non-empty and 4 GB or smaller.");
+  if(input.maxDurationSec && input.duration>input.maxDurationSec+0.01) throw new Error(`TikTok creator limit is ${input.maxDurationSec} seconds, but this video is ${input.duration.toFixed(1)} seconds.`);
+  const video=input.streams.find((stream)=>stream.codecType==="video");
+  if(!video) throw new Error("TikTok upload requires a video stream.");
+  if(video.width!==null && (video.width<360 || video.width>4096)) throw new Error("TikTok video width must be between 360 and 4096 pixels.");
+  if(video.height!==null && (video.height<360 || video.height>4096)) throw new Error("TikTok video height must be between 360 and 4096 pixels.");
+  if(video.fps!==null && (video.fps<23 || video.fps>60)) throw new Error("TikTok video frame rate must be between 23 and 60 FPS.");
+}
+
 
 export async function initTikTokDirectPost(input:{accessToken:string;item:ContentBatchItem;privacyLevel:TikTokPrivacyLevel;disableComment?:boolean;disableDuet?:boolean;disableStitch?:boolean}) {
   if(!input.item.outputPath) throw new Error("Rendered video path is missing.");
