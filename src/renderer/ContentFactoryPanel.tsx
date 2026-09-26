@@ -65,6 +65,8 @@ export default function ContentFactoryPanel({
     void window.videoEditor.getPublishAccounts().then(setPublishAccounts);
     void window.videoEditor.loadPublishJobs().then((saved) => setPublishJobs(saved.jobs));
     void window.videoEditor.loadAffiliateQueue().then((saved) => { setAffiliateProducts(saved.products); setAffiliateJobs(saved.jobs); });
+    const unsubscribePublishJobs=window.videoEditor.onPublishJobsUpdated((saved) => setPublishJobs(saved.jobs));
+    return () => unsubscribePublishJobs();
   }, []);
 
   const getPublishDraft = (item: import("../shared/content-factory").ContentBatchItem): PublishPlan =>
