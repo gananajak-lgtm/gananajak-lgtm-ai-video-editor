@@ -328,6 +328,7 @@ export type DesktopApi = {
   validatePublishItem: (item: import("./content-factory").ContentBatchItem) => Promise<{ valid:boolean; issues:Array<{ field:string; message:string; platform?:import("./content-factory").PublishPlatform }> }>;
   loadPublishJobs: () => Promise<{ jobs: import("./content-factory").PublishJob[]; updatedAt: string }>;
   createPublishJobs: (item: import("./content-factory").ContentBatchItem) => Promise<{ jobs: import("./content-factory").PublishJob[]; updatedAt: string }>;
+  publishYouTubeJob: (jobId: string, item: import("./content-factory").ContentBatchItem) => Promise<{ jobs: import("./content-factory").PublishJob[]; updatedAt: string }>;
   getPublishAccounts: () => Promise<import("./content-factory").PublishAccount[]>;
   configureYouTubeOAuth: (clientId: string, clientSecret?: string) => Promise<import("./content-factory").PublishAccount[]>;
   connectYouTube: () => Promise<import("./content-factory").PublishAccount[]>;
