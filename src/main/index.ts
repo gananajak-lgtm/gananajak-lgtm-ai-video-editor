@@ -519,6 +519,7 @@ ipcMain.handle("content:publish-tiktok-job", async (_event, jobId:string, item:i
   broadcastPublishQueue(await savePublishQueue(root,running));
   try{
     let publishId=target.externalPublishId;
+    if(publishId && !target.uploadCompleted){const current=await fetchTikTokPublishStatus(tokens.access_token,publishId);if(current.status==="PUBLISH_COMPLETE"){const result:import("../shared/content-factory").PublishResult={platform:"tiktok",status:"published",externalId:current.postIds[0]??publishId,publishedAt:new Date().toISOString()};const completed=queue.jobs.map((job)=>job.id===jobId?{...job,status:"published" as const,result,uploadedBytes:current.uploadedBytes,error:undefined,updatedAt:new Date().toISOString()}:job);const saved=await savePublishQueue(root,completed);broadcastPublishQueue(saved);return saved;}if(current.status==="FAILED") throw new Error(`TikTok publish session failed.${current.failReason?` ${current.failReason}`:""} Start a new publish job only after reviewing the failure.`);const guarded=queue.jobs.map((job)=>job.id===jobId?{...job,status:"failed" as const,uploadedBytes:current.uploadedBytes,error:"TikTok has an existing publish session but the app cannot prove the file upload completed. Do not create a duplicate post. Review TikTok status or create a fresh job after the existing session expires.",updatedAt:new Date().toISOString()}:job);const saved=await savePublishQueue(root,guarded);broadcastPublishQueue(saved);return saved;}
     if(!publishId){
       const privacyLevel=item.publish?.tiktok?.privacyLevel;
       if(!privacyLevel) throw new Error("Review TikTok creator settings and choose a privacy level before publishing.");
@@ -535,6 +536,7 @@ ipcMain.handle("content:publish-tiktok-job", async (_event, jobId:string, item:i
       const sessionJobs=running.map((job)=>job.id===jobId?{...job,externalPublishId:publishId,updatedAt:new Date().toISOString()}:job);
       broadcastPublishQueue(await savePublishQueue(root,sessionJobs));
       await uploadTikTokFile({uploadUrl:session.upload_url,filePath:item.outputPath,videoSize:session.videoSize,chunkSize:session.chunkSize,totalChunkCount:session.totalChunkCount});
+      const afterUpload=await loadPublishQueue(root);const uploaded=afterUpload.jobs.map((job)=>job.id===jobId?{...job,uploadCompleted:true,uploadedBytes:session.videoSize,updatedAt:new Date().toISOString()}:job);broadcastPublishQueue(await savePublishQueue(root,uploaded));
     }
     let status;
     try { status=await waitForTikTokPublish({accessToken:tokens.access_token,publishId}); }
