@@ -106,6 +106,7 @@ export type PublishJob = {
   scheduledAt?: string;
   attempts: number;
   result?: PublishResult;
+  externalPublishId?: string;
   error?: string;
   createdAt: string;
   updatedAt: string;
