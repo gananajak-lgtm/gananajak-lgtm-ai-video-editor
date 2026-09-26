@@ -488,7 +488,11 @@ ipcMain.handle("content:publish-tiktok-job", async (_event, jobId:string, item:i
       if(!creator.privacyLevelOptions.includes(privacyLevel)) throw new Error("The selected TikTok privacy level is no longer available. Review creator settings again.");
       if(!item.outputPath) throw new Error("Rendered video path is missing.");
       validateTikTokMedia({...await probeMediaInfo(item.outputPath),maxDurationSec:creator.maxVideoPostDurationSec});
-      const session=await initTikTokDirectPost({accessToken:tokens.access_token,item,privacyLevel,disableComment:item.publish?.tiktok?.disableComment,disableDuet:item.publish?.tiktok?.disableDuet,disableStitch:item.publish?.tiktok?.disableStitch});
+      const disclosure=item.publish?.tiktok;
+      if(!disclosure?.musicUsageConfirmed) throw new Error("Confirm TikTok Music Usage Confirmation before publishing.");
+      if(disclosure.commercialContent && !disclosure.brandOrganic && !disclosure.brandedContent) throw new Error("Choose Your Brand, Branded Content, or both for commercial TikTok content.");
+      if(disclosure.brandedContent && privacyLevel==="SELF_ONLY") throw new Error("TikTok branded content cannot use private visibility.");
+      const session=await initTikTokDirectPost({accessToken:tokens.access_token,item,privacyLevel,disableComment:disclosure.disableComment,disableDuet:disclosure.disableDuet,disableStitch:disclosure.disableStitch,isAigc:disclosure.isAigc,brandOrganic:disclosure.commercialContent && disclosure.brandOrganic,brandedContent:disclosure.commercialContent && disclosure.brandedContent});
       publishId=session.publish_id;
       const sessionJobs=running.map((job)=>job.id===jobId?{...job,externalPublishId:publishId,updatedAt:new Date().toISOString()}:job);
       broadcastPublishQueue(await savePublishQueue(root,sessionJobs));
