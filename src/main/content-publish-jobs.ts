@@ -23,5 +23,5 @@ export function releaseDuePublishJobs(jobs: PublishJob[], now = new Date()): Pub
 }
 
 export function recoverInterruptedPublishJobs(jobs: PublishJob[], now = new Date()): PublishJob[] {
-  return jobs.map((job)=>job.status==="publishing" ? job.externalPublishId ? {...job,status:"processing",error:"TikTok accepted this publish session. Check its status to continue.",updatedAt:now.toISOString()} : {...job,status:"failed",error:"Upload was interrupted before TikTok created a resumable publish session. Retry when ready.",updatedAt:now.toISOString()} : job);
+  return jobs.map((job)=>{ if(job.status!=="publishing") return job; if(job.platform==="tiktok" && job.externalPublishId) return {...job,status:"processing",error:"TikTok accepted this publish session. Check its status to continue.",updatedAt:now.toISOString()}; return {...job,status:"failed",error:`${job.platform} publishing was interrupted. Review the existing publish session before retrying to avoid a duplicate post.`,updatedAt:now.toISOString()}; });
 }
