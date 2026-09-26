@@ -9,6 +9,15 @@ export type YouTubeUploadInput = {
   privacyStatus?: "private" | "unlisted" | "public";
 };
 
+export function describeYouTubeUploadError(status: number, detail?: string): string {
+  const suffix=detail?.trim() ? ` Details: ${detail.trim().slice(0,500)}` : "";
+  if(status===401) return "YouTube authorization expired or was revoked. Reconnect YouTube and retry.";
+  if(status===403) return `YouTube rejected this upload. Check channel permissions, API access, or quota.${suffix}`;
+  if(status===429) return "YouTube rate limit or quota was reached. Wait and retry later.";
+  if(status>=500) return `YouTube is temporarily unavailable (HTTP ${status}). Retry later.`;
+  return `YouTube upload failed (HTTP ${status}).${suffix}`;
+}
+
 export async function uploadVideoToYouTube(input: YouTubeUploadInput): Promise<PublishResult> {
   if (!input.item.outputPath) throw new Error("Rendered video path is missing.");
   let fileInfo;
@@ -43,7 +52,7 @@ export async function uploadVideoToYouTube(input: YouTubeUploadInput): Promise<P
     },
     body: JSON.stringify(metadata)
   });
-  if (!session.ok) throw new Error(`YouTube upload session failed (${session.status}): ${await session.text()}`);
+  if (!session.ok) throw new Error(describeYouTubeUploadError(session.status, await session.text()));
   const uploadUrl = session.headers.get("location");
   if (!uploadUrl) throw new Error("YouTube did not return a resumable upload URL.");
 
@@ -59,7 +68,7 @@ export async function uploadVideoToYouTube(input: YouTubeUploadInput): Promise<P
     duplex: "half"
   } as RequestInit & { duplex: "half" });
   const body = await uploaded.json().catch(() => ({})) as { id?: string; error?: { message?: string } };
-  if (!uploaded.ok || !body.id) throw new Error(body.error?.message || `YouTube upload failed (${uploaded.status}).`);
+  if (!uploaded.ok || !body.id) throw new Error(describeYouTubeUploadError(uploaded.status, body.error?.message));
   return {
     platform: "youtube",
     status: "published",
