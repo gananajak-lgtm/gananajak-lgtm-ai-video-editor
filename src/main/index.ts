@@ -20,7 +20,7 @@ import { generateBatchAssets } from "./content-batch-assets";
 import { renderContentBatch } from "./content-batch-render";
 import { ensurePublishPlan } from "./content-publish-planner";
 import { validatePublishItem } from "./content-publish-validation";
-import { createPublishJobs, releaseDuePublishJobs } from "./content-publish-jobs";
+import { createPublishJobs, recoverInterruptedPublishJobs, releaseDuePublishJobs } from "./content-publish-jobs";
 import { loadPublishQueue, savePublishQueue } from "./content-publish-queue-store";
 import { uploadVideoToYouTube } from "./youtube-uploader";
 import { refreshYouTubeAccessToken } from "./youtube-oauth";
@@ -393,8 +393,9 @@ ipcMain.handle("content:validate-publish-item", async (_event, item: import("../
 ipcMain.handle("content:load-publish-jobs", async () => {
   const root=path.join(app.getPath("userData"),"publish");
   const current=await loadPublishQueue(root);
-  const jobs=releaseDuePublishJobs(current.jobs);
-  const changed=jobs.some((job,index)=>job.status!==current.jobs[index]?.status);
+  const recovered=recoverInterruptedPublishJobs(current.jobs);
+  const jobs=releaseDuePublishJobs(recovered);
+  const changed=jobs.some((job,index)=>job.status!==current.jobs[index]?.status || job.error!==current.jobs[index]?.error);
   return changed ? savePublishQueue(root,jobs) : current;
 });
 ipcMain.handle("content:create-publish-jobs", async (_event, item: import("../shared/content-factory").ContentBatchItem) => {
