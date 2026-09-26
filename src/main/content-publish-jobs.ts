@@ -21,3 +21,7 @@ export function releaseDuePublishJobs(jobs: PublishJob[], now = new Date()): Pub
     return {...job,status:"queued",updatedAt:now.toISOString()};
   });
 }
+
+export function recoverInterruptedPublishJobs(jobs: PublishJob[], now = new Date()): PublishJob[] {
+  return jobs.map((job)=>job.status==="publishing" ? {...job,status:"failed",error:"Upload was interrupted before completion. Retry when ready.",updatedAt:now.toISOString()} : job);
+}
