@@ -63,6 +63,8 @@ import { loadMetaOAuthConfig, loadMetaToken, saveMetaOAuthConfig, saveMetaToken 
 import { listMetaPublishingPages } from "./meta-publishing";
 import { createFacebookReel, uploadFacebookLocalReel, finishFacebookReel } from "./facebook-reels-uploader";
 import { createInstagramReelContainer, publishInstagramReel, validateInstagramHostedVideoUrl, waitForInstagramContainer } from "./instagram-reels-uploader";
+import { makeInstagramObjectKey, uploadInstagramVideo, validateInstagramHostingConfig } from "./instagram-hosting";
+import { loadInstagramHostingConfig, saveInstagramHostingConfig } from "./instagram-hosting-store";
 
 const isDev = !app.isPackaged;
 
@@ -557,6 +559,9 @@ ipcMain.handle("content:publish-tiktok-job", async (_event, jobId:string, item:i
     const saved=await savePublishQueue(root,failed);broadcastPublishQueue(saved);throw error;
   }
 });
+
+ipcMain.handle("content:configure-instagram-hosting",async(_event,uploadUrl:string,publicBaseUrl:string,bearerToken?:string)=>{const config=validateInstagramHostingConfig({uploadUrl:uploadUrl.trim(),publicBaseUrl:publicBaseUrl.trim(),bearerToken:bearerToken?.trim()||undefined});await saveInstagramHostingConfig(config);return {configured:true,uploadUrl:config.uploadUrl,publicBaseUrl:config.publicBaseUrl};});
+ipcMain.handle("content:stage-instagram-video",async(_event,item:import("../shared/content-factory").ContentBatchItem)=>{if(!item.outputPath)throw new Error("Render the video before staging it for Instagram.");const config=await loadInstagramHostingConfig();if(!config)throw new Error("Configure Instagram temporary hosting first.");return uploadInstagramVideo(config,item.outputPath,makeInstagramObjectKey(item.id,item.outputPath));});
 
 ipcMain.handle("content:publish-instagram-job", async (_event, jobId:string, item:import("../shared/content-factory").ContentBatchItem) => {
  const root=path.join(app.getPath("userData"),"publish"),queue=await loadPublishQueue(root),target=queue.jobs.find((job)=>job.id===jobId&&job.platform==="instagram");
