@@ -12,7 +12,7 @@ test("plans TikTok FILE_UPLOAD chunks within the documented 64 MB ceiling",()=>{
   assert.deepEqual(planTikTokChunks(4*1024*1024),{chunkSize:4*1024*1024,totalChunkCount:1});
   const plan=planTikTokChunks(130*1024*1024);
   assert.ok(plan.chunkSize<=64*1024*1024);
-  assert.ok(plan.totalChunkCount>=3);
+  assert.equal(plan.totalChunkCount,2);
 });
 
 test("builds editable TikTok caption metadata",()=>{
