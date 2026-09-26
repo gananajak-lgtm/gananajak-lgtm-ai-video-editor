@@ -61,6 +61,7 @@ import { loadAffiliateQueue, saveAffiliateQueue } from "./affiliate-queue-store"
 import { buildMetaAuthorizationUrl, exchangeMetaAuthorizationCode, exchangeMetaLongLivedToken } from "./meta-oauth";
 import { loadMetaOAuthConfig, loadMetaToken, saveMetaOAuthConfig, saveMetaToken } from "./meta-token-store";
 import { listMetaPublishingPages } from "./meta-publishing";
+import { createFacebookReel, uploadFacebookLocalReel, finishFacebookReel } from "./facebook-reels-uploader";
 
 const isDev = !app.isPackaged;
 
@@ -551,6 +552,38 @@ ipcMain.handle("content:publish-tiktok-job", async (_event, jobId:string, item:i
   }catch(error){
     const message=error instanceof Error?error.message:String(error);
     const latest=await loadPublishQueue(root);
+    const failed=latest.jobs.map((job)=>job.id===jobId?{...job,status:"failed" as const,error:message,updatedAt:new Date().toISOString()}:job);
+    const saved=await savePublishQueue(root,failed);broadcastPublishQueue(saved);throw error;
+  }
+});
+
+ipcMain.handle("content:publish-facebook-job", async (_event, jobId:string, item:import("../shared/content-factory").ContentBatchItem) => {
+  const root=path.join(app.getPath("userData"),"publish"), queue=await loadPublishQueue(root);
+  const target=queue.jobs.find((job)=>job.id===jobId && job.platform==="facebook");
+  if(!target) throw new Error("Facebook publish job was not found.");
+  if(target.status==="publishing") throw new Error("This Facebook upload is already in progress.");
+  if(target.status==="published") throw new Error("This Facebook publish job is already complete.");
+  if(target.scheduledAt && new Date(target.scheduledAt).getTime()>Date.now()) throw new Error("This publish job is scheduled for a future time.");
+  if(!item.outputPath) throw new Error("Rendered video path is missing.");
+  const pageId=item.publish?.meta?.pageId; if(!pageId) throw new Error("Choose a Facebook Page before publishing.");
+  const token=await loadMetaToken(); if(!token) throw new Error("Connect Meta before publishing.");
+  const pages=await listMetaPublishingPages(token.access_token), page=pages.find((entry)=>entry.id===pageId);
+  if(!page) throw new Error("The selected Facebook Page is no longer available. Reconnect Meta and choose a Page again.");
+  const running=queue.jobs.map((job)=>job.id===jobId?{...job,status:"publishing" as const,attempts:job.attempts+1,error:undefined,updatedAt:new Date().toISOString()}:job);
+  broadcastPublishQueue(await savePublishQueue(root,running));
+  try{
+    const started=await createFacebookReel({pageId:page.id,pageAccessToken:page.accessToken});
+    const sessionJobs=running.map((job)=>job.id===jobId?{...job,externalPublishId:started.video_id,updatedAt:new Date().toISOString()}:job);
+    broadcastPublishQueue(await savePublishQueue(root,sessionJobs));
+    const bytes=await readFile(item.outputPath);
+    await uploadFacebookLocalReel({videoId:started.video_id,pageAccessToken:page.accessToken,bytes});
+    const description=[item.publish?.description?.trim(),...(item.publish?.hashtags??[]).map((tag)=>`#${tag.replace(/^#/,"")}`)].filter(Boolean).join("\n\n");
+    await finishFacebookReel({pageId:page.id,pageAccessToken:page.accessToken,videoId:started.video_id,title:item.publish?.title,description});
+    const result:import("../shared/content-factory").PublishResult={platform:"facebook",status:"published",externalId:started.video_id,publishedAt:new Date().toISOString()};
+    const latest=await loadPublishQueue(root), completed=latest.jobs.map((job)=>job.id===jobId?{...job,status:"published" as const,result,error:undefined,updatedAt:new Date().toISOString()}:job);
+    const saved=await savePublishQueue(root,completed);broadcastPublishQueue(saved);return saved;
+  }catch(error){
+    const message=error instanceof Error?error.message:String(error), latest=await loadPublishQueue(root);
     const failed=latest.jobs.map((job)=>job.id===jobId?{...job,status:"failed" as const,error:message,updatedAt:new Date().toISOString()}:job);
     const saved=await savePublishQueue(root,failed);broadcastPublishQueue(saved);throw error;
   }
