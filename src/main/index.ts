@@ -366,8 +366,8 @@ ipcMain.handle("content:configure-youtube-oauth", async (_event, clientId:string
   return [
     { platform:"youtube", status:"disconnected", displayName:"OAuth configured · authorization required" },
     { platform:"tiktok", status:"disconnected" },
-    { platform:"facebook", status:"disconnected" },
-    { platform:"instagram", status:"disconnected" }
+    { platform:"facebook", status:(await loadMetaToken()) ? "connected" : "disconnected", displayName:(await loadMetaToken()) ? "Meta authorized" : undefined },
+    { platform:"instagram", status:(await loadMetaToken()) ? "connected" : "disconnected", displayName:(await loadMetaToken()) ? "Meta authorized" : undefined }
   ];
 });
 
