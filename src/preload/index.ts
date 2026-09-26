@@ -48,6 +48,7 @@ const api: DesktopApi = {
     ipcRenderer.invoke("content:resume-local-test-batch", batch, outputDir),
   loadContentBatch: () => ipcRenderer.invoke("content:load-batch"),
   updatePublishPlan: (batch, itemId, publish) => ipcRenderer.invoke("content:update-publish-plan", batch, itemId, publish),
+  validatePublishItem: (item) => ipcRenderer.invoke("content:validate-publish-item", item),
   getPublishAccounts: () => ipcRenderer.invoke("content:get-publish-accounts"),
   configureYouTubeOAuth: (clientId, clientSecret) => ipcRenderer.invoke("content:configure-youtube-oauth", clientId, clientSecret),
   connectYouTube: () => ipcRenderer.invoke("content:connect-youtube"),
