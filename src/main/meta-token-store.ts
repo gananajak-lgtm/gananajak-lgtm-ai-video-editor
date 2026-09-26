@@ -19,3 +19,6 @@ export const saveMetaOAuthConfig=(config:MetaOAuthConfig)=>saveEncrypted(configP
 export const loadMetaOAuthConfig=()=>loadEncrypted<MetaOAuthConfig>(configPath());
 export async function saveMetaToken(token:MetaTokenResponse){const now=Date.now();await saveEncrypted(tokenPath(),{...token,obtainedAt:now,expiresAt:token.expires_in?now+Math.max(0,token.expires_in-60)*1000:undefined});}
 export const loadMetaToken=()=>loadEncrypted<StoredMetaToken>(tokenPath());
+
+export function isMetaTokenUsable(token:StoredMetaToken|null,now=Date.now()){return Boolean(token?.access_token)&&(!token?.expiresAt||token.expiresAt>now);}
+export async function loadUsableMetaToken(){const token=await loadMetaToken();return isMetaTokenUsable(token)?token:null;}
