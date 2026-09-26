@@ -22,6 +22,8 @@ import { ensurePublishPlan } from "./content-publish-planner";
 import { validatePublishItem } from "./content-publish-validation";
 import { createPublishJobs } from "./content-publish-jobs";
 import { loadPublishQueue, savePublishQueue } from "./content-publish-queue-store";
+import { uploadVideoToYouTube } from "./youtube-uploader";
+import { refreshYouTubeAccessToken } from "./youtube-oauth";
 import {
   createPlaybackUrl,
   installMediaProtocol
@@ -396,6 +398,35 @@ ipcMain.handle("content:create-publish-jobs", async (_event, item: import("../sh
   const platforms = new Set(replacements.map((job) => job.platform));
   const jobs = [...current.jobs.filter((job) => job.itemId !== item.id || !platforms.has(job.platform)), ...replacements];
   return savePublishQueue(root, jobs);
+});
+
+ipcMain.handle("content:publish-youtube-job", async (_event, jobId: string, item: import("../shared/content-factory").ContentBatchItem) => {
+  const root = path.join(app.getPath("userData"), "publish");
+  const queue = await loadPublishQueue(root);
+  const target = queue.jobs.find((job) => job.id === jobId && job.platform === "youtube");
+  if (!target) throw new Error("YouTube publish job was not found.");
+  if (target.scheduledAt && new Date(target.scheduledAt).getTime() > Date.now()) throw new Error("This publish job is scheduled for a future time.");
+  let tokens = await loadYouTubeTokens();
+  if (!tokens) throw new Error("Connect YouTube before publishing.");
+  if (tokens.expiresAt <= Date.now()) {
+    const config = await loadYouTubeOAuthConfig();
+    if (!config || !tokens.refresh_token) throw new Error("Reconnect YouTube to refresh authorization.");
+    const refreshed = await refreshYouTubeAccessToken({ clientId:config.clientId, clientSecret:config.clientSecret, refreshToken:tokens.refresh_token });
+    await saveYouTubeTokens(refreshed); tokens = await loadYouTubeTokens();
+    if (!tokens) throw new Error("YouTube authorization refresh failed.");
+  }
+  const startedAt = new Date().toISOString();
+  const running = queue.jobs.map((job) => job.id === jobId ? { ...job, status:"publishing" as const, attempts:job.attempts+1, error:undefined, updatedAt:startedAt } : job);
+  await savePublishQueue(root, running);
+  try {
+    const result = await uploadVideoToYouTube({ accessToken:tokens.access_token, item, privacyStatus:"private" });
+    const completed = running.map((job) => job.id === jobId ? { ...job, status:"published" as const, result, updatedAt:new Date().toISOString() } : job);
+    return savePublishQueue(root, completed);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const failed = running.map((job) => job.id === jobId ? { ...job, status:"failed" as const, error:message, updatedAt:new Date().toISOString() } : job);
+    await savePublishQueue(root, failed); throw error;
+  }
 });
 
 ipcMain.handle("content:update-publish-plan", async (_event, batch: import("../shared/content-factory").ContentBatch, itemId:string, publish: import("../shared/content-factory").PublishPlan) => {
