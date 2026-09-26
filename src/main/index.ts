@@ -392,7 +392,7 @@ ipcMain.handle("content:connect-tiktok", async (): Promise<import("../shared/con
     await shell.openExternal(`https://www.tiktok.com/v2/auth/authorize/?${params.toString()}`);
     const callback=await loopback.callback;
     const tokens=await exchangeTikTokAuthorizationCode({clientKey:tiktokOAuthConfig.clientKey,clientSecret:tiktokOAuthConfig.clientSecret,code:callback.code,redirectUri:callback.redirectUri,codeVerifier:pkce.verifier});
-    if(!tokens.scope.split(",").map((scope)=>scope.trim()).includes("video.publish")) throw new Error("TikTok authorization did not grant video.publish.");
+    if(!tokens.scope.split(/[\s,]+/).map((scope)=>scope.trim()).filter(Boolean).includes("video.publish")) throw new Error("TikTok authorization did not grant video.publish.");
     await saveTikTokTokens(tokens);
     const youtubeTokens=await loadYouTubeTokens();
     return [{platform:"youtube",status:youtubeTokens ? "connected":"disconnected",displayName:youtubeTokens ? "YouTube authorized":undefined},{platform:"tiktok",status:"connected",displayName:"TikTok authorized"},{platform:"facebook",status:"disconnected"},{platform:"instagram",status:"disconnected"}];
