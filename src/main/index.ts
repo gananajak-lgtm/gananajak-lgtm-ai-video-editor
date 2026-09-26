@@ -498,7 +498,17 @@ ipcMain.handle("content:publish-tiktok-job", async (_event, jobId:string, item:i
       broadcastPublishQueue(await savePublishQueue(root,sessionJobs));
       await uploadTikTokFile({uploadUrl:session.upload_url,filePath:item.outputPath,videoSize:session.videoSize,chunkSize:session.chunkSize,totalChunkCount:session.totalChunkCount});
     }
-    const status=await waitForTikTokPublish({accessToken:tokens.access_token,publishId});
+    let status;
+    try { status=await waitForTikTokPublish({accessToken:tokens.access_token,publishId}); }
+    catch(error){
+      if(error instanceof Error && error.message.includes("still processing")){
+        const current=await import("./tiktok-uploader").then((module)=>module.fetchTikTokPublishStatus(tokens.access_token,publishId));
+        const latest=await loadPublishQueue(root);
+        const processing=latest.jobs.map((job)=>job.id===jobId?{...job,status:"processing" as const,uploadedBytes:current.uploadedBytes,error:"TikTok is processing this post. It may take a few minutes or longer during moderation. Check status again instead of uploading a new copy.",updatedAt:new Date().toISOString()}:job);
+        const saved=await savePublishQueue(root,processing);broadcastPublishQueue(saved);return saved;
+      }
+      throw error;
+    }
     const externalId=status.postIds[0] ?? publishId;
     const result:import("../shared/content-factory").PublishResult={platform:"tiktok",status:"published",externalId,publishedAt:new Date().toISOString()};
     const latest=await loadPublishQueue(root);
