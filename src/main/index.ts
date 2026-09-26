@@ -63,7 +63,7 @@ import { loadMetaOAuthConfig, loadMetaToken, saveMetaOAuthConfig, saveMetaToken 
 import { listMetaPublishingPages } from "./meta-publishing";
 import { createFacebookReel, uploadFacebookLocalReel, finishFacebookReel } from "./facebook-reels-uploader";
 import { createInstagramReelContainer, publishInstagramReel, validateInstagramHostedVideoUrl, waitForInstagramContainer } from "./instagram-reels-uploader";
-import { makeInstagramObjectKey, uploadInstagramVideo, validateInstagramHostingConfig } from "./instagram-hosting";
+import { deleteInstagramVideo, makeInstagramObjectKey, uploadInstagramVideo, validateInstagramHostingConfig } from "./instagram-hosting";
 import { loadInstagramHostingConfig, saveInstagramHostingConfig } from "./instagram-hosting-store";
 
 const isDev = !app.isPackaged;
@@ -573,7 +573,7 @@ ipcMain.handle("content:publish-instagram-job", async (_event, jobId:string, ite
  try{
   let containerId=target.externalPublishId;
   if(!containerId){const caption=[item.publish?.caption||item.publish?.title,...(item.publish?.hashtags??[]).map((tag)=>`#${tag.replace(/^#/,"")}`)].filter(Boolean).join("\n\n");const created=await createInstagramReelContainer({igUserId,pageAccessToken:page.accessToken,videoUrl:hostedVideoUrl,caption,shareToFeed:item.publish?.meta?.shareInstagramReelToFeed});containerId=created.id;const withContainer=running.map((job)=>job.id===jobId?{...job,externalPublishId:containerId,updatedAt:new Date().toISOString()}:job);broadcastPublishQueue(await savePublishQueue(root,withContainer));}
-  await waitForInstagramContainer({containerId,pageAccessToken:page.accessToken});const published=await publishInstagramReel({igUserId,pageAccessToken:page.accessToken,containerId});const result:import("../shared/content-factory").PublishResult={platform:"instagram",status:"published",externalId:published.id,publishedAt:new Date().toISOString()};const latest=await loadPublishQueue(root),completed=latest.jobs.map((job)=>job.id===jobId?{...job,status:"published" as const,result,error:undefined,updatedAt:new Date().toISOString()}:job);const saved=await savePublishQueue(root,completed);broadcastPublishQueue(saved);return saved;
+  await waitForInstagramContainer({containerId,pageAccessToken:page.accessToken});const published=await publishInstagramReel({igUserId,pageAccessToken:page.accessToken,containerId});const result:import("../shared/content-factory").PublishResult={platform:"instagram",status:"published",externalId:published.id,publishedAt:new Date().toISOString()};if(item.publish?.meta?.hostedVideoObjectKey){const hosting=await loadInstagramHostingConfig();if(hosting){try{await deleteInstagramVideo(hosting,item.publish.meta.hostedVideoObjectKey);item.publish.meta.hostedVideoCleanupPending=false;}catch{item.publish.meta.hostedVideoCleanupPending=true;}}}const latest=await loadPublishQueue(root),completed=latest.jobs.map((job)=>job.id===jobId?{...job,status:"published" as const,result,error:undefined,updatedAt:new Date().toISOString()}:job);const saved=await savePublishQueue(root,completed);broadcastPublishQueue(saved);return saved;
  }catch(error){const message=error instanceof Error?error.message:String(error),latest=await loadPublishQueue(root);const processing=message.includes("still processing");const failed=latest.jobs.map((job)=>job.id===jobId?{...job,status:(processing?"processing":"failed") as "processing"|"failed",error:message,updatedAt:new Date().toISOString()}:job);const saved=await savePublishQueue(root,failed);broadcastPublishQueue(saved);if(processing)return saved;throw error;}
 });
 
