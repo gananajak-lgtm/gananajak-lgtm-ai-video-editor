@@ -446,7 +446,7 @@ export default function ContentFactoryPanel({
     }
   };
 
-  const importMetaVideoForฉาก = async (sceneId: string) => {
+  const importMetaVideoForScene = async (sceneId: string) => {
     if (!project) return;
     setError(null);
     try {
