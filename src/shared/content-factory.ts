@@ -122,7 +122,7 @@ export type PublishPlan = {
   scheduledAt?: string;
   publishedAt?: string;
   error?: string;
-  tiktok?: { privacyLevel?:TikTokPrivacyLevel; disableComment?:boolean; disableDuet?:boolean; disableStitch?:boolean; creatorNickname?:string };
+  tiktok?: { privacyLevel?:TikTokPrivacyLevel; disableComment?:boolean; disableDuet?:boolean; disableStitch?:boolean; creatorNickname?:string; isAigc?:boolean; commercialContent?:boolean; brandOrganic?:boolean; brandedContent?:boolean; musicUsageConfirmed?:boolean };
 };
 
 export type ContentBatchStatus = "queued" | "preparing" | "ready" | "generating-assets" | "assets-ready" | "rendering" | "rendered" | "failed";
