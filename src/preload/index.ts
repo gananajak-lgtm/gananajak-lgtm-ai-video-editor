@@ -54,6 +54,7 @@ const api: DesktopApi = {
   publishYouTubeJob: (jobId, item) => ipcRenderer.invoke("content:publish-youtube-job", jobId, item),
   getTikTokCreatorInfo: () => ipcRenderer.invoke("content:get-tiktok-creator-info"),
   publishTikTokJob: (jobId, item) => ipcRenderer.invoke("content:publish-tiktok-job", jobId, item),
+  publishFacebookJob: (jobId, item) => ipcRenderer.invoke("content:publish-facebook-job", jobId, item),
   getPublishAccounts: () => ipcRenderer.invoke("content:get-publish-accounts"),
   configureYouTubeOAuth: (clientId, clientSecret) => ipcRenderer.invoke("content:configure-youtube-oauth", clientId, clientSecret),
   configureTikTokOAuth: (clientKey, clientSecret) => ipcRenderer.invoke("content:configure-tiktok-oauth", clientKey, clientSecret),
