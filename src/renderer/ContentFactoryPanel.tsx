@@ -48,6 +48,9 @@ export default function ContentFactoryPanel({
   const [youtubeClientId, setYoutubeClientId] = useState("");
   const [youtubeClientSecret, setYoutubeClientSecret] = useState("");
   const [youtubeConnecting, setYoutubeConnecting] = useState(false);
+  const [tiktokClientKey, setTikTokClientKey] = useState("");
+  const [tiktokClientSecret, setTikTokClientSecret] = useState("");
+  const [tiktokConnecting, setTikTokConnecting] = useState(false);
   const [publishValidation, setPublishValidation] = useState<Record<string, { valid:boolean; issues:Array<{ field:string; message:string; platform?:PublishPlatform }> }>>({});
   const [publishJobs, setPublishJobs] = useState<PublishJob[]>([]);
   const [publishingJobId, setPublishingJobId] = useState<string | null>(null);
@@ -142,6 +145,23 @@ export default function ContentFactoryPanel({
     try { setPublishAccounts(await window.videoEditor.connectYouTube()); }
     catch (oauthError) { setError(oauthError instanceof Error ? oauthError.message : String(oauthError)); }
     finally { setYoutubeConnecting(false); }
+  };
+
+  const saveTikTokOAuth = async () => {
+    if (!tiktokClientKey.trim() || !tiktokClientSecret.trim()) return;
+    setError(null);
+    try {
+      setPublishAccounts(await window.videoEditor.configureTikTokOAuth(tiktokClientKey.trim(), tiktokClientSecret.trim()));
+      setTikTokClientSecret("");
+    } catch (oauthError) { setError(oauthError instanceof Error ? oauthError.message : String(oauthError)); }
+  };
+
+  const connectTikTok = async () => {
+    if (tiktokConnecting) return;
+    setTikTokConnecting(true); setError(null);
+    try { setPublishAccounts(await window.videoEditor.connectTikTok()); }
+    catch (oauthError) { setError(oauthError instanceof Error ? oauthError.message : String(oauthError)); }
+    finally { setTikTokConnecting(false); }
   };
 
   const importAffiliateProducts = async () => {
@@ -615,6 +635,14 @@ export default function ContentFactoryPanel({
           <button onClick={saveYouTubeOAuth} disabled={!youtubeClientId.trim()}>บันทึก YouTube OAuth</button>
           <button className="primary" onClick={connectYouTube} disabled={youtubeConnecting}>{youtubeConnecting ? "กำลังเชื่อมต่อ YouTube..." : "เชื่อมต่อ YouTube"}</button>
         </div>
+        <div className="keyRow">
+          <input value={tiktokClientKey} onChange={(event) => setTikTokClientKey(event.target.value)} placeholder="TikTok client key" aria-label="TikTok client key" />
+          <input type="password" value={tiktokClientSecret} onChange={(event) => setTikTokClientSecret(event.target.value)} placeholder="TikTok client secret" aria-label="TikTok client secret" />
+          <button onClick={saveTikTokOAuth} disabled={!tiktokClientKey.trim() || !tiktokClientSecret.trim()}>บันทึก TikTok OAuth</button>
+          <button className="primary" onClick={connectTikTok} disabled={tiktokConnecting}>{tiktokConnecting ? "กำลังเชื่อมต่อ TikTok..." : "เชื่อมต่อ TikTok"}</button>
+          <span className={publishAccounts.find((account) => account.platform === "tiktok")?.status === "connected" ? "aiBadge readyBadge" : "aiBadge"}>TikTok {publishAccounts.find((account) => account.platform === "tiktok")?.status ?? "disconnected"}</span>
+        </div>
+        <p className="muted">TikTok Desktop redirect URI: register <code>http://127.0.0.1:*/callback/</code> in Login Kit. Direct Post requires approved <code>video.publish</code> access.</p>
       </div>
 
       {batch && (
