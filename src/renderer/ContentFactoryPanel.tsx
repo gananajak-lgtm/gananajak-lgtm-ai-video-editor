@@ -9,6 +9,7 @@ import type {
   PublishAccount
 } from "../shared/content-factory";
 import type { ContentProviderStatus } from "../shared/types";
+import type { AffiliateContentJob, AffiliateProduct } from "../shared/affiliate-factory";
 
 type Props = {
   aiConfigured: boolean;
@@ -47,11 +48,18 @@ export default function ContentFactoryPanel({
   const [youtubeClientSecret, setYoutubeClientSecret] = useState("");
   const [youtubeConnecting, setYoutubeConnecting] = useState(false);
   const [publishValidation, setPublishValidation] = useState<Record<string, { valid:boolean; issues:Array<{ field:string; message:string; platform?:PublishPlatform }> }>>({});
+  const [affiliateUrls, setAffiliateUrls] = useState("");
+  const [affiliateProducts, setAffiliateProducts] = useState<AffiliateProduct[]>([]);
+  const [affiliateJobs, setAffiliateJobs] = useState<AffiliateContentJob[]>([]);
+  const [affiliateImporting, setAffiliateImporting] = useState(false);
+  const [affiliateLocalRunning, setAffiliateLocalRunning] = useState(false);
+  const [affiliateImportErrors, setAffiliateImportErrors] = useState<string[]>([]);
 
   useEffect(() => {
     void window.videoEditor.getContentProviderStatus().then(setProviderStatus);
     void window.videoEditor.loadContentBatch().then((saved) => { if (saved) setBatch(saved); });
     void window.videoEditor.getPublishAccounts().then(setPublishAccounts);
+    void window.videoEditor.loadAffiliateQueue().then((saved) => { setAffiliateProducts(saved.products); setAffiliateJobs(saved.jobs); });
   }, []);
 
   const updatePublish = async (itemId: string, patch: Partial<PublishPlan>) => {
@@ -92,6 +100,34 @@ export default function ContentFactoryPanel({
     try { setPublishAccounts(await window.videoEditor.connectYouTube()); }
     catch (oauthError) { setError(oauthError instanceof Error ? oauthError.message : String(oauthError)); }
     finally { setYoutubeConnecting(false); }
+  };
+
+  const importAffiliateProducts = async () => {
+    const urls = affiliateUrls.split(/\\r?\\n/).map((value) => value.trim()).filter(Boolean).slice(0, 100);
+    if (!urls.length || affiliateImporting) return;
+    setAffiliateImporting(true); setError(null); setAffiliateImportErrors([]);
+    try {
+      const products: AffiliateProduct[] = []; const failures: string[] = [];
+      for (const url of urls) {
+        try { products.push(await window.videoEditor.importAffiliateProduct(url)); }
+        catch (importError) { failures.push(\`${url}: ${importError instanceof Error ? importError.message : String(importError)}\`); }
+      }
+      const jobs = await window.videoEditor.createAffiliateJobs(products);
+      setAffiliateProducts(products); setAffiliateJobs(jobs); setAffiliateImportErrors(failures);
+      await window.videoEditor.saveAffiliateQueue(products, jobs);
+      if (!products.length && failures.length) setError("No valid affiliate products were imported.");
+    } catch (importError) { setError(importError instanceof Error ? importError.message : String(importError)); }
+    finally { setAffiliateImporting(false); }
+  };
+
+  const createLocalAffiliateVideos = async () => {
+    if (!affiliateJobs.length || affiliateLocalRunning) return;
+    const outputDir = await window.videoEditor.chooseBatchOutputFolder(); if (!outputDir) return;
+    setAffiliateLocalRunning(true); setError(null); setBatchProgress({ completed:0, total:affiliateJobs.length });
+    const unsubscribe = window.videoEditor.onContentBatchProgress((progress) => setBatchProgress({ completed:progress.completed, total:progress.total }));
+    try { setBatch(await window.videoEditor.createLocalAffiliateBatch(affiliateJobs, outputDir, language, Math.max(10, duration))); }
+    catch (localError) { setError(localError instanceof Error ? localError.message : String(localError)); }
+    finally { unsubscribe(); setAffiliateLocalRunning(false); }
   };
 
   const saveProviderKeys = async () => {
