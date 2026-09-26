@@ -32,8 +32,8 @@ test("mocks creator info, direct-post init, file upload and publish status",asyn
   }) as typeof fetch; t.after(()=>{globalThis.fetch=originalFetch;});
 
   const creator=await queryTikTokCreatorInfo("token"); assert.deepEqual(creator.privacyLevelOptions,["SELF_ONLY"]);
-  const session=await initTikTokDirectPost({accessToken:"token",item:item(filePath),privacyLevel:"SELF_ONLY"});
-  const initBody=JSON.parse(String(calls[1].init?.body)); assert.equal(initBody.post_info.privacy_level,"SELF_ONLY"); assert.equal(initBody.source_info.source,"FILE_UPLOAD");
+  const session=await initTikTokDirectPost({accessToken:"token",item:item(filePath),privacyLevel:"SELF_ONLY",isAigc:true,brandOrganic:true,brandedContent:false});
+  const initBody=JSON.parse(String(calls[1].init?.body)); assert.equal(initBody.post_info.privacy_level,"SELF_ONLY"); assert.equal(initBody.post_info.is_aigc,true); assert.equal(initBody.post_info.brand_organic_toggle,true); assert.equal(initBody.post_info.brand_content_toggle,false); assert.equal(initBody.source_info.source,"FILE_UPLOAD");
   await uploadTikTokFile({uploadUrl:session.upload_url,filePath,videoSize:session.videoSize,chunkSize:session.chunkSize,totalChunkCount:session.totalChunkCount});
   assert.equal(calls[2].init?.method,"PUT"); assert.equal((calls[2].init?.headers as Record<string,string>)["content-range"],"bytes 0-9/10");
   const status=await fetchTikTokPublishStatus("token",session.publish_id); assert.equal(status.status,"PUBLISH_COMPLETE"); assert.deepEqual(status.postIds,["12345"]);
