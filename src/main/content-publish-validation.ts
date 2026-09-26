@@ -17,6 +17,8 @@ export function validatePublishItem(item: ContentBatchItem, now = new Date()): P
   const youtubeDescription=[plan.description?.trim(), ...(plan.hashtags ?? []).map((tag)=>`#${tag.replace(/^#/, "")}`)].filter(Boolean).join("\\n\\n");
   if ((plan.platforms ?? []).includes("youtube") && youtubeDescription.length > 5000) issues.push({ field:"description", message:"YouTube descriptions must be 5000 characters or fewer.", platform:"youtube" });
   if (platforms.length === 0) issues.push({ field:"platforms", message:"Select at least one publishing platform." });
+  if(platforms.includes("facebook") && !plan.meta?.pageId) issues.push({field:"meta.pageId",platform:"facebook",message:"Choose a Facebook Page before publishing."});
+  if(platforms.includes("instagram")){if(!plan.meta?.pageId||!plan.meta?.instagramBusinessAccountId) issues.push({field:"meta.instagramBusinessAccountId",platform:"instagram",message:"Choose a Facebook Page linked to an Instagram Professional account."});try{const url=new URL(plan.meta?.hostedVideoUrl??"");if(url.protocol!=="https:"||["localhost","127.0.0.1","::1"].includes(url.hostname)) throw new Error();}catch{issues.push({field:"meta.hostedVideoUrl",platform:"instagram",message:"Add a public HTTPS video URL for Instagram publishing."});}}
   for (const platform of platforms) {
     const capability = getPublishConnectorCapability(platform);
     if (!capability?.readyForIntegration) issues.push({ field:"platforms", platform, message:`${platform} publishing connector is not ready yet.` });
