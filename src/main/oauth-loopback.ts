@@ -6,7 +6,7 @@ export type OAuthLoopback = { redirectUri:string; callback:Promise<OAuthCallback
 
 export function createOAuthState() { return randomBytes(32).toString("base64url"); }
 
-export async function startOAuthLoopback(expectedState:string, timeoutMs=120_000, callbackPath=""):Promise<OAuthLoopback> {
+export async function startOAuthLoopback(expectedState:string, timeoutMs=120_000, callbackPath="", port=0):Promise<OAuthLoopback> {
   let close=()=>{};
   let resolveCallback!:(value:OAuthCallback)=>void;
   let rejectCallback!:(reason:Error)=>void;
@@ -20,7 +20,7 @@ export async function startOAuthLoopback(expectedState:string, timeoutMs=120_000
     if(!code || !state || state!==expectedState){res.statusCode=400;res.end("Invalid OAuth callback. You can close this window.");close();rejectCallback(new Error("Invalid OAuth callback state."));return;}
     res.end("Account connected. You can return to Gananajak AI Video Editor.");close();resolveCallback({code,state,redirectUri});
   });
-  await new Promise<void>((resolve,reject)=>{server.once("error",reject);server.listen(0,"127.0.0.1",()=>resolve());});
+  await new Promise<void>((resolve,reject)=>{server.once("error",reject);server.listen(port,"127.0.0.1",()=>resolve());});
   const address=server.address(); if(!address || typeof address==="string"){server.close();throw new Error("Could not allocate OAuth callback port.");}
   const timer=setTimeout(()=>{server.close();rejectCallback(new Error("OAuth authorization timed out."));},timeoutMs);
   close=()=>{clearTimeout(timer);server.close();};
