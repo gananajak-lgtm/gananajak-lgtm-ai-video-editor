@@ -27,3 +27,6 @@ test("recovers TikTok publishing session as processing instead of re-uploading",
   assert.equal(recovered[0]?.externalPublishId,"v_pub_existing");
   assert.match(recovered[0]?.error ?? "",/check its status/i);
 });
+
+
+test("does not misclassify interrupted Facebook sessions as TikTok processing",()=>{const now=new Date("2026-09-27T00:00:00.000Z");const [job]=recoverInterruptedPublishJobs([{id:"fb",itemId:"item",platform:"facebook",status:"publishing",attempts:1,externalPublishId:"video-existing",createdAt:now.toISOString(),updatedAt:now.toISOString()}],now);assert.equal(job.status,"failed");assert.match(job.error??"",/facebook publishing was interrupted/i);assert.equal(job.externalPublishId,"video-existing");});
