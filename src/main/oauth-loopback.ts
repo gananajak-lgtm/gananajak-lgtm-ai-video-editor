@@ -15,8 +15,8 @@ export async function startOAuthLoopback(expectedState:string, timeoutMs=120_000
     const address=server.address(); if (!address || typeof address==="string") return;
     const redirectUri=`http://127.0.0.1:${address.port}${callbackPath}`;
     const url=new URL(req.url ?? "/",redirectUri);
-    const error=url.searchParams.get("error"), code=url.searchParams.get("code"), state=url.searchParams.get("state");
-    if(error){res.end("Authorization was not completed. You can close this window.");close();rejectCallback(new Error(error));return;}
+    const error=url.searchParams.get("error"), errorDescription=url.searchParams.get("error_description"), logId=url.searchParams.get("log_id"), code=url.searchParams.get("code"), state=url.searchParams.get("state");
+    if(error){res.end("Authorization was not completed. You can close this window.");close();rejectCallback(new Error(`${errorDescription || error}${logId ? ` (TikTok log ID: ${logId})` : ""}`));return;}
     if(!code || !state || state!==expectedState){res.statusCode=400;res.end("Invalid OAuth callback. You can close this window.");close();rejectCallback(new Error("Invalid OAuth callback state."));return;}
     res.end("Account connected. You can return to Gananajak AI Video Editor.");close();resolveCallback({code,state,redirectUri});
   });
