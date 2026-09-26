@@ -488,7 +488,7 @@ export default function App() {
         onRelinkSingle={relinkSingle}
       />
 
-      <section className="hero">
+      <details className="hero compactIntro">
         <div>
           <p className="kicker">ตัดต่อเรื่องราวอัตโนมัติ</p>
           <h2>ให้ AI ฟัง ดู วางช็อต และจัดเสียงให้คุณ</h2>
@@ -497,7 +497,7 @@ export default function App() {
           </p>
         </div>
         <div className="heroBadge">🎧</div>
-      </section>
+      </details>
 
       <ContentFactoryPanel
         aiConfigured={aiStatus.configured}
