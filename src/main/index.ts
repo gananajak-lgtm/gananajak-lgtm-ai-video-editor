@@ -545,7 +545,7 @@ ipcMain.handle("content:publish-tiktok-job", async (_event, jobId:string, item:i
       if(error instanceof Error && error.message.includes("still processing")){
         const current=await import("./tiktok-uploader").then((module)=>module.fetchTikTokPublishStatus(tokens.access_token,publishId));
         const latest=await loadPublishQueue(root);
-        const processing=latest.jobs.map((job)=>job.id===jobId?{...job,status:"processing" as const,uploadedBytes:current.uploadedBytes,error:"TikTok is processing this post. It may take a few minutes or longer during moderation. Check status again instead of uploading a new copy.",updatedAt:new Date().toISOString()}:job);
+        const processing=latest.jobs.map((job)=>job.id===jobId?{...job,status:"processing" as const,uploadedBytes:current.uploadedBytes,error:undefined,statusDetail:"TikTok is processing this post. It may take a few minutes or longer during moderation.",updatedAt:new Date().toISOString()}:job);
         const saved=await savePublishQueue(root,processing);broadcastPublishQueue(saved);return saved;
       }
       throw error;
@@ -553,7 +553,7 @@ ipcMain.handle("content:publish-tiktok-job", async (_event, jobId:string, item:i
     const externalId=status.postIds[0] ?? publishId;
     const result:import("../shared/content-factory").PublishResult={platform:"tiktok",status:"published",externalId,publishedAt:new Date().toISOString()};
     const latest=await loadPublishQueue(root);
-    const completed=latest.jobs.map((job)=>job.id===jobId?{...job,status:"published" as const,result,error:undefined,updatedAt:new Date().toISOString()}:job);
+    const completed=latest.jobs.map((job)=>job.id===jobId?{...job,status:"published" as const,result,error:undefined,statusDetail:undefined,updatedAt:new Date().toISOString()}:job);
     const saved=await savePublishQueue(root,completed);broadcastPublishQueue(saved);return saved;
   }catch(error){
     const message=error instanceof Error?error.message:String(error);
