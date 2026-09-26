@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import type { ContentBatchItem } from "../shared/content-factory";
-import { buildTikTokCaption, fetchTikTokPublishStatus, initTikTokDirectPost, planTikTokChunks, queryTikTokCreatorInfo, uploadTikTokFile } from "./tiktok-uploader";
+import { buildTikTokCaption, fetchTikTokPublishStatus, initTikTokDirectPost, planTikTokChunks, queryTikTokCreatorInfo, uploadTikTokFile, waitForTikTokPublish } from "./tiktok-uploader";
 
 const item=(outputPath:string):ContentBatchItem=>({id:"tt-1",brief:{topic:"TikTok test",format:"short",language:"en",targetDurationSeconds:30},status:"rendered",outputPath,publish:{status:"ready",title:"Caption",hashtags:["demo"],platforms:["tiktok"]}});
 
@@ -37,4 +37,13 @@ test("mocks creator info, direct-post init, file upload and publish status",asyn
   await uploadTikTokFile({uploadUrl:session.upload_url,filePath,videoSize:session.videoSize,chunkSize:session.chunkSize,totalChunkCount:session.totalChunkCount});
   assert.equal(calls[2].init?.method,"PUT"); assert.equal((calls[2].init?.headers as Record<string,string>)["content-range"],"bytes 0-9/10");
   const status=await fetchTikTokPublishStatus("token",session.publish_id); assert.equal(status.status,"PUBLISH_COMPLETE"); assert.deepEqual(status.postIds,["12345"]);
+});
+
+
+test("polls TikTok processing until publish completes",async(t)=>{
+  const originalFetch=globalThis.fetch; let count=0;
+  globalThis.fetch=(async()=>{count+=1;return new Response(JSON.stringify({data:{status:count<2?"PROCESSING_UPLOAD":"PUBLISH_COMPLETE",publicaly_available_post_id:count<2?[]:["post-9"]},error:{code:"ok"}}),{status:200});}) as typeof fetch;
+  t.after(()=>{globalThis.fetch=originalFetch;});
+  const result=await waitForTikTokPublish({accessToken:"token",publishId:"pub",maxAttempts:3,delayMs:0});
+  assert.equal(count,2); assert.deepEqual(result.postIds,["post-9"]);
 });
