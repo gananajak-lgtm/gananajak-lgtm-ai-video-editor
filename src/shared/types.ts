@@ -325,6 +325,7 @@ export type DesktopApi = {
   resumeLocalTestBatch: (batch: ContentBatch, outputDir: string) => Promise<ContentBatch>;
   loadContentBatch: () => Promise<ContentBatch | null>;
   updatePublishPlan: (batch: ContentBatch, itemId: string, publish: import("./content-factory").PublishPlan) => Promise<ContentBatch>;
+  validatePublishItem: (item: import("./content-factory").ContentBatchItem) => Promise<{ valid:boolean; issues:Array<{ field:string; message:string; platform?:import("./content-factory").PublishPlatform }> }>;
   getPublishAccounts: () => Promise<import("./content-factory").PublishAccount[]>;
   configureYouTubeOAuth: (clientId: string, clientSecret?: string) => Promise<import("./content-factory").PublishAccount[]>;
   connectYouTube: () => Promise<import("./content-factory").PublishAccount[]>;
