@@ -21,7 +21,7 @@ test("recovers interrupted publishing jobs as retryable failures",()=>{const now
 
 test("recovers TikTok publishing session as processing instead of re-uploading",()=>{
   const now=new Date("2026-09-26T10:00:00Z");
-  const jobs=[{id:"tt-1",itemId:"item-1",platform:"tiktok" as const,status:"publishing" as const,attempts:1,externalPublishId:"v_pub_existing",createdAt:now.toISOString(),updatedAt:now.toISOString()}];
+  const jobs=[{id:"tt-1",itemId:"item-1",platform:"tiktok" as const,status:"publishing" as const,attempts:1,externalPublishId:"v_pub_existing",uploadCompleted:true,createdAt:now.toISOString(),updatedAt:now.toISOString()}];
   const recovered=recoverInterruptedPublishJobs(jobs,new Date("2026-09-26T10:05:00Z"));
   assert.equal(recovered[0]?.status,"processing");
   assert.equal(recovered[0]?.externalPublishId,"v_pub_existing");
