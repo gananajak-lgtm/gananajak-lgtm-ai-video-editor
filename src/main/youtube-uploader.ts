@@ -14,11 +14,15 @@ export async function uploadVideoToYouTube(input: YouTubeUploadInput): Promise<P
   if (!fileInfo.isFile()) throw new Error("Rendered video file cannot be found.");
   const plan = input.item.publish;
   if (!plan?.title?.trim()) throw new Error("YouTube title is required.");
+  const title=plan.title.trim();
+  if (title.length > 100) throw new Error("YouTube title must be 100 characters or fewer.");
+  const description=[plan.description?.trim(), ...(plan.hashtags ?? []).map((tag) => `#${tag.replace(/^#/, "")}`)].filter(Boolean).join("\\n\\n");
+  if (description.length > 5000) throw new Error("YouTube description must be 5000 characters or fewer.");
 
   const metadata = {
     snippet: {
-      title: plan.title.trim(),
-      description: [plan.description?.trim(), ...(plan.hashtags ?? []).map((tag) => `#${tag.replace(/^#/, "")}`)].filter(Boolean).join("\n\n"),
+      title,
+      description,
       tags: (plan.hashtags ?? []).map((tag) => tag.replace(/^#/, "")).filter(Boolean),
       categoryId: "22"
     },
