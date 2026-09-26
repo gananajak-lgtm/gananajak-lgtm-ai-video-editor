@@ -51,7 +51,8 @@ import { createOAuthState, startOAuthLoopback } from "./oauth-loopback";
 import { exchangeYouTubeAuthorizationCode } from "./youtube-oauth";
 import { loadYouTubeTokens, saveYouTubeTokens, loadYouTubeOAuthConfig, saveYouTubeOAuthConfig } from "./youtube-token-store";
 import { createTikTokPkce, exchangeTikTokAuthorizationCode, refreshTikTokAccessToken } from "./tiktok-oauth";
-import { queryTikTokCreatorInfo, initTikTokDirectPost, uploadTikTokFile, waitForTikTokPublish } from "./tiktok-uploader";
+import { queryTikTokCreatorInfo, initTikTokDirectPost, uploadTikTokFile, waitForTikTokPublish, validateTikTokMedia } from "./tiktok-uploader";
+import { probeMediaInfo } from "./video/probe";
 import { loadTikTokTokens, saveTikTokTokens, loadTikTokOAuthConfig, saveTikTokOAuthConfig } from "./tiktok-token-store";
 import { createAffiliateProduct } from "./affiliate-product-import";
 import { createAffiliateContentJobs } from "./affiliate-content-jobs";
@@ -474,25 +475,35 @@ ipcMain.handle("content:publish-tiktok-job", async (_event, jobId:string, item:i
   if(target.status==="publishing") throw new Error("This TikTok upload is already in progress.");
   if(target.status==="published") throw new Error("This TikTok publish job is already complete.");
   if(target.scheduledAt && new Date(target.scheduledAt).getTime()>Date.now()) throw new Error("This publish job is scheduled for a future time.");
-  const privacyLevel=item.publish?.tiktok?.privacyLevel;
-  if(!privacyLevel) throw new Error("Review TikTok creator settings and choose a privacy level before publishing.");
   const tokens=await getUsableTikTokTokens();
-  const creator=await queryTikTokCreatorInfo(tokens.access_token);
-  if(!creator.privacyLevelOptions.includes(privacyLevel)) throw new Error("The selected TikTok privacy level is no longer available. Review creator settings again.");
   const startedAt=new Date().toISOString();
   const running=queue.jobs.map((job)=>job.id===jobId?{...job,status:"publishing" as const,attempts:job.attempts+1,error:undefined,updatedAt:startedAt}:job);
   broadcastPublishQueue(await savePublishQueue(root,running));
   try{
-    const session=await initTikTokDirectPost({accessToken:tokens.access_token,item,privacyLevel,disableComment:item.publish?.tiktok?.disableComment,disableDuet:item.publish?.tiktok?.disableDuet,disableStitch:item.publish?.tiktok?.disableStitch});
-    await uploadTikTokFile({uploadUrl:session.upload_url,filePath:item.outputPath!,videoSize:session.videoSize,chunkSize:session.chunkSize,totalChunkCount:session.totalChunkCount});
-    const status=await waitForTikTokPublish({accessToken:tokens.access_token,publishId:session.publish_id});
-    const externalId=status.postIds[0] ?? session.publish_id;
+    let publishId=target.externalPublishId;
+    if(!publishId){
+      const privacyLevel=item.publish?.tiktok?.privacyLevel;
+      if(!privacyLevel) throw new Error("Review TikTok creator settings and choose a privacy level before publishing.");
+      const creator=await queryTikTokCreatorInfo(tokens.access_token);
+      if(!creator.privacyLevelOptions.includes(privacyLevel)) throw new Error("The selected TikTok privacy level is no longer available. Review creator settings again.");
+      if(!item.outputPath) throw new Error("Rendered video path is missing.");
+      validateTikTokMedia({...await probeMediaInfo(item.outputPath),maxDurationSec:creator.maxVideoPostDurationSec});
+      const session=await initTikTokDirectPost({accessToken:tokens.access_token,item,privacyLevel,disableComment:item.publish?.tiktok?.disableComment,disableDuet:item.publish?.tiktok?.disableDuet,disableStitch:item.publish?.tiktok?.disableStitch});
+      publishId=session.publish_id;
+      const sessionJobs=running.map((job)=>job.id===jobId?{...job,externalPublishId:publishId,updatedAt:new Date().toISOString()}:job);
+      broadcastPublishQueue(await savePublishQueue(root,sessionJobs));
+      await uploadTikTokFile({uploadUrl:session.upload_url,filePath:item.outputPath,videoSize:session.videoSize,chunkSize:session.chunkSize,totalChunkCount:session.totalChunkCount});
+    }
+    const status=await waitForTikTokPublish({accessToken:tokens.access_token,publishId});
+    const externalId=status.postIds[0] ?? publishId;
     const result:import("../shared/content-factory").PublishResult={platform:"tiktok",status:"published",externalId,publishedAt:new Date().toISOString()};
-    const completed=running.map((job)=>job.id===jobId?{...job,status:"published" as const,result,updatedAt:new Date().toISOString()}:job);
+    const latest=await loadPublishQueue(root);
+    const completed=latest.jobs.map((job)=>job.id===jobId?{...job,status:"published" as const,result,error:undefined,updatedAt:new Date().toISOString()}:job);
     const saved=await savePublishQueue(root,completed);broadcastPublishQueue(saved);return saved;
   }catch(error){
     const message=error instanceof Error?error.message:String(error);
-    const failed=running.map((job)=>job.id===jobId?{...job,status:"failed" as const,error:message,updatedAt:new Date().toISOString()}:job);
+    const latest=await loadPublishQueue(root);
+    const failed=latest.jobs.map((job)=>job.id===jobId?{...job,status:"failed" as const,error:message,updatedAt:new Date().toISOString()}:job);
     const saved=await savePublishQueue(root,failed);broadcastPublishQueue(saved);throw error;
   }
 });
