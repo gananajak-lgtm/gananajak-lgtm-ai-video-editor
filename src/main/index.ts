@@ -1,3 +1,4 @@
+import { createMetaBrokerSession, exchangeMetaBrokerSession, validateMetaBrokerConfig } from "./meta-auth-broker";
 import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell } from "electron";
 import path from "node:path";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
@@ -59,7 +60,7 @@ import { createAffiliateContentJobs } from "./affiliate-content-jobs";
 import { affiliateJobToContentBrief } from "./affiliate-content-planner";
 import { loadAffiliateQueue, saveAffiliateQueue } from "./affiliate-queue-store";
 import { buildMetaAuthorizationUrl, exchangeMetaAuthorizationCode, exchangeMetaLongLivedToken } from "./meta-oauth";
-import { loadMetaOAuthConfig, loadMetaToken, loadUsableMetaToken, saveMetaOAuthConfig, saveMetaToken } from "./meta-token-store";
+import { loadMetaOAuthConfig, loadMetaToken, loadUsableMetaToken, saveMetaOAuthConfig, saveMetaToken, loadMetaBrokerConfig, saveMetaBrokerConfig } from "./meta-token-store";
 import { listMetaPublishingPages } from "./meta-publishing";
 import { createFacebookReel, uploadFacebookLocalReel, finishFacebookReel, getFacebookReelStatus, classifyFacebookReelStatus } from "./facebook-reels-uploader";
 import { createInstagramReelContainer, publishInstagramReel, validateInstagramHostedVideoUrl, waitForInstagramContainer } from "./instagram-reels-uploader";
@@ -383,6 +384,10 @@ ipcMain.handle("content:configure-meta-oauth", async (_event, appId:string, appS
   if(url.hostname!=="127.0.0.1" || url.protocol!=="http:" || !url.port) throw new Error("Meta desktop redirect URI must use an exact http://127.0.0.1:PORT/path URI.");
   metaOAuthConfig=config; await saveMetaOAuthConfig(config); return true;
 });
+
+ipcMain.handle("content:configure-meta-broker",async(_event,baseUrl:string,clientId:string)=>{const config=validateMetaBrokerConfig({baseUrl:baseUrl.trim(),clientId:clientId.trim()});await saveMetaBrokerConfig(config);return {configured:true,baseUrl:config.baseUrl,clientId:config.clientId};});
+ipcMain.handle("content:start-meta-broker-auth",async()=>{const config=await loadMetaBrokerConfig();if(!config)throw new Error("Configure Meta Auth Broker first.");const state=createOAuthState();const session=await createMetaBrokerSession(config,state);const authUrl=new URL(session.authorizationUrl);if(authUrl.protocol!=="https:")throw new Error("Meta broker authorization URL must use HTTPS.");await shell.openExternal(authUrl.toString());return {sessionId:session.sessionId,state};});
+ipcMain.handle("content:complete-meta-broker-auth",async(_event,sessionId:string,code:string,state:string)=>{const config=await loadMetaBrokerConfig();if(!config)throw new Error("Configure Meta Auth Broker first.");const token=await exchangeMetaBrokerSession(config,{sessionId,code,state});await saveMetaToken(token);return (await listMetaPublishingPages(token.access_token)).map(({id,name,instagramBusinessAccountId})=>({id,name,instagramBusinessAccountId}));});
 
 ipcMain.handle("content:connect-meta", async () => {
   if(!metaOAuthConfig) metaOAuthConfig=await loadMetaOAuthConfig();
