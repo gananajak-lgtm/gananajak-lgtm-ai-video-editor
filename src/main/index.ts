@@ -51,7 +51,7 @@ import { createOAuthState, startOAuthLoopback } from "./oauth-loopback";
 import { exchangeYouTubeAuthorizationCode } from "./youtube-oauth";
 import { loadYouTubeTokens, saveYouTubeTokens, loadYouTubeOAuthConfig, saveYouTubeOAuthConfig } from "./youtube-token-store";
 import { createTikTokPkce, exchangeTikTokAuthorizationCode, refreshTikTokAccessToken } from "./tiktok-oauth";
-import { queryTikTokCreatorInfo, initTikTokDirectPost, uploadTikTokFile, waitForTikTokPublish, validateTikTokMedia } from "./tiktok-uploader";
+import { queryTikTokCreatorInfo, initTikTokDirectPost, uploadTikTokFile, waitForTikTokPublish, validateTikTokMedia, fetchTikTokPublishStatus } from "./tiktok-uploader";
 import { probeMediaInfo } from "./video/probe";
 import { loadTikTokTokens, saveTikTokTokens, loadTikTokOAuthConfig, saveTikTokOAuthConfig } from "./tiktok-token-store";
 import { createAffiliateProduct } from "./affiliate-product-import";
