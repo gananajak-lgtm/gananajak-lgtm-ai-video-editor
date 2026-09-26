@@ -407,6 +407,12 @@ ipcMain.handle("content:create-publish-jobs", async (_event, item: import("../sh
   return savePublishQueue(root, jobs);
 });
 
+function broadcastPublishQueue(state: { jobs: import("../shared/content-factory").PublishJob[]; updatedAt: string }) {
+  for (const window of BrowserWindow.getAllWindows()) {
+    if (!window.isDestroyed()) window.webContents.send("content:publish-jobs-updated", state);
+  }
+}
+
 ipcMain.handle("content:publish-youtube-job", async (_event, jobId: string, item: import("../shared/content-factory").ContentBatchItem) => {
   const root = path.join(app.getPath("userData"), "publish");
   const queue = await loadPublishQueue(root);
@@ -426,15 +432,18 @@ ipcMain.handle("content:publish-youtube-job", async (_event, jobId: string, item
   }
   const startedAt = new Date().toISOString();
   const running = queue.jobs.map((job) => job.id === jobId ? { ...job, status:"publishing" as const, attempts:job.attempts+1, error:undefined, updatedAt:startedAt } : job);
-  await savePublishQueue(root, running);
+  const runningState=await savePublishQueue(root, running);
+  broadcastPublishQueue(runningState);
   try {
     const result = await uploadVideoToYouTube({ accessToken:tokens.access_token, item, privacyStatus:"private" });
     const completed = running.map((job) => job.id === jobId ? { ...job, status:"published" as const, result, updatedAt:new Date().toISOString() } : job);
-    return savePublishQueue(root, completed);
+    const completedState=await savePublishQueue(root, completed);
+    broadcastPublishQueue(completedState);
+    return completedState;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const failed = running.map((job) => job.id === jobId ? { ...job, status:"failed" as const, error:message, updatedAt:new Date().toISOString() } : job);
-    await savePublishQueue(root, failed); throw error;
+    const failedState=await savePublishQueue(root, failed); broadcastPublishQueue(failedState); throw error;
   }
 });
 
