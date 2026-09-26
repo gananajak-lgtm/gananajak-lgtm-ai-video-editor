@@ -48,6 +48,7 @@ export type AssetJob = {
   attempts: number;
   outputAssetId?: string;
   error?: string;
+  statusDetail?: string;
   createdAt: string;
   updatedAt: string;
 };
