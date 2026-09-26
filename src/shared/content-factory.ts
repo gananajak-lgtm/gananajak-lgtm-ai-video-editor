@@ -124,6 +124,7 @@ export type PublishPlan = {
   publishedAt?: string;
   error?: string;
   tiktok?: { privacyLevel?:TikTokPrivacyLevel; disableComment?:boolean; disableDuet?:boolean; disableStitch?:boolean; creatorNickname?:string; isAigc?:boolean; commercialContent?:boolean; brandOrganic?:boolean; brandedContent?:boolean; musicUsageConfirmed?:boolean };
+  meta?: { pageId?:string; pageName?:string; instagramBusinessAccountId?:string; shareInstagramReelToFeed?:boolean; hostedVideoUrl?:string };
 };
 
 export type ContentBatchStatus = "queued" | "preparing" | "ready" | "generating-assets" | "assets-ready" | "rendering" | "rendered" | "failed";
