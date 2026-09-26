@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import type { ContentBatchItem } from "../shared/content-factory";
-import { buildTikTokCaption, fetchTikTokPublishStatus, initTikTokDirectPost, planTikTokChunks, queryTikTokCreatorInfo, uploadTikTokFile, waitForTikTokPublish, validateTikTokMedia } from "./tiktok-uploader";
+import { buildTikTokCaption, enforceTikTokCreatorRestrictions, fetchTikTokPublishStatus, initTikTokDirectPost, planTikTokChunks, queryTikTokCreatorInfo, uploadTikTokFile, waitForTikTokPublish, validateTikTokMedia } from "./tiktok-uploader";
 
 const item=(outputPath:string):ContentBatchItem=>({id:"tt-1",brief:{topic:"TikTok test",format:"short",language:"en",targetDurationSeconds:30},status:"rendered",outputPath,publish:{status:"ready",title:"Caption",hashtags:["demo"],platforms:["tiktok"]}});
 
@@ -61,3 +61,5 @@ test("plans documented TikTok chunks with a final chunk up to 128 MB",()=>{
   assert.deepEqual(planTikTokChunks(size),{chunkSize:64*1024*1024,totalChunkCount:2});
   assert.throws(()=>planTikTokChunks(4*1024*1024*1024+1),/4 GB/i);
 });
+
+test("enforces TikTok creator interaction restrictions",()=>{const creator={privacyLevelOptions:["SELF_ONLY"] as const,commentDisabled:true,duetDisabled:true,stitchDisabled:true};assert.throws(()=>enforceTikTokCreatorRestrictions({creator,disableComment:false,disableDuet:true,disableStitch:true}),/comments/i);assert.throws(()=>enforceTikTokCreatorRestrictions({creator,disableComment:true,disableDuet:false,disableStitch:true}),/Duet/i);assert.throws(()=>enforceTikTokCreatorRestrictions({creator,disableComment:true,disableDuet:true,disableStitch:false}),/Stitch/i);assert.doesNotThrow(()=>enforceTikTokCreatorRestrictions({creator,disableComment:true,disableDuet:true,disableStitch:true}));});
