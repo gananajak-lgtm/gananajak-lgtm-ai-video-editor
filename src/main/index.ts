@@ -644,6 +644,20 @@ ipcMain.handle(
   }
 );
 
+let publishScheduler: ReturnType<typeof setInterval> | null = null;
+
+async function refreshDuePublishJobs() {
+  const root=path.join(app.getPath("userData"),"publish");
+  const current=await loadPublishQueue(root);
+  const jobs=releaseDuePublishJobs(current.jobs);
+  const changed=jobs.some((job,index)=>job.status!==current.jobs[index]?.status);
+  if (!changed) return;
+  const saved=await savePublishQueue(root,jobs);
+  for (const window of BrowserWindow.getAllWindows()) {
+    if (!window.isDestroyed()) window.webContents.send("content:publish-jobs-updated", saved);
+  }
+}
+
 app.whenReady().then(async () => {
   if (process.argv.includes("--smoke-test")) {
     const smokeRoot = path.join(app.getPath("temp"), "gananajak-packaged-smoke");
@@ -660,6 +674,8 @@ app.whenReady().then(async () => {
   }
   installMediaProtocol();
   createWindow();
+  await refreshDuePublishJobs();
+  publishScheduler=setInterval(() => { void refreshDuePublishJobs(); }, 30_000);
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -667,6 +683,8 @@ app.whenReady().then(async () => {
     }
   });
 });
+
+app.on("before-quit", () => { if (publishScheduler) clearInterval(publishScheduler); publishScheduler=null; });
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
