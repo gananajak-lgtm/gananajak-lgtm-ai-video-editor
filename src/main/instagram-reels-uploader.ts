@@ -14,3 +14,18 @@ export async function publishInstagramReel(input:{igUserId:string;pageAccessToke
  const p=new URLSearchParams({creation_id:input.containerId,access_token:input.pageAccessToken});
  return json<{id:string}>(await fetch(`${GRAPH}/${input.igUserId}/media_publish?${p}`,{method:"POST"}));
 }
+
+
+export async function waitForInstagramContainer(input:{containerId:string;pageAccessToken:string;timeoutMs?:number;pollMs?:number}){
+ const timeoutMs=input.timeoutMs??120_000,pollMs=input.pollMs??5_000,deadline=Date.now()+timeoutMs;
+ while(Date.now()<deadline){
+  const status=await getInstagramContainerStatus(input);
+  if(status.status_code==="FINISHED") return status;
+  if(status.status_code==="ERROR"||status.status_code==="EXPIRED") throw new Error(status.status||`Instagram container ${status.status_code.toLowerCase()}.`);
+  await new Promise((resolve)=>setTimeout(resolve,pollMs));
+ }
+ throw new Error("Instagram Reel is still processing. Check the existing container again instead of creating a duplicate.");
+}
+export function validateInstagramHostedVideoUrl(value:string){
+ const url=new URL(value);if(url.protocol!=="https:") throw new Error("Instagram hosted video URL must use HTTPS.");if(["localhost","127.0.0.1","::1"].includes(url.hostname)) throw new Error("Instagram hosted video URL must be publicly reachable, not localhost.");return url.toString();
+}
