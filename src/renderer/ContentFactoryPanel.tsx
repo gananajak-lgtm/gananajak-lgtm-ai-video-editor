@@ -92,6 +92,19 @@ export default function ContentFactoryPanel({
     } catch (queueError) { setError(queueError instanceof Error ? queueError.message : String(queueError)); }
   };
 
+  const publishYouTubeJob = async (jobId: string, itemId: string) => {
+    const item = batch?.items.find((entry) => entry.id === itemId);
+    if (!item || youtubeConnecting) return;
+    setError(null);
+    try {
+      const saved = await window.videoEditor.publishYouTubeJob(jobId, item);
+      setPublishJobs(saved.jobs);
+    } catch (publishError) {
+      setError(publishError instanceof Error ? publishError.message : String(publishError));
+      const saved = await window.videoEditor.loadPublishJobs(); setPublishJobs(saved.jobs);
+    }
+  };
+
   const togglePublishPlatform = async (itemId:string, platform:PublishPlatform) => {
     const item = batch?.items.find((entry) => entry.id === itemId);
     if (!item) return;
@@ -613,7 +626,7 @@ export default function ContentFactoryPanel({
                 <div className="keyRow">
                   <button onClick={() => void validatePublish(item.id)}>Validate before publish</button>
                   <button className="primary" onClick={() => void queuePublish(item.id)}>Queue publish jobs</button>
-                  {publishJobs.filter((job) => job.itemId === item.id).map((job) => <span className="aiBadge" key={job.id}>{job.platform}: {job.status}</span>)}
+                  {publishJobs.filter((job) => job.itemId === item.id).map((job) => <span className="keyRow" key={job.id}><span className={job.status === "published" ? "aiBadge readyBadge" : "aiBadge"}>{job.platform}: {job.status}</span>{job.platform === "youtube" && job.status !== "published" && <button onClick={() => void publishYouTubeJob(job.id, item.id)} disabled={job.status === "publishing"}>{job.status === "publishing" ? "Uploading..." : job.status === "failed" ? "Retry YouTube upload" : "Upload private to YouTube"}</button>}{job.result?.url && <span className="muted">{job.result.url}</span>}</span>)}
                   {publishValidation[item.id]?.valid && <span className="aiBadge readyBadge">Ready to publish ✓</span>}
                 </div>
                 {publishValidation[item.id] && !publishValidation[item.id].valid && (
