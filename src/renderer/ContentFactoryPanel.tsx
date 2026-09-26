@@ -6,7 +6,8 @@ import type {
   ContentProject,
   PublishPlatform,
   PublishPlan,
-  PublishAccount
+  PublishAccount,
+  PublishJob
 } from "../shared/content-factory";
 import type { ContentProviderStatus } from "../shared/types";
 import type { AffiliateContentJob, AffiliateProduct } from "../shared/affiliate-factory";
@@ -48,6 +49,7 @@ export default function ContentFactoryPanel({
   const [youtubeClientSecret, setYoutubeClientSecret] = useState("");
   const [youtubeConnecting, setYoutubeConnecting] = useState(false);
   const [publishValidation, setPublishValidation] = useState<Record<string, { valid:boolean; issues:Array<{ field:string; message:string; platform?:PublishPlatform }> }>>({});
+  const [publishJobs, setPublishJobs] = useState<PublishJob[]>([]);
   const [affiliateUrls, setAffiliateUrls] = useState("");
   const [affiliateProducts, setAffiliateProducts] = useState<AffiliateProduct[]>([]);
   const [affiliateJobs, setAffiliateJobs] = useState<AffiliateContentJob[]>([]);
@@ -59,6 +61,7 @@ export default function ContentFactoryPanel({
     void window.videoEditor.getContentProviderStatus().then(setProviderStatus);
     void window.videoEditor.loadContentBatch().then((saved) => { if (saved) setBatch(saved); });
     void window.videoEditor.getPublishAccounts().then(setPublishAccounts);
+    void window.videoEditor.loadPublishJobs().then((saved) => setPublishJobs(saved.jobs));
     void window.videoEditor.loadAffiliateQueue().then((saved) => { setAffiliateProducts(saved.products); setAffiliateJobs(saved.jobs); });
   }, []);
 
@@ -76,6 +79,17 @@ export default function ContentFactoryPanel({
     if(!item) return;
     const result=await window.videoEditor.validatePublishItem(item);
     setPublishValidation((current)=>({...current,[itemId]:result}));
+  };
+
+  const queuePublish = async (itemId: string) => {
+    const item = batch?.items.find((entry) => entry.id === itemId);
+    if (!item) return;
+    setError(null);
+    try {
+      const saved = await window.videoEditor.createPublishJobs(item);
+      setPublishJobs(saved.jobs);
+      setPublishValidation((current) => ({ ...current, [itemId]: { valid:true, issues:[] } }));
+    } catch (queueError) { setError(queueError instanceof Error ? queueError.message : String(queueError)); }
   };
 
   const togglePublishPlatform = async (itemId:string, platform:PublishPlatform) => {
@@ -598,6 +612,8 @@ export default function ContentFactoryPanel({
                 </div>
                 <div className="keyRow">
                   <button onClick={() => void validatePublish(item.id)}>Validate before publish</button>
+                  <button className="primary" onClick={() => void queuePublish(item.id)}>Queue publish jobs</button>
+                  {publishJobs.filter((job) => job.itemId === item.id).map((job) => <span className="aiBadge" key={job.id}>{job.platform}: {job.status}</span>)}
                   {publishValidation[item.id]?.valid && <span className="aiBadge readyBadge">Ready to publish ✓</span>}
                 </div>
                 {publishValidation[item.id] && !publishValidation[item.id].valid && (
