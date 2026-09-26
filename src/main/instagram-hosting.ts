@@ -19,3 +19,9 @@ export async function uploadInstagramVideo(config:InstagramHostingConfig,filePat
  return {publicUrl:`${safe.publicBaseUrl}/${objectKey.split("/").map(encodeURIComponent).join("/")}`,objectKey,size:info.size};
 }
 export function makeInstagramObjectKey(itemId:string,filePath:string){const ext=path.extname(filePath).toLowerCase()===".mp4"?".mp4":".mp4";return `instagram/${itemId}-${Date.now()}${ext}`;}
+
+export async function deleteInstagramVideo(config:InstagramHostingConfig,objectKey:string){
+ const safe=validateInstagramHostingConfig(config),target=new URL(safe.uploadUrl);target.searchParams.set("key",objectKey);
+ const headers:Record<string,string>={};if(safe.bearerToken)headers.authorization=`Bearer ${safe.bearerToken}`;
+ const response=await fetch(target,{method:"DELETE",headers});if(!response.ok&&response.status!==404)throw new Error(`Instagram staging cleanup failed (HTTP ${response.status}).`);return true;
+}
