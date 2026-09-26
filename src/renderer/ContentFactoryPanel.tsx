@@ -46,6 +46,7 @@ export default function ContentFactoryPanel({
   const [youtubeClientId, setYoutubeClientId] = useState("");
   const [youtubeClientSecret, setYoutubeClientSecret] = useState("");
   const [youtubeConnecting, setYoutubeConnecting] = useState(false);
+  const [publishValidation, setPublishValidation] = useState<Record<string, { valid:boolean; issues:Array<{ field:string; message:string; platform?:PublishPlatform }> }>>({});
 
   useEffect(() => {
     void window.videoEditor.getContentProviderStatus().then(setProviderStatus);
@@ -60,6 +61,13 @@ export default function ContentFactoryPanel({
     const publish: PublishPlan = { status:item.publish?.status ?? "draft", ...item.publish, ...patch };
     const next = await window.videoEditor.updatePublishPlan(batch, itemId, publish);
     setBatch(next);
+  };
+
+  const validatePublish = async (itemId:string) => {
+    const item=batch?.items.find((entry)=>entry.id===itemId);
+    if(!item) return;
+    const result=await window.videoEditor.validatePublishItem(item);
+    setPublishValidation((current)=>({...current,[itemId]:result}));
   };
 
   const togglePublishPlatform = async (itemId:string, platform:PublishPlatform) => {
@@ -552,6 +560,13 @@ export default function ContentFactoryPanel({
                   {(["youtube","tiktok","facebook","instagram"] as PublishPlatform[]).map((platform) => <label key={platform}><input type="checkbox" checked={item.publish?.platforms?.includes(platform) ?? false} onChange={() => void togglePublishPlatform(item.id, platform)} /> {platform}</label>)}
                   <input type="datetime-local" value={item.publish?.scheduledAt?.slice(0,16) ?? ""} onChange={(event) => void updatePublish(item.id, { scheduledAt:event.target.value || undefined, status:event.target.value ? "scheduled" : "ready" })} aria-label="Publish schedule" />
                 </div>
+                <div className="keyRow">
+                  <button onClick={() => void validatePublish(item.id)}>Validate before publish</button>
+                  {publishValidation[item.id]?.valid && <span className="aiBadge readyBadge">Ready to publish ✓</span>}
+                </div>
+                {publishValidation[item.id] && !publishValidation[item.id].valid && (
+                  <div className="message errorMessage">{publishValidation[item.id].issues.map((issue) => issue.message).join(" · ")}</div>
+                )}
                 <p className="muted">{item.outputPath ?? "Rendered output"}</p>
               </div>
             </div>
