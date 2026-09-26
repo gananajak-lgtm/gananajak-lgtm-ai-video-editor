@@ -19,6 +19,7 @@ import { createContentBatch, prepareContentBatch } from "./content-batch";
 import { generateBatchAssets } from "./content-batch-assets";
 import { renderContentBatch } from "./content-batch-render";
 import { ensurePublishPlan } from "./content-publish-planner";
+import { validatePublishItem } from "./content-publish-validation";
 import {
   createPlaybackUrl,
   installMediaProtocol
@@ -382,6 +383,8 @@ ipcMain.handle("content:get-publish-accounts", async (): Promise<import("../shar
     { platform:"instagram", status:"disconnected" }
   ];
 });
+
+ipcMain.handle("content:validate-publish-item", async (_event, item: import("../shared/content-factory").ContentBatchItem) => validatePublishItem(item));
 
 ipcMain.handle("content:update-publish-plan", async (_event, batch: import("../shared/content-factory").ContentBatch, itemId:string, publish: import("../shared/content-factory").PublishPlan) => {
   const result = { ...batch, items: batch.items.map((item) => item.id === itemId ? { ...item, publish } : item), updatedAt:new Date().toISOString() };
