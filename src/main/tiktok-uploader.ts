@@ -1,7 +1,6 @@
 import { open, stat } from "node:fs/promises";
-import type { ContentBatchItem } from "../shared/content-factory";
+import type { ContentBatchItem, TikTokPrivacyLevel } from "../shared/content-factory";
 
-export type TikTokPrivacyLevel = "PUBLIC_TO_EVERYONE" | "MUTUAL_FOLLOW_FRIENDS" | "FOLLOWER_OF_CREATOR" | "SELF_ONLY";
 export type TikTokCreatorInfo = {
   creatorNickname?: string;
   privacyLevelOptions: TikTokPrivacyLevel[];
@@ -90,4 +89,16 @@ export async function uploadTikTokFile(input:{uploadUrl:string;filePath:string;v
 export async function fetchTikTokPublishStatus(accessToken:string,publishId:string):Promise<TikTokPublishStatus> {
   const data=await postJson<{status:string;fail_reason?:string;publicaly_available_post_id?:string[]}>(`${API}/v2/post/publish/status/fetch/`,accessToken,{publish_id:publishId});
   return {status:data.status,failReason:data.fail_reason,postIds:data.publicaly_available_post_id ?? []};
+}
+
+
+export async function waitForTikTokPublish(input:{accessToken:string;publishId:string;maxAttempts?:number;delayMs?:number}) {
+  const maxAttempts=input.maxAttempts ?? 20, delayMs=input.delayMs ?? 1500;
+  for(let attempt=0;attempt<maxAttempts;attempt+=1){
+    const status=await fetchTikTokPublishStatus(input.accessToken,input.publishId);
+    if(status.status==="PUBLISH_COMPLETE") return status;
+    if(status.status==="FAILED") throw new Error(`TikTok publish failed.${status.failReason ? ` ${status.failReason}` : ""}`);
+    if(attempt<maxAttempts-1) await new Promise((resolve)=>setTimeout(resolve,delayMs));
+  }
+  throw new Error("TikTok is still processing the video. Retry status later.");
 }
