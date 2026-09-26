@@ -62,6 +62,7 @@ import { buildMetaAuthorizationUrl, exchangeMetaAuthorizationCode, exchangeMetaL
 import { loadMetaOAuthConfig, loadMetaToken, saveMetaOAuthConfig, saveMetaToken } from "./meta-token-store";
 import { listMetaPublishingPages } from "./meta-publishing";
 import { createFacebookReel, uploadFacebookLocalReel, finishFacebookReel } from "./facebook-reels-uploader";
+import { createInstagramReelContainer, publishInstagramReel, validateInstagramHostedVideoUrl, waitForInstagramContainer } from "./instagram-reels-uploader";
 
 const isDev = !app.isPackaged;
 
@@ -555,6 +556,20 @@ ipcMain.handle("content:publish-tiktok-job", async (_event, jobId:string, item:i
     const failed=latest.jobs.map((job)=>job.id===jobId?{...job,status:"failed" as const,error:message,updatedAt:new Date().toISOString()}:job);
     const saved=await savePublishQueue(root,failed);broadcastPublishQueue(saved);throw error;
   }
+});
+
+ipcMain.handle("content:publish-instagram-job", async (_event, jobId:string, item:import("../shared/content-factory").ContentBatchItem) => {
+ const root=path.join(app.getPath("userData"),"publish"),queue=await loadPublishQueue(root),target=queue.jobs.find((job)=>job.id===jobId&&job.platform==="instagram");
+ if(!target) throw new Error("Instagram publish job was not found.");if(target.status==="publishing") throw new Error("This Instagram publish is already in progress.");if(target.status==="published") throw new Error("This Instagram publish job is already complete.");if(target.scheduledAt&&new Date(target.scheduledAt).getTime()>Date.now()) throw new Error("This publish job is scheduled for a future time.");
+ const pageId=item.publish?.meta?.pageId,igUserId=item.publish?.meta?.instagramBusinessAccountId;if(!pageId||!igUserId) throw new Error("Choose a Facebook Page linked to an Instagram Professional account.");
+ const hostedVideoUrl=validateInstagramHostedVideoUrl(item.publish?.meta?.hostedVideoUrl?.trim()??"");
+ const token=await loadMetaToken();if(!token) throw new Error("Connect Meta before publishing.");const pages=await listMetaPublishingPages(token.access_token),page=pages.find((entry)=>entry.id===pageId&&entry.instagramBusinessAccountId===igUserId);if(!page) throw new Error("The selected Instagram account is no longer linked to this Facebook Page. Reconnect Meta.");
+ const running=queue.jobs.map((job)=>job.id===jobId?{...job,status:"publishing" as const,attempts:job.attempts+1,error:undefined,updatedAt:new Date().toISOString()}:job);broadcastPublishQueue(await savePublishQueue(root,running));
+ try{
+  let containerId=target.externalPublishId;
+  if(!containerId){const caption=[item.publish?.caption||item.publish?.title,...(item.publish?.hashtags??[]).map((tag)=>`#${tag.replace(/^#/,"")}`)].filter(Boolean).join("\n\n");const created=await createInstagramReelContainer({igUserId,pageAccessToken:page.accessToken,videoUrl:hostedVideoUrl,caption,shareToFeed:item.publish?.meta?.shareInstagramReelToFeed});containerId=created.id;const withContainer=running.map((job)=>job.id===jobId?{...job,externalPublishId:containerId,updatedAt:new Date().toISOString()}:job);broadcastPublishQueue(await savePublishQueue(root,withContainer));}
+  await waitForInstagramContainer({containerId,pageAccessToken:page.accessToken});const published=await publishInstagramReel({igUserId,pageAccessToken:page.accessToken,containerId});const result:import("../shared/content-factory").PublishResult={platform:"instagram",status:"published",externalId:published.id,publishedAt:new Date().toISOString()};const latest=await loadPublishQueue(root),completed=latest.jobs.map((job)=>job.id===jobId?{...job,status:"published" as const,result,error:undefined,updatedAt:new Date().toISOString()}:job);const saved=await savePublishQueue(root,completed);broadcastPublishQueue(saved);return saved;
+ }catch(error){const message=error instanceof Error?error.message:String(error),latest=await loadPublishQueue(root);const processing=message.includes("still processing");const failed=latest.jobs.map((job)=>job.id===jobId?{...job,status:(processing?"processing":"failed") as "processing"|"failed",error:message,updatedAt:new Date().toISOString()}:job);const saved=await savePublishQueue(root,failed);broadcastPublishQueue(saved);if(processing)return saved;throw error;}
 });
 
 ipcMain.handle("content:publish-facebook-job", async (_event, jobId:string, item:import("../shared/content-factory").ContentBatchItem) => {
