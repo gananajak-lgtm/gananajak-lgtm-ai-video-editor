@@ -77,6 +77,7 @@ export type ContentProject = {
 export type PublishStatus = "draft" | "ready" | "scheduled" | "publishing" | "published" | "failed";
 
 export type PublishPlatform = "youtube" | "tiktok" | "facebook" | "instagram";
+export type TikTokPrivacyLevel = "PUBLIC_TO_EVERYONE" | "MUTUAL_FOLLOW_FRIENDS" | "FOLLOWER_OF_CREATOR" | "SELF_ONLY";
 
 export type PublishAccount = {
   platform: PublishPlatform;
@@ -120,6 +121,7 @@ export type PublishPlan = {
   scheduledAt?: string;
   publishedAt?: string;
   error?: string;
+  tiktok?: { privacyLevel?:TikTokPrivacyLevel; disableComment?:boolean; disableDuet?:boolean; disableStitch?:boolean; creatorNickname?:string };
 };
 
 export type ContentBatchStatus = "queued" | "preparing" | "ready" | "generating-assets" | "assets-ready" | "rendering" | "rendered" | "failed";
