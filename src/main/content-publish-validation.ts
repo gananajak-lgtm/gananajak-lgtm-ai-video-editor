@@ -12,6 +12,9 @@ export function validatePublishItem(item: ContentBatchItem, now = new Date()): P
   else if (!existsSync(item.outputPath)) issues.push({ field:"outputPath", message:"Rendered video file cannot be found." });
   if (!plan) return { valid:false, issues:[...issues, { field:"publish", message:"Publish metadata has not been prepared." }] };
   if (!plan.title?.trim()) issues.push({ field:"title", message:"Add a title before publishing." });
+  else if (plan.title.trim().length > 100) issues.push({ field:"title", message:"YouTube titles must be 100 characters or fewer.", platform:"youtube" });
+  const youtubeDescription=[plan.description?.trim(), ...(plan.hashtags ?? []).map((tag)=>`#${tag.replace(/^#/, "")}`)].filter(Boolean).join("\\n\\n");
+  if ((plan.platforms ?? []).includes("youtube") && youtubeDescription.length > 5000) issues.push({ field:"description", message:"YouTube descriptions must be 5000 characters or fewer.", platform:"youtube" });
   const platforms = plan.platforms ?? [];
   if (platforms.length === 0) issues.push({ field:"platforms", message:"Select at least one publishing platform." });
   for (const platform of platforms) {
