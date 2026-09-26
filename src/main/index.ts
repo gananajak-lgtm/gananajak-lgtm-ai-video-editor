@@ -61,7 +61,7 @@ import { loadAffiliateQueue, saveAffiliateQueue } from "./affiliate-queue-store"
 import { buildMetaAuthorizationUrl, exchangeMetaAuthorizationCode, exchangeMetaLongLivedToken } from "./meta-oauth";
 import { loadMetaOAuthConfig, loadMetaToken, saveMetaOAuthConfig, saveMetaToken } from "./meta-token-store";
 import { listMetaPublishingPages } from "./meta-publishing";
-import { createFacebookReel, uploadFacebookLocalReel, finishFacebookReel } from "./facebook-reels-uploader";
+import { createFacebookReel, uploadFacebookLocalReel, finishFacebookReel, getFacebookReelStatus, classifyFacebookReelStatus } from "./facebook-reels-uploader";
 import { createInstagramReelContainer, publishInstagramReel, validateInstagramHostedVideoUrl, waitForInstagramContainer } from "./instagram-reels-uploader";
 import { deleteInstagramVideo, makeInstagramObjectKey, uploadInstagramVideo, validateInstagramHostingConfig } from "./instagram-hosting";
 import { loadInstagramHostingConfig, saveInstagramHostingConfig } from "./instagram-hosting-store";
