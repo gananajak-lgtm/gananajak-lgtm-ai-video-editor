@@ -294,7 +294,7 @@ export default function App() {
   };
 
   const chooseเสียงบรรยาย = async () => {
-    const picked = await window.videoEditor.selectเสียงบรรยาย();
+    const picked = await window.videoEditor.selectNarration();
     if (picked) {
       setเสียงบรรยาย(picked);
       setTranscript(null);
@@ -327,7 +327,7 @@ export default function App() {
     }
   };
 
-  const transcribeเสียงบรรยาย = async () => {
+  const transcribeNarration = async () => {
     if (!narration) return;
 
     setTranscribing(true);
@@ -335,7 +335,7 @@ export default function App() {
     setNotice("Listening to the full narration and creating timestamped speech segments...");
 
     try {
-      const result = await window.videoEditor.transcribeเสียงบรรยาย(narration);
+      const result = await window.videoEditor.transcribeNarration(narration);
       setTranscript(result);
       setEditingPlan(null);
       setTimeline(null);
@@ -599,7 +599,7 @@ export default function App() {
             <button
               className="primary"
               disabled={!narration || transcribing || rendering || building}
-              onClick={transcribeเสียงบรรยาย}
+              onClick={transcribeNarration}
             >
               {transcribing ? "กำลังฟังเสียงบรรยาย..." : transcript ? "วิเคราะห์อีกครั้ง" : "วิเคราะห์เสียงบรรยาย"}
             </button>
