@@ -50,6 +50,8 @@ import { buildAutomaticTimeline } from "./video/timeline";
 import { createOAuthState, startOAuthLoopback } from "./oauth-loopback";
 import { exchangeYouTubeAuthorizationCode } from "./youtube-oauth";
 import { loadYouTubeTokens, saveYouTubeTokens, loadYouTubeOAuthConfig, saveYouTubeOAuthConfig } from "./youtube-token-store";
+import { createTikTokPkce, exchangeTikTokAuthorizationCode } from "./tiktok-oauth";
+import { loadTikTokTokens, saveTikTokTokens, loadTikTokOAuthConfig, saveTikTokOAuthConfig } from "./tiktok-token-store";
 import { createAffiliateProduct } from "./affiliate-product-import";
 import { createAffiliateContentJobs } from "./affiliate-content-jobs";
 import { affiliateJobToContentBrief } from "./affiliate-content-planner";
@@ -363,6 +365,38 @@ ipcMain.handle("content:configure-youtube-oauth", async (_event, clientId:string
   ];
 });
 
+let tiktokOAuthConfig: { clientKey:string; clientSecret:string } | null = null;
+
+ipcMain.handle("content:configure-tiktok-oauth", async (_event, clientKey:string, clientSecret:string): Promise<import("../shared/content-factory").PublishAccount[]> => {
+  const normalizedClientKey=clientKey.trim(), normalizedClientSecret=clientSecret.trim();
+  if(!normalizedClientKey || !normalizedClientSecret) throw new Error("TikTok client key and client secret are required.");
+  tiktokOAuthConfig={clientKey:normalizedClientKey,clientSecret:normalizedClientSecret};
+  await saveTikTokOAuthConfig(tiktokOAuthConfig);
+  const youtubeTokens=await loadYouTubeTokens();
+  return [
+    {platform:"youtube",status:youtubeTokens ? "connected":"disconnected",displayName:youtubeTokens ? "YouTube authorized":undefined},
+    {platform:"tiktok",status:"disconnected",displayName:"OAuth configured · authorization required"},
+    {platform:"facebook",status:"disconnected"},{platform:"instagram",status:"disconnected"}
+  ];
+});
+
+ipcMain.handle("content:connect-tiktok", async (): Promise<import("../shared/content-factory").PublishAccount[]> => {
+  if(!tiktokOAuthConfig) tiktokOAuthConfig=await loadTikTokOAuthConfig();
+  if(!tiktokOAuthConfig) throw new Error("Configure TikTok OAuth before connecting.");
+  const state=createOAuthState(), pkce=createTikTokPkce();
+  const loopback=await startOAuthLoopback(state,120_000,"/callback/");
+  try {
+    const params=new URLSearchParams({client_key:tiktokOAuthConfig.clientKey,response_type:"code",scope:"user.info.basic,video.publish",redirect_uri:loopback.redirectUri,state,code_challenge:pkce.challenge,code_challenge_method:"S256"});
+    await shell.openExternal(`https://www.tiktok.com/v2/auth/authorize/?${params.toString()}`);
+    const callback=await loopback.callback;
+    const tokens=await exchangeTikTokAuthorizationCode({clientKey:tiktokOAuthConfig.clientKey,clientSecret:tiktokOAuthConfig.clientSecret,code:callback.code,redirectUri:callback.redirectUri,codeVerifier:pkce.verifier});
+    if(!tokens.scope.split(",").map((scope)=>scope.trim()).includes("video.publish")) throw new Error("TikTok authorization did not grant video.publish.");
+    await saveTikTokTokens(tokens);
+    const youtubeTokens=await loadYouTubeTokens();
+    return [{platform:"youtube",status:youtubeTokens ? "connected":"disconnected",displayName:youtubeTokens ? "YouTube authorized":undefined},{platform:"tiktok",status:"connected",displayName:"TikTok authorized"},{platform:"facebook",status:"disconnected"},{platform:"instagram",status:"disconnected"}];
+  } finally { loopback.close(); }
+});
+
 ipcMain.handle("content:connect-youtube", async (): Promise<import("../shared/content-factory").PublishAccount[]> => {
   if (!youtubeOAuthConfig) youtubeOAuthConfig=await loadYouTubeOAuthConfig();
   if (!youtubeOAuthConfig) throw new Error("Configure YouTube OAuth before connecting.");
@@ -380,9 +414,10 @@ ipcMain.handle("content:connect-youtube", async (): Promise<import("../shared/co
 
 ipcMain.handle("content:get-publish-accounts", async (): Promise<import("../shared/content-factory").PublishAccount[]> => {
   const youtubeTokens=await loadYouTubeTokens();
+  const tiktokTokens=await loadTikTokTokens();
   return [
     { platform:"youtube", status:youtubeTokens?.refresh_token || youtubeTokens?.access_token ? "connected" : "disconnected", displayName:youtubeTokens ? "YouTube authorized" : undefined },
-    { platform:"tiktok", status:"disconnected" },
+    { platform:"tiktok", status:tiktokTokens?.refresh_token || tiktokTokens?.access_token ? "connected" : "disconnected", displayName:tiktokTokens ? "TikTok authorized" : undefined },
     { platform:"facebook", status:"disconnected" },
     { platform:"instagram", status:"disconnected" }
   ];
