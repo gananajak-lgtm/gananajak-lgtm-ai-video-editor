@@ -54,6 +54,7 @@ export default function ContentFactoryPanel({
   const [publishValidation, setPublishValidation] = useState<Record<string, { valid:boolean; issues:Array<{ field:string; message:string; platform?:PublishPlatform }> }>>({});
   const [publishJobs, setPublishJobs] = useState<PublishJob[]>([]);
   const [publishingJobId, setPublishingJobId] = useState<string | null>(null);
+  const [tiktokCreatorInfo, setTikTokCreatorInfo] = useState<{creatorNickname?:string;privacyLevelOptions:import("../shared/content-factory").TikTokPrivacyLevel[];commentDisabled?:boolean;duetDisabled?:boolean;stitchDisabled?:boolean;maxVideoPostDurationSec?:number}|null>(null);
   const [publishDrafts, setPublishDrafts] = useState<Record<string, PublishPlan>>({});
   const [publishSaving, setPublishSaving] = useState<string | null>(null);
   const [affiliateUrls, setAffiliateUrls] = useState("");
@@ -123,6 +124,25 @@ export default function ContentFactoryPanel({
       setError(publishError instanceof Error ? publishError.message : String(publishError));
       const saved = await window.videoEditor.loadPublishJobs(); setPublishJobs(saved.jobs);
     } finally { setPublishingJobId(null); }
+  };
+
+  const reviewTikTokSettings = async (itemId:string) => {
+    const item=batch?.items.find((entry)=>entry.id===itemId); if(!item) return;
+    setError(null);
+    try {
+      const info=await window.videoEditor.getTikTokCreatorInfo(); setTikTokCreatorInfo(info);
+      const current=getPublishDraft(item);
+      const privacy=current.tiktok?.privacyLevel && info.privacyLevelOptions.includes(current.tiktok.privacyLevel) ? current.tiktok.privacyLevel : info.privacyLevelOptions[0];
+      patchPublishDraft(item,{tiktok:{...current.tiktok,creatorNickname:info.creatorNickname,privacyLevel,disableComment:current.tiktok?.disableComment ?? Boolean(info.commentDisabled),disableDuet:current.tiktok?.disableDuet ?? Boolean(info.duetDisabled),disableStitch:current.tiktok?.disableStitch ?? Boolean(info.stitchDisabled)}});
+    } catch(reviewError){setError(reviewError instanceof Error?reviewError.message:String(reviewError));}
+  };
+
+  const publishTikTokJob = async (jobId:string,itemId:string) => {
+    const item=batch?.items.find((entry)=>entry.id===itemId); if(!item || publishingJobId) return;
+    setPublishingJobId(jobId);setError(null);
+    try{const saved=await window.videoEditor.publishTikTokJob(jobId,item);setPublishJobs(saved.jobs);}
+    catch(publishError){setError(publishError instanceof Error?publishError.message:String(publishError));const saved=await window.videoEditor.loadPublishJobs();setPublishJobs(saved.jobs);}
+    finally{setPublishingJobId(null);}
   };
 
   const togglePublishPlatform = (item: import("../shared/content-factory").ContentBatchItem, platform:PublishPlatform) => {
@@ -670,7 +690,11 @@ export default function ContentFactoryPanel({
                   <button onClick={() => void savePublishDraft(item.id)} disabled={publishSaving === item.id}>{publishSaving === item.id ? "กำลังบันทึก..." : "บันทึกข้อมูลเผยแพร่"}</button>
                   <button onClick={() => void validatePublish(item.id)} disabled={Boolean(publishDrafts[item.id])}>ตรวจสอบก่อนเผยแพร่</button>
                   <button className="primary" onClick={() => void queuePublish(item.id)} disabled={Boolean(publishDrafts[item.id])}>เข้าคิวเผยแพร่</button>
-                  {publishJobs.filter((job) => job.itemId === item.id).map((job) => <span className="keyRow" key={job.id}><span className={job.status === "published" ? "aiBadge readyBadge" : "aiBadge"}>{job.platform}: {job.status}</span>{job.platform === "youtube" && job.status !== "published" && <button onClick={() => void publishYouTubeJob(job.id, item.id)} disabled={job.status === "publishing" || job.status === "blocked" || publishingJobId === job.id}>{job.status === "publishing" ? "กำลังอัปโหลด..." : job.status === "blocked" ? `Scheduled ${job.scheduledAt ? new Date(job.scheduledAt).toLocaleString() : ""}` : job.status === "failed" ? "ลองอัปโหลด YouTube อีกครั้ง" : "อัปโหลดไป YouTube แบบส่วนตัว"}</button>}{job.result?.url && <button onClick={() => void navigator.clipboard.writeText(job.result?.url ?? "")}>คัดลอกลิงก์ YouTube</button>}</span>)}
+                  {getPublishDraft(item).platforms?.includes("tiktok") && <div className="keyRow">
+                    <button onClick={() => void reviewTikTokSettings(item.id)}>ตรวจสิทธิ์และตัวเลือก TikTok</button>
+                    {tiktokCreatorInfo && <><span className="muted">{tiktokCreatorInfo.creatorNickname ?? "TikTok creator"}</span><select value={getPublishDraft(item).tiktok?.privacyLevel ?? ""} onChange={(event)=>patchPublishDraft(item,{tiktok:{...getPublishDraft(item).tiktok,privacyLevel:event.target.value as import("../shared/content-factory").TikTokPrivacyLevel}})}><option value="" disabled>เลือกความเป็นส่วนตัว</option>{tiktokCreatorInfo.privacyLevelOptions.map((level)=><option value={level} key={level}>{level}</option>)}</select><label><input type="checkbox" checked={Boolean(getPublishDraft(item).tiktok?.disableComment)} disabled={Boolean(tiktokCreatorInfo.commentDisabled)} onChange={(event)=>patchPublishDraft(item,{tiktok:{...getPublishDraft(item).tiktok,disableComment:event.target.checked}})} /> ปิดคอมเมนต์</label><label><input type="checkbox" checked={Boolean(getPublishDraft(item).tiktok?.disableDuet)} disabled={Boolean(tiktokCreatorInfo.duetDisabled)} onChange={(event)=>patchPublishDraft(item,{tiktok:{...getPublishDraft(item).tiktok,disableDuet:event.target.checked}})} /> ปิด Duet</label><label><input type="checkbox" checked={Boolean(getPublishDraft(item).tiktok?.disableStitch)} disabled={Boolean(tiktokCreatorInfo.stitchDisabled)} onChange={(event)=>patchPublishDraft(item,{tiktok:{...getPublishDraft(item).tiktok,disableStitch:event.target.checked}})} /> ปิด Stitch</label></>}
+                  </div>}
+                  {publishJobs.filter((job) => job.itemId === item.id).map((job) => <span className="keyRow" key={job.id}><span className={job.status === "published" ? "aiBadge readyBadge" : "aiBadge"}>{job.platform}: {job.status}</span>{job.platform === "youtube" && job.status !== "published" && <button onClick={() => void publishYouTubeJob(job.id, item.id)} disabled={job.status === "publishing" || job.status === "blocked" || publishingJobId === job.id}>{job.status === "publishing" ? "กำลังอัปโหลด..." : job.status === "blocked" ? `Scheduled ${job.scheduledAt ? new Date(job.scheduledAt).toLocaleString() : ""}` : job.status === "failed" ? "ลองอัปโหลด YouTube อีกครั้ง" : "อัปโหลดไป YouTube แบบส่วนตัว"}</button>}{job.platform === "tiktok" && job.status !== "published" && <button onClick={() => void publishTikTokJob(job.id,item.id)} disabled={job.status === "publishing" || job.status === "blocked" || publishingJobId === job.id || !item.publish?.tiktok?.privacyLevel}>{job.status === "publishing" ? "กำลังส่ง TikTok..." : job.status === "failed" ? "ลองส่ง TikTok อีกครั้ง" : "ยืนยันและเผยแพร่ TikTok"}</button>}{job.result?.url && <button onClick={() => void navigator.clipboard.writeText(job.result?.url ?? "")}>คัดลอกลิงก์</button>}{job.error && <span className="muted">{job.error}</span>}</span>)}
                   {publishValidation[item.id]?.valid && <span className="aiBadge readyBadge">พร้อมเผยแพร่ ✓</span>}
                 </div>
                 {publishValidation[item.id] && !publishValidation[item.id].valid && (
