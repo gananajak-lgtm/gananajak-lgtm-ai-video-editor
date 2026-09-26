@@ -1,4 +1,5 @@
-import { readFile, stat } from "node:fs/promises";
+import { stat } from "node:fs/promises";
+import { createReadStream } from "node:fs";
 import path from "node:path";
 import type { ContentBatchItem, PublishResult } from "../shared/content-factory";
 
@@ -43,16 +44,17 @@ export async function uploadVideoToYouTube(input: YouTubeUploadInput): Promise<P
   const uploadUrl = session.headers.get("location");
   if (!uploadUrl) throw new Error("YouTube did not return a resumable upload URL.");
 
-  const bytes = await readFile(input.item.outputPath);
+  const stream = createReadStream(input.item.outputPath);
   const uploaded = await fetch(uploadUrl, {
     method: "PUT",
     headers: {
       authorization: `Bearer ${input.accessToken}`,
-      "content-length": String(bytes.byteLength),
+      "content-length": String(fileInfo.size),
       "content-type": path.extname(input.item.outputPath).toLowerCase() === ".mp4" ? "video/mp4" : "application/octet-stream"
     },
-    body: bytes
-  });
+    body: stream,
+    duplex: "half"
+  } as RequestInit & { duplex: "half" });
   const body = await uploaded.json().catch(() => ({})) as { id?: string; error?: { message?: string } };
   if (!uploaded.ok || !body.id) throw new Error(body.error?.message || `YouTube upload failed (${uploaded.status}).`);
   return {
