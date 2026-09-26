@@ -57,6 +57,8 @@ export function planTikTokChunks(videoSize:number) {
   return {chunkSize,totalChunkCount};
 }
 
+export function enforceTikTokCreatorRestrictions(input:{creator:TikTokCreatorInfo;disableComment?:boolean;disableDuet?:boolean;disableStitch?:boolean}){if(input.creator.commentDisabled&&!input.disableComment)throw new Error("TikTok creator settings require comments to be disabled for this post.");if(input.creator.duetDisabled&&!input.disableDuet)throw new Error("TikTok creator settings require Duet to be disabled for this post.");if(input.creator.stitchDisabled&&!input.disableStitch)throw new Error("TikTok creator settings require Stitch to be disabled for this post.");}
+
 export function validateTikTokMedia(input:{duration:number;sizeBytes:number;streams:Array<{codecType:string|null;width:number|null;height:number|null;fps:number|null}>;maxDurationSec?:number}) {
   if(input.sizeBytes<=0 || input.sizeBytes>MAX_VIDEO_SIZE) throw new Error("TikTok video must be non-empty and 4 GB or smaller.");
   if(input.maxDurationSec && input.duration>input.maxDurationSec+0.01) throw new Error(`TikTok creator limit is ${input.maxDurationSec} seconds, but this video is ${input.duration.toFixed(1)} seconds.`);
