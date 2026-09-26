@@ -87,7 +87,7 @@ export type PublishAccount = {
   error?: string;
 };
 
-export type PublishJobStatus = "queued" | "blocked" | "publishing" | "published" | "failed";
+export type PublishJobStatus = "queued" | "blocked" | "publishing" | "processing" | "published" | "failed";
 
 export type PublishResult = {
   platform: PublishPlatform;
@@ -107,6 +107,7 @@ export type PublishJob = {
   attempts: number;
   result?: PublishResult;
   externalPublishId?: string;
+  uploadedBytes?: number;
   error?: string;
   createdAt: string;
   updatedAt: string;
