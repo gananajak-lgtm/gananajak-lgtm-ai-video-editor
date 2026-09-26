@@ -332,6 +332,7 @@ export type DesktopApi = {
   getTikTokCreatorInfo: () => Promise<{ creatorNickname?:string; privacyLevelOptions:import("./content-factory").TikTokPrivacyLevel[]; commentDisabled?:boolean; duetDisabled?:boolean; stitchDisabled?:boolean; maxVideoPostDurationSec?:number }>;
   publishTikTokJob: (jobId: string, item: import("./content-factory").ContentBatchItem) => Promise<{ jobs: import("./content-factory").PublishJob[]; updatedAt: string }>;
   publishFacebookJob: (jobId: string, item: import("./content-factory").ContentBatchItem) => Promise<{ jobs: import("./content-factory").PublishJob[]; updatedAt: string }>;
+  publishInstagramJob: (jobId: string, item: import("./content-factory").ContentBatchItem) => Promise<{ jobs: import("./content-factory").PublishJob[]; updatedAt: string }>;
   getPublishAccounts: () => Promise<import("./content-factory").PublishAccount[]>;
   configureYouTubeOAuth: (clientId: string, clientSecret?: string) => Promise<import("./content-factory").PublishAccount[]>;
   configureTikTokOAuth: (clientKey: string, clientSecret: string) => Promise<import("./content-factory").PublishAccount[]>;
