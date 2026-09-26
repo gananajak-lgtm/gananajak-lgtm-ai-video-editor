@@ -51,6 +51,7 @@ const api: DesktopApi = {
   validatePublishItem: (item) => ipcRenderer.invoke("content:validate-publish-item", item),
   loadPublishJobs: () => ipcRenderer.invoke("content:load-publish-jobs"),
   createPublishJobs: (item) => ipcRenderer.invoke("content:create-publish-jobs", item),
+  publishYouTubeJob: (jobId, item) => ipcRenderer.invoke("content:publish-youtube-job", jobId, item),
   getPublishAccounts: () => ipcRenderer.invoke("content:get-publish-accounts"),
   configureYouTubeOAuth: (clientId, clientSecret) => ipcRenderer.invoke("content:configure-youtube-oauth", clientId, clientSecret),
   connectYouTube: () => ipcRenderer.invoke("content:connect-youtube"),
