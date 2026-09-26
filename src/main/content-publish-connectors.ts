@@ -11,7 +11,7 @@ export type PublishConnectorCapability = {
 export const PUBLISH_CONNECTOR_CAPABILITIES: PublishConnectorCapability[] = [
   { platform:"youtube", mode:"direct", requiresOAuth:true, readyForIntegration:true, note:"YouTube Data API videos.insert supports authenticated video upload and metadata." },
   { platform:"tiktok", mode:"direct", requiresOAuth:true, readyForIntegration:true, note:"TikTok Content Posting API supports Direct Post and draft upload; app review/scopes apply." },
-  { platform:"facebook", mode:"planned", requiresOAuth:true, readyForIntegration:false, note:"Connector pending provider-specific authorization and publishing implementation." },
+  { platform:"facebook", mode:"direct", requiresOAuth:true, readyForIntegration:true, note:"Facebook Page Reels supports authenticated local-file upload sessions." },
   { platform:"instagram", mode:"planned", requiresOAuth:true, readyForIntegration:false, note:"Connector pending provider-specific authorization and publishing implementation." }
 ];
 
