@@ -1,3 +1,5 @@
+import type { ContentBatch, ContentBrief, ContentProject } from "./content-factory";
+
 export type ProjectMedia = {
   images: string[];
   narration: string | null;
@@ -22,6 +24,7 @@ export type ProjectDocument = {
   editingPlan: EditingBrainPlan | null;
   timeline: TimelinePlan | null;
   audioLayers: AudioLayer[];
+  contentProject?: ContentProject | null;
   renderHistory?: FullEpisodeTestReport[];
 };
 
@@ -58,6 +61,8 @@ export type ShotType = "close" | "medium" | "wide" | "unknown";
 export type TimelineClip = {
   id: string;
   imagePath: string;
+  videoPath?: string;
+  videoDuration?: number;
   start: number;
   duration: number;
   motion: ShotMotion;
@@ -201,6 +206,11 @@ export type AiSettingsStatus = {
   persistedSecurely: boolean;
 };
 
+export type ContentProviderStatus = {
+  replicateConfigured: boolean;
+  elevenLabsConfigured: boolean;
+};
+
 export type RenderProgress = {
   progress: number;
   elapsed: number;
@@ -304,6 +314,45 @@ export type DesktopApi = {
   ) => Promise<TimelinePlan>;
   getAiSettingsStatus: () => Promise<AiSettingsStatus>;
   saveOpenAiApiKey: (apiKey: string) => Promise<AiSettingsStatus>;
+  getContentProviderStatus: () => Promise<ContentProviderStatus>;
+  saveReplicateApiToken: (token: string) => Promise<ContentProviderStatus>;
+  saveElevenLabsApiKey: (apiKey: string) => Promise<ContentProviderStatus>;
+  generateContentProject: (brief: ContentBrief) => Promise<ContentProject>;
+  generateLocalTestProject: (brief: ContentBrief) => Promise<ContentProject>;
+  generateLocalTestAssets: (project: ContentProject) => Promise<ContentProject>;
+  prepareContentBatch: (briefs: ContentBrief[]) => Promise<ContentBatch>;
+  createLocalTestBatch: (briefs: ContentBrief[], outputDir: string) => Promise<ContentBatch>;
+  resumeLocalTestBatch: (batch: ContentBatch, outputDir: string) => Promise<ContentBatch>;
+  loadContentBatch: () => Promise<ContentBatch | null>;
+  updatePublishPlan: (batch: ContentBatch, itemId: string, publish: import("./content-factory").PublishPlan) => Promise<ContentBatch>;
+  validatePublishItem: (item: import("./content-factory").ContentBatchItem) => Promise<{ valid:boolean; issues:Array<{ field:string; message:string; platform?:import("./content-factory").PublishPlatform }> }>;
+  loadPublishJobs: () => Promise<{ jobs: import("./content-factory").PublishJob[]; updatedAt: string }>;
+  createPublishJobs: (item: import("./content-factory").ContentBatchItem) => Promise<{ jobs: import("./content-factory").PublishJob[]; updatedAt: string }>;
+  publishYouTubeJob: (jobId: string, item: import("./content-factory").ContentBatchItem) => Promise<{ jobs: import("./content-factory").PublishJob[]; updatedAt: string }>;
+  getTikTokCreatorInfo: () => Promise<{ creatorNickname?:string; privacyLevelOptions:import("./content-factory").TikTokPrivacyLevel[]; commentDisabled?:boolean; duetDisabled?:boolean; stitchDisabled?:boolean; maxVideoPostDurationSec?:number }>;
+  publishTikTokJob: (jobId: string, item: import("./content-factory").ContentBatchItem) => Promise<{ jobs: import("./content-factory").PublishJob[]; updatedAt: string }>;
+  publishFacebookJob: (jobId: string, item: import("./content-factory").ContentBatchItem) => Promise<{ jobs: import("./content-factory").PublishJob[]; updatedAt: string }>;
+  getPublishAccounts: () => Promise<import("./content-factory").PublishAccount[]>;
+  configureYouTubeOAuth: (clientId: string, clientSecret?: string) => Promise<import("./content-factory").PublishAccount[]>;
+  configureTikTokOAuth: (clientKey: string, clientSecret: string) => Promise<import("./content-factory").PublishAccount[]>;
+  connectYouTube: () => Promise<import("./content-factory").PublishAccount[]>;
+  connectTikTok: () => Promise<import("./content-factory").PublishAccount[]>;
+  configureMetaOAuth: (appId:string, appSecret:string, redirectUri:string) => Promise<boolean>;
+  connectMeta: () => Promise<Array<{id:string;name:string;instagramBusinessAccountId?:string}>>;
+  getMetaDestinations: () => Promise<Array<{id:string;name:string;instagramBusinessAccountId?:string}>>;
+  importAffiliateProduct: (sourceUrl: string) => Promise<import("./affiliate-factory").AffiliateProduct>;
+  loadAffiliateQueue: () => Promise<{ products: import("./affiliate-factory").AffiliateProduct[]; jobs: import("./affiliate-factory").AffiliateContentJob[]; updatedAt: string }>;
+  saveAffiliateQueue: (products: import("./affiliate-factory").AffiliateProduct[], jobs: import("./affiliate-factory").AffiliateContentJob[]) => Promise<{ products: import("./affiliate-factory").AffiliateProduct[]; jobs: import("./affiliate-factory").AffiliateContentJob[]; updatedAt: string }>;
+  createAffiliateJobs: (products: import("./affiliate-factory").AffiliateProduct[]) => Promise<import("./affiliate-factory").AffiliateContentJob[]>;
+  prepareAffiliateBatch: (jobs: import("./affiliate-factory").AffiliateContentJob[], language?: import("./content-factory").ContentLanguage, duration?: number) => Promise<import("./content-factory").ContentBatch>;
+  createLocalAffiliateBatch: (jobs: import("./affiliate-factory").AffiliateContentJob[], outputDir: string, language?: import("./content-factory").ContentLanguage, duration?: number) => Promise<import("./content-factory").ContentBatch>;
+  resumeContentBatch: (batch: ContentBatch) => Promise<ContentBatch>;
+  generateContentBatchAssets: (batch: ContentBatch) => Promise<ContentBatch>;
+  chooseBatchOutputFolder: () => Promise<string | null>;
+  renderContentBatch: (batch: ContentBatch, outputDir: string) => Promise<ContentBatch>;
+  importMetaVideo: (project: ContentProject, sceneId: string) => Promise<ContentProject | null>;
+  generateContentAssets: (project: ContentProject) => Promise<ContentProject>;
+  assembleAndRenderContent: (project: ContentProject, outputPath: string) => Promise<RenderResult & { narrationPath: string; timeline: TimelinePlan }>;
   transcribeNarration: (narrationPath: string) => Promise<TranscriptResult>;
   buildEditingBrainPlan: (
     transcript: TranscriptResult,
@@ -330,6 +379,19 @@ export type DesktopApi = {
   ) => Promise<QcPackResult | null>;
   chooseOutput: () => Promise<string | null>;
   renderTimeline: (plan: TimelinePlan, outputPath: string) => Promise<RenderResult>;
+  onPublishJobsUpdated: (listener: (state: { jobs: import("./content-factory").PublishJob[]; updatedAt: string }) => void) => () => void;
+    onContentBatchRenderProgress: (
+    listener: (progress: { completed: number; total: number; item: import("./content-factory").ContentBatchItem; renderProgress?: number }) => void
+  ) => () => void;
+  onContentBatchAssetProgress: (
+    listener: (progress: { completed: number; total: number; item: import("./content-factory").ContentBatchItem; assetCompleted?: number; assetTotal?: number; kind?: string }) => void
+  ) => () => void;
+  onContentBatchProgress: (
+    listener: (progress: { completed: number; total: number; item: import("./content-factory").ContentBatchItem }) => void
+  ) => () => void;
+  onContentAssetProgress: (
+    listener: (progress: { completed: number; total: number; currentJobId?: string; kind?: string }) => void
+  ) => () => void;
   onRenderProgress: (
     listener: (progress: RenderProgress) => void
   ) => () => void;

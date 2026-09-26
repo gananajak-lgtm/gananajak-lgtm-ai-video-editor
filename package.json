@@ -11,7 +11,9 @@
     "build:renderer": "vite build",
     "build:electron": "tsc -p tsconfig.electron.json",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.electron.json --noEmit",
-    "smoke:render": "node scripts/render-smoke.cjs"
+    "smoke:render": "node scripts/render-smoke.cjs",
+    "test:content": "npm run build:electron && node --test dist-electron/main/affiliate-product-import.test.js dist-electron/main/affiliate-content-planner.test.js dist-electron/main/content-publish-planner.test.js dist-electron/main/content-publish-validation.test.js dist-electron/main/content-publish-jobs.test.js dist-electron/main/youtube-uploader.test.js dist-electron/main/tiktok-uploader.test.js dist-electron/main/tiktok-oauth.test.js dist-electron/main/meta-oauth.test.js dist-electron/main/facebook-reels-uploader.test.js dist-electron/main/instagram-reels-uploader.test.js dist-electron/main/content-local-test-assets.test.js dist-electron/main/content-asset-runner.test.js dist-electron/main/content-narration-runner.test.js dist-electron/main/content-timeline-bridge.test.js dist-electron/main/content-factory.integration.test.js dist-electron/main/video/render.test.js dist-electron/main/content-batch.test.js dist-electron/main/content-batch-assets.test.js dist-electron/main/content-batch-render.test.js",
+    "dist:win": "npm run build && electron-builder --win nsis"
   },
   "dependencies": {
     "ffmpeg-static": "^5.2.0",
@@ -28,6 +30,42 @@
     "electron": "^35.0.0",
     "typescript": "^5.7.2",
     "vite": "^6.0.7",
-    "wait-on": "^8.0.1"
+    "wait-on": "^8.0.1",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.gananajak.aivideoeditor",
+    "productName": "Gananajak AI Video Editor",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/ffmpeg-static/**/*",
+      "node_modules/ffprobe-static/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Gananajak-AI-Video-Editor-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Gananajak AI Video Editor"
+    }
   }
 }

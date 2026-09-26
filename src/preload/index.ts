@@ -31,6 +31,56 @@ const api: DesktopApi = {
   getAiSettingsStatus: () => ipcRenderer.invoke("ai:settings-status"),
   saveOpenAiApiKey: (apiKey) =>
     ipcRenderer.invoke("ai:save-openai-key", apiKey),
+  getContentProviderStatus: () => ipcRenderer.invoke("content:provider-status"),
+  saveReplicateApiToken: (token) => ipcRenderer.invoke("content:save-replicate-token", token),
+  saveElevenLabsApiKey: (apiKey) => ipcRenderer.invoke("content:save-elevenlabs-key", apiKey),
+  generateContentProject: (brief) =>
+    ipcRenderer.invoke("content:generate-project", brief),
+  generateLocalTestProject: (brief) =>
+    ipcRenderer.invoke("content:generate-local-test-project", brief),
+  generateLocalTestAssets: (project) =>
+    ipcRenderer.invoke("content:generate-local-test-assets", project),
+  prepareContentBatch: (briefs) =>
+    ipcRenderer.invoke("content:prepare-batch", briefs),
+  createLocalTestBatch: (briefs, outputDir) =>
+    ipcRenderer.invoke("content:create-local-test-batch", briefs, outputDir),
+  resumeLocalTestBatch: (batch, outputDir) =>
+    ipcRenderer.invoke("content:resume-local-test-batch", batch, outputDir),
+  loadContentBatch: () => ipcRenderer.invoke("content:load-batch"),
+  updatePublishPlan: (batch, itemId, publish) => ipcRenderer.invoke("content:update-publish-plan", batch, itemId, publish),
+  validatePublishItem: (item) => ipcRenderer.invoke("content:validate-publish-item", item),
+  loadPublishJobs: () => ipcRenderer.invoke("content:load-publish-jobs"),
+  createPublishJobs: (item) => ipcRenderer.invoke("content:create-publish-jobs", item),
+  publishYouTubeJob: (jobId, item) => ipcRenderer.invoke("content:publish-youtube-job", jobId, item),
+  getTikTokCreatorInfo: () => ipcRenderer.invoke("content:get-tiktok-creator-info"),
+  publishTikTokJob: (jobId, item) => ipcRenderer.invoke("content:publish-tiktok-job", jobId, item),
+  publishFacebookJob: (jobId, item) => ipcRenderer.invoke("content:publish-facebook-job", jobId, item),
+  getPublishAccounts: () => ipcRenderer.invoke("content:get-publish-accounts"),
+  configureYouTubeOAuth: (clientId, clientSecret) => ipcRenderer.invoke("content:configure-youtube-oauth", clientId, clientSecret),
+  configureTikTokOAuth: (clientKey, clientSecret) => ipcRenderer.invoke("content:configure-tiktok-oauth", clientKey, clientSecret),
+  connectYouTube: () => ipcRenderer.invoke("content:connect-youtube"),
+  connectTikTok: () => ipcRenderer.invoke("content:connect-tiktok"),
+  configureMetaOAuth: (appId, appSecret, redirectUri) => ipcRenderer.invoke("content:configure-meta-oauth", appId, appSecret, redirectUri),
+  connectMeta: () => ipcRenderer.invoke("content:connect-meta"),
+  getMetaDestinations: () => ipcRenderer.invoke("content:get-meta-destinations"),
+  importAffiliateProduct: (sourceUrl) => ipcRenderer.invoke("affiliate:import-product", sourceUrl),
+  loadAffiliateQueue: () => ipcRenderer.invoke("affiliate:load-queue"),
+  saveAffiliateQueue: (products, jobs) => ipcRenderer.invoke("affiliate:save-queue", products, jobs),
+  createAffiliateJobs: (products) => ipcRenderer.invoke("affiliate:create-jobs", products),
+  prepareAffiliateBatch: (jobs, language, duration) => ipcRenderer.invoke("affiliate:prepare-batch", jobs, language, duration),
+  createLocalAffiliateBatch: (jobs, outputDir, language, duration) => ipcRenderer.invoke("affiliate:create-local-batch", jobs, outputDir, language, duration),
+  resumeContentBatch: (batch) =>
+    ipcRenderer.invoke("content:resume-batch", batch),
+  generateContentBatchAssets: (batch) =>
+    ipcRenderer.invoke("content:generate-batch-assets", batch),
+  chooseBatchOutputFolder: () => ipcRenderer.invoke("content:choose-batch-output"),
+  renderContentBatch: (batch, outputDir) => ipcRenderer.invoke("content:render-batch", batch, outputDir),
+  importMetaVideo: (project, sceneId) =>
+    ipcRenderer.invoke("content:import-meta-video", project, sceneId),
+  generateContentAssets: (project) =>
+    ipcRenderer.invoke("content:generate-assets", project),
+  assembleAndRenderContent: (project, outputPath) =>
+    ipcRenderer.invoke("content:assemble-and-render", project, outputPath),
   transcribeNarration: (narrationPath) =>
     ipcRenderer.invoke("ai:transcribe-narration", narrationPath),
   buildEditingBrainPlan: (transcript, sfxLibrary) =>
@@ -48,6 +98,31 @@ const api: DesktopApi = {
   chooseOutput: () => ipcRenderer.invoke("render:choose-output"),
   renderTimeline: (plan: TimelinePlan, outputPath: string) =>
     ipcRenderer.invoke("render:timeline", plan, outputPath),
+  onPublishJobsUpdated: (listener) => { const handler = (_event: IpcRendererEvent, state: Parameters<typeof listener>[0]) => listener(state); ipcRenderer.on("content:publish-jobs-updated", handler); return () => ipcRenderer.removeListener("content:publish-jobs-updated", handler); },
+    onContentBatchRenderProgress: (listener) => {
+    const handler = (_event: IpcRendererEvent, progress: Parameters<typeof listener>[0]) => listener(progress);
+    ipcRenderer.on("content:batch-render-progress", handler);
+    return () => ipcRenderer.removeListener("content:batch-render-progress", handler);
+  },
+  onContentBatchAssetProgress: (listener) => {
+    const handler = (_event: IpcRendererEvent, progress: Parameters<typeof listener>[0]) => listener(progress);
+    ipcRenderer.on("content:batch-asset-progress", handler);
+    return () => ipcRenderer.removeListener("content:batch-asset-progress", handler);
+  },
+  onContentBatchProgress: (listener) => {
+    const handler = (_event: IpcRendererEvent, progress: Parameters<typeof listener>[0]) => listener(progress);
+    ipcRenderer.on("content:batch-progress", handler);
+    return () => ipcRenderer.removeListener("content:batch-progress", handler);
+  },
+  onContentAssetProgress: (listener) => {
+    const handler = (
+      _event: IpcRendererEvent,
+      progress: { completed: number; total: number; currentJobId?: string; kind?: string }
+    ) => listener(progress);
+
+    ipcRenderer.on("content:asset-progress", handler);
+    return () => ipcRenderer.removeListener("content:asset-progress", handler);
+  },
   onRenderProgress: (listener) => {
     const handler = (
       _event: IpcRendererEvent,

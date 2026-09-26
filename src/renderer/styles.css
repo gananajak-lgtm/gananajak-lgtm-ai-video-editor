@@ -424,8 +424,8 @@ button:disabled {
   margin-top: 20px;
 }
 
-.keyRow input {
-  flex: 1;
+.keyRow input,
+.keyRow select {
   min-width: 0;
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 12px;
@@ -436,9 +436,29 @@ button:disabled {
   font: inherit;
 }
 
-.keyRow input:focus {
+.keyRow input {
+  flex: 1;
+}
+
+.keyRow select {
+  flex: 0 1 150px;
+}
+
+.keyRow input[type="number"] {
+  flex: 0 1 120px;
+}
+
+.keyRow input:focus,
+.keyRow select:focus {
   border-color: rgba(96, 165, 250, 0.7);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.transcriptRow small {
+  display: block;
+  margin-top: 6px;
+  color: #94a3b8;
+  line-height: 1.45;
 }
 
 .aiControls {
@@ -2245,3 +2265,45 @@ button:disabled {
     text-align: left;
   }
 }
+
+
+/* Desktop compact workspace: keep primary workflow visible without page-length scrolling. */
+@media (min-width: 1100px) {
+  body { font-size: 13px; }
+  .shell { width: min(1540px, calc(100% - 28px)); padding: 14px 0 24px; }
+  .topbar { min-height: 34px; }
+  .topbar h1 { font-size: 18px; }
+  .eyebrow, .kicker { margin-bottom: 3px; font-size: 9px; }
+  button { border-radius: 9px; padding: 7px 11px; font-size: 12px; }
+  .hero { margin: 12px 0; min-height: 0; padding: 14px 18px; border-radius: 16px; }
+  .hero h2 { max-width: none; font-size: 22px; line-height: 1.1; letter-spacing: -0.02em; }
+  .hero .lede { margin-top: 6px; max-width: 1050px; font-size: 12px; line-height: 1.4; }
+  .heroBadge { width: 48px; height: 48px; border-radius: 12px; font-size: 24px; }
+  .projectToolbar { margin-top: 8px; padding: 10px 12px; }
+  .grid { gap: 10px; }
+  .panel { min-height: 150px; padding: 14px; border-radius: 14px; }
+  .step { width: 26px; height: 26px; }
+  .mediaList { margin-top: 10px; max-height: 96px; overflow-y: auto; }
+  .mediaRow { padding: 6px 8px; }
+  .audioCard { margin-top: 10px; padding: 12px; border-radius: 12px; }
+  .wave { font-size: 22px; }
+  .aiPanel, .transcriptPanel, .audioLayersPanel, .editingBrainPanel, .visualBrainPanel, .timelinePanel {
+    margin-top: 10px; padding: 14px 16px; border-radius: 14px;
+  }
+  .aiPanelHeader .muted, .audioLayersHeader .muted, .editingBrainHeader .muted, .visualBrainHeader .muted {
+    margin-top: 4px; line-height: 1.35;
+  }
+  .keyRow { margin-top: 10px; gap: 7px; }
+  .keyRow input, .keyRow select { padding: 7px 9px; border-radius: 8px; font-size: 12px; }
+  .aiBadge, .timelineMeta span, .brainStats span, .visualStats span { padding: 5px 8px; font-size: 10px; }
+  .brainStats, .visualStats { margin-top: 9px; }
+  .editingBrainHeader .muted, .visualBrainHeader .muted { display: none; }
+  .editingBrainPanel, .visualBrainPanel { min-height: 0; }
+  .transcriptList { margin-top: 10px; max-height: 240px; }
+  .transcriptRow { padding: 8px 10px; }
+  .pipeline { margin-top: 10px; padding: 12px 14px; border-radius: 13px; }
+  .message { margin-top: 8px; padding: 9px 11px; }
+}
+
+.compactIntro { cursor: pointer; }
+.compactIntro:not([open]) { display: none; }
