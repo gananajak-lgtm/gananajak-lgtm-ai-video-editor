@@ -133,7 +133,7 @@ export default function ContentFactoryPanel({
       const info=await window.videoEditor.getTikTokCreatorInfo(); setTikTokCreatorInfo(info);
       const current=getPublishDraft(item);
       const privacy=current.tiktok?.privacyLevel && info.privacyLevelOptions.includes(current.tiktok.privacyLevel) ? current.tiktok.privacyLevel : info.privacyLevelOptions[0];
-      patchPublishDraft(item,{tiktok:{...current.tiktok,creatorNickname:info.creatorNickname,privacyLevel,disableComment:current.tiktok?.disableComment ?? Boolean(info.commentDisabled),disableDuet:current.tiktok?.disableDuet ?? Boolean(info.duetDisabled),disableStitch:current.tiktok?.disableStitch ?? Boolean(info.stitchDisabled)}});
+      patchPublishDraft(item,{tiktok:{...current.tiktok,creatorNickname:info.creatorNickname,privacyLevel:privacy,disableComment:current.tiktok?.disableComment ?? Boolean(info.commentDisabled),disableDuet:current.tiktok?.disableDuet ?? Boolean(info.duetDisabled),disableStitch:current.tiktok?.disableStitch ?? Boolean(info.stitchDisabled)}});
     } catch(reviewError){setError(reviewError instanceof Error?reviewError.message:String(reviewError));}
   };
 
