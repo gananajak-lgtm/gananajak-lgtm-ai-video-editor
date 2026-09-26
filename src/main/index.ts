@@ -392,13 +392,13 @@ ipcMain.handle("content:connect-meta", async () => {
     const shortToken=await exchangeMetaAuthorizationCode({...metaOAuthConfig,code:callback.code});
     const longToken=await exchangeMetaLongLivedToken({appId:metaOAuthConfig.appId,appSecret:metaOAuthConfig.appSecret,accessToken:shortToken.access_token});
     await saveMetaToken(longToken);
-    return listMetaPublishingPages(longToken.access_token);
+    return (await listMetaPublishingPages(longToken.access_token)).map(({id,name,instagramBusinessAccountId})=>({id,name,instagramBusinessAccountId}));
   } finally { loopback.close(); }
 });
 
 ipcMain.handle("content:get-meta-destinations", async () => {
   const token=await loadMetaToken(); if(!token) return [];
-  return listMetaPublishingPages(token.access_token);
+  return (await listMetaPublishingPages(token.access_token)).map(({id,name,instagramBusinessAccountId})=>({id,name,instagramBusinessAccountId}));
 });
 
 let tiktokOAuthConfig: { clientKey:string; clientSecret:string } | null = null;
