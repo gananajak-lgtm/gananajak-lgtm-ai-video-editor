@@ -17,3 +17,13 @@ test("releases blocked jobs when schedule becomes due",()=>{const item=rendered(
 test("keeps future scheduled jobs blocked",()=>{const item=rendered();item.publish={status:"scheduled",title:"Title",platforms:["youtube"],scheduledAt:"2026-09-28T00:00:00Z"};const jobs=createPublishJobs(item,new Date("2026-09-26T00:00:00Z"));assert.equal(releaseDuePublishJobs(jobs,new Date("2026-09-27T00:00:00Z"))[0]?.status,"blocked");});
 
 test("recovers interrupted publishing jobs as retryable failures",()=>{const now=new Date("2026-09-26T10:00:00Z");const jobs=[{id:"job-1",itemId:"item-1",platform:"youtube" as const,status:"publishing" as const,attempts:1,createdAt:now.toISOString(),updatedAt:now.toISOString()}];const recovered=recoverInterruptedPublishJobs(jobs,new Date("2026-09-26T10:05:00Z"));assert.equal(recovered[0]?.status,"failed");assert.match(recovered[0]?.error ?? "",/interrupted/i);});
+
+
+test("recovers TikTok publishing session as processing instead of re-uploading",()=>{
+  const now=new Date("2026-09-26T10:00:00Z");
+  const jobs=[{id:"tt-1",itemId:"item-1",platform:"tiktok" as const,status:"publishing" as const,attempts:1,externalPublishId:"v_pub_existing",createdAt:now.toISOString(),updatedAt:now.toISOString()}];
+  const recovered=recoverInterruptedPublishJobs(jobs,new Date("2026-09-26T10:05:00Z"));
+  assert.equal(recovered[0]?.status,"processing");
+  assert.equal(recovered[0]?.externalPublishId,"v_pub_existing");
+  assert.match(recovered[0]?.error ?? "",/check its status/i);
+});
