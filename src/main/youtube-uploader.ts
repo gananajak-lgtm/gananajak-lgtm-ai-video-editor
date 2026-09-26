@@ -55,7 +55,7 @@ export async function uploadVideoToYouTube(input: YouTubeUploadInput): Promise<P
       "content-length": String(fileInfo.size),
       "content-type": path.extname(input.item.outputPath).toLowerCase() === ".mp4" ? "video/mp4" : "application/octet-stream"
     },
-    body: stream,
+    body: stream as unknown as BodyInit,
     duplex: "half"
   } as RequestInit & { duplex: "half" });
   const body = await uploaded.json().catch(() => ({})) as { id?: string; error?: { message?: string } };
