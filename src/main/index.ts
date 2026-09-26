@@ -411,6 +411,8 @@ ipcMain.handle("content:publish-youtube-job", async (_event, jobId: string, item
   const queue = await loadPublishQueue(root);
   const target = queue.jobs.find((job) => job.id === jobId && job.platform === "youtube");
   if (!target) throw new Error("YouTube publish job was not found.");
+  if (target.status === "publishing") throw new Error("This YouTube upload is already in progress.");
+  if (target.status === "published") throw new Error("This YouTube publish job is already complete.");
   if (target.scheduledAt && new Date(target.scheduledAt).getTime() > Date.now()) throw new Error("This publish job is scheduled for a future time.");
   let tokens = await loadYouTubeTokens();
   if (!tokens) throw new Error("Connect YouTube before publishing.");
