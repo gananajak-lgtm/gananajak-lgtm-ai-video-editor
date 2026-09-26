@@ -51,7 +51,7 @@ import { createOAuthState, startOAuthLoopback } from "./oauth-loopback";
 import { exchangeYouTubeAuthorizationCode } from "./youtube-oauth";
 import { loadYouTubeTokens, saveYouTubeTokens, loadYouTubeOAuthConfig, saveYouTubeOAuthConfig } from "./youtube-token-store";
 import { createTikTokPkce, exchangeTikTokAuthorizationCode, refreshTikTokAccessToken } from "./tiktok-oauth";
-import { queryTikTokCreatorInfo, initTikTokDirectPost, uploadTikTokFile, waitForTikTokPublish, validateTikTokMedia, fetchTikTokPublishStatus } from "./tiktok-uploader";
+import { queryTikTokCreatorInfo, initTikTokDirectPost, uploadTikTokFile, waitForTikTokPublish, validateTikTokMedia, fetchTikTokPublishStatus, enforceTikTokCreatorRestrictions } from "./tiktok-uploader";
 import { probeMediaInfo } from "./video/probe";
 import { loadTikTokTokens, saveTikTokTokens, loadTikTokOAuthConfig, saveTikTokOAuthConfig } from "./tiktok-token-store";
 import { createAffiliateProduct } from "./affiliate-product-import";
@@ -525,6 +525,7 @@ ipcMain.handle("content:publish-tiktok-job", async (_event, jobId:string, item:i
       if(!privacyLevel) throw new Error("Review TikTok creator settings and choose a privacy level before publishing.");
       const creator=await queryTikTokCreatorInfo(tokens.access_token);
       if(!creator.privacyLevelOptions.includes(privacyLevel)) throw new Error("The selected TikTok privacy level is no longer available. Review creator settings again.");
+      enforceTikTokCreatorRestrictions({creator,disableComment:item.publish?.tiktok?.disableComment,disableDuet:item.publish?.tiktok?.disableDuet,disableStitch:item.publish?.tiktok?.disableStitch});
       if(!item.outputPath) throw new Error("Rendered video path is missing.");
       validateTikTokMedia({...await probeMediaInfo(item.outputPath),maxDurationSec:creator.maxVideoPostDurationSec});
       const disclosure=item.publish?.tiktok;
