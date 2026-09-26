@@ -18,3 +18,9 @@ export async function exchangeMetaLongLivedToken(input:{appId:string;appSecret:s
   const params=new URLSearchParams({grant_type:"fb_exchange_token",client_id:input.appId,client_secret:input.appSecret,fb_exchange_token:input.accessToken});
   return json<MetaTokenResponse>(await fetch(`${GRAPH}/oauth/access_token?${params}`));
 }
+
+
+export function buildMetaAuthorizationUrl(input:{appId:string;redirectUri:string;state:string}){
+  const params=new URLSearchParams({client_id:input.appId,redirect_uri:input.redirectUri,state:input.state,response_type:"code",scope:"pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish"});
+  return `https://www.facebook.com/dialog/oauth?${params}`;
+}
