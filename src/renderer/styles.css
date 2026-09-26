@@ -2304,3 +2304,6 @@ button:disabled {
   .pipeline { margin-top: 10px; padding: 12px 14px; border-radius: 13px; }
   .message { margin-top: 8px; padding: 9px 11px; }
 }
+
+.compactIntro { cursor: pointer; }
+.compactIntro:not([open]) { display: none; }
