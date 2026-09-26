@@ -9,7 +9,7 @@ export type TikTokCreatorInfo = {
   stitchDisabled?: boolean;
   maxVideoPostDurationSec?: number;
 };
-export type TikTokPublishStatus = { status:string; failReason?:string; postIds:string[] };
+export type TikTokPublishStatus = { status:string; failReason?:string; postIds:string[]; uploadedBytes?:number };
 
 type TikTokEnvelope<T> = { data?:T; error?:{ code?:string; message?:string; log_id?:string } };
 
@@ -103,8 +103,8 @@ export async function uploadTikTokFile(input:{uploadUrl:string;filePath:string;v
 }
 
 export async function fetchTikTokPublishStatus(accessToken:string,publishId:string):Promise<TikTokPublishStatus> {
-  const data=await postJson<{status:string;fail_reason?:string;publicaly_available_post_id?:string[]}>(`${API}/v2/post/publish/status/fetch/`,accessToken,{publish_id:publishId});
-  return {status:data.status,failReason:data.fail_reason,postIds:data.publicaly_available_post_id ?? []};
+  const data=await postJson<{status:string;fail_reason?:string;publicaly_available_post_id?:string[];uploaded_bytes?:number}>(`${API}/v2/post/publish/status/fetch/`,accessToken,{publish_id:publishId});
+  return {status:data.status,failReason:data.fail_reason,postIds:data.publicaly_available_post_id ?? [],uploadedBytes:data.uploaded_bytes};
 }
 
 
