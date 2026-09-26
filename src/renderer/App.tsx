@@ -27,7 +27,7 @@ function formatTime(seconds: number) {
 
 export default function App() {
   const [projectId, setProjectId] = useState(() => `project-${Date.now()}`);
-  const [projectTitle, setProjectTitle] = useState("Untitled story");
+  const [projectTitle, setProjectTitle] = useState("เรื่องไม่มีชื่อ");
   const [projectCreatedAt, setProjectCreatedAt] = useState(
     () => new Date().toISOString()
   );
@@ -39,7 +39,7 @@ export default function App() {
   const [missingMedia, setMissingMedia] = useState<string[]>([]);
   const [relinking, setRelinking] = useState(false);
   const [images, setImages] = useState<string[]>([]);
-  const [narration, setNarration] = useState<string | null>(null);
+  const [narration, setเสียงบรรยาย] = useState<string | null>(null);
   const [timeline, setTimeline] = useState<TimelinePlan | null>(null);
   const [transcript, setTranscript] = useState<TranscriptResult | null>(null);
   const [editingPlan, setEditingPlan] = useState<EditingBrainPlan | null>(null);
@@ -66,7 +66,7 @@ export default function App() {
     setProjectCreatedAt(project.createdAt);
     setProjectPath(loaded.filePath);
     setImages(project.images);
-    setNarration(project.narration);
+    setเสียงบรรยาย(project.narration);
     setTranscript(project.transcript);
     setEditingPlan(project.editingPlan);
     setTimeline(
@@ -89,8 +89,8 @@ export default function App() {
     } else {
       setNotice(
         loaded.filePath
-          ? "Project opened."
-          : "Recovered the latest autosaved project."
+          ? "เปิดโปรเจกต์แล้ว"
+          : "กู้คืนโปรเจกต์ที่บันทึกอัตโนมัติล่าสุดแล้ว"
       );
     }
     setError(null);
@@ -133,7 +133,7 @@ export default function App() {
     () => ({
       schemaVersion: 1,
       id: projectId,
-      title: projectTitle.trim() || "Untitled story",
+      title: projectTitle.trim() || "เรื่องไม่มีชื่อ",
       createdAt: projectCreatedAt,
       updatedAt: new Date().toISOString(),
       images,
@@ -199,7 +199,7 @@ export default function App() {
   const applyRelinkResult = (result: ProjectRelinkResult) => {
     const project = result.project;
     setImages(project.images);
-    setNarration(project.narration);
+    setเสียงบรรยาย(project.narration);
     setTranscript(project.transcript);
     setEditingPlan(project.editingPlan);
     setTimeline(
@@ -279,8 +279,8 @@ export default function App() {
 
   const ready = images.length > 0 && narration !== null;
   const summary = useMemo(() => {
-    if (!images.length) return "No images selected";
-    return images.length === 1 ? "1 image selected" : `${images.length} images selected`;
+    if (!images.length) return "ยังไม่ได้เลือกภาพ";
+    return images.length === 1 ? "1 ภาพที่เลือก" : `${images.length} ภาพที่เลือก`;
   }, [images]);
 
   const chooseImages = async () => {
@@ -293,10 +293,10 @@ export default function App() {
     }
   };
 
-  const chooseNarration = async () => {
-    const picked = await window.videoEditor.selectNarration();
+  const chooseเสียงบรรยาย = async () => {
+    const picked = await window.videoEditor.selectเสียงบรรยาย();
     if (picked) {
-      setNarration(picked);
+      setเสียงบรรยาย(picked);
       setTranscript(null);
       setEditingPlan(null);
       setTimeline(null);
@@ -327,7 +327,7 @@ export default function App() {
     }
   };
 
-  const transcribeNarration = async () => {
+  const transcribeเสียงบรรยาย = async () => {
     if (!narration) return;
 
     setTranscribing(true);
@@ -335,12 +335,12 @@ export default function App() {
     setNotice("Listening to the full narration and creating timestamped speech segments...");
 
     try {
-      const result = await window.videoEditor.transcribeNarration(narration);
+      const result = await window.videoEditor.transcribeเสียงบรรยาย(narration);
       setTranscript(result);
       setEditingPlan(null);
       setTimeline(null);
       setNotice(
-        `Narration analyzed: ${result.segments.length} timestamped speech segments across ${formatTime(result.duration)}.`
+        `เสียงบรรยาย analyzed: ${result.segments.length} timestamped speech segments across ${formatTime(result.duration)}.`
       );
     } catch (transcribeError) {
       setError(
@@ -436,7 +436,7 @@ export default function App() {
       duration: timeline.duration
     });
     setError(null);
-    setNotice("Rendering MP4 with FFmpeg...");
+    setNotice("กำลังเรนเดอร์ MP4 ด้วย FFmpeg...");
 
     try {
       const result = await window.videoEditor.renderTimeline(renderPlan, outputPath);
@@ -468,7 +468,7 @@ export default function App() {
         </div>
         <div className="status">
           <span className="statusDot" />
-          Phase 1 · In-app playback foundation
+          ระยะที่ 1 · ระบบตัดต่อและเล่นวิดีโอในแอป
         </div>
       </header>
 
@@ -490,8 +490,8 @@ export default function App() {
 
       <section className="hero">
         <div>
-          <p className="kicker">Automatic story editing</p>
-          <h2>Let the editor listen, see, plan shots, and place sound.</h2>
+          <p className="kicker">ตัดต่อเรื่องราวอัตโนมัติ</p>
+          <h2>ให้ AI ฟัง ดู วางช็อต และจัดเสียงให้คุณ</h2>
           <p className="lede">
             Long narration becomes a timestamped story map, grouped scenes, matched visuals, deliberate shot timing, and layered sound before the final cut is rendered.
           </p>
@@ -515,9 +515,9 @@ export default function App() {
           <div className="panelHeader">
             <div>
               <span className="step">01</span>
-              <h3>Story images</h3>
+              <h3>ภาพประกอบเรื่อง</h3>
             </div>
-            <button onClick={chooseImages}>Choose images</button>
+            <button onClick={chooseImages}>เลือกภาพ</button>
           </div>
           <p className="muted">{summary}</p>
           <div className="mediaList">
@@ -537,12 +537,12 @@ export default function App() {
           <div className="panelHeader">
             <div>
               <span className="step">02</span>
-              <h3>Narration</h3>
+              <h3>เสียงบรรยาย</h3>
             </div>
-            <button onClick={chooseNarration}>Choose audio</button>
+            <button onClick={chooseเสียงบรรยาย}>เลือกเสียง</button>
           </div>
           <p className="muted">
-            {narration ? fileName(narration) : "No narration selected"}
+            {narration ? fileName(narration) : "ยังไม่ได้เลือกเสียงบรรยาย"}
           </p>
           <div className="audioCard">
             <div className="wave">▂▅▇▃▆▂▇▅▃▆▇▂▅▃▇▆▂▅</div>
@@ -550,8 +550,8 @@ export default function App() {
               {transcript
                 ? `${transcript.segments.length} timestamped segments ready`
                 : narration
-                  ? "Ready for AI listening"
-                  : "Waiting for audio"}
+                  ? "พร้อมให้ AI วิเคราะห์เสียง"
+                  : "รอไฟล์เสียง"}
             </span>
           </div>
         </article>
@@ -560,14 +560,14 @@ export default function App() {
       <section className="aiPanel">
         <div className="aiPanelHeader">
           <div>
-            <p className="eyebrow">AI AUDIO BRAIN</p>
-            <h3>Listen to a full episode and keep exact timing</h3>
+            <p className="eyebrow">ระบบวิเคราะห์เสียง AI</p>
+            <h3>ฟังเสียงทั้งตอนและรักษาเวลาอย่างแม่นยำ</h3>
             <p className="muted">
               The audio is processed in 10-minute chunks, then every speech segment is restored to its original episode timestamp.
             </p>
           </div>
           <span className={aiStatus.configured ? "aiBadge readyBadge" : "aiBadge"}>
-            {aiStatus.configured ? "AI connected" : "API key required"}
+            {aiStatus.configured ? "เชื่อมต่อ AI แล้ว" : "ต้องตั้งค่า API key"}
           </span>
         </div>
 
@@ -581,7 +581,7 @@ export default function App() {
               autoComplete="off"
             />
             <button disabled={!apiKeyDraft.trim() || savingKey} onClick={saveApiKey}>
-              {savingKey ? "Saving..." : "Save key"}
+              {savingKey ? "กำลังบันทึก..." : "บันทึกคีย์"}
             </button>
           </div>
         )}
@@ -589,7 +589,7 @@ export default function App() {
         {aiStatus.configured && (
           <div className="aiControls">
             <div>
-              <strong>Timestamp transcription</strong>
+              <strong>ถอดเสียงพร้อมเวลา</strong>
               <small>
                 {aiStatus.persistedSecurely
                   ? "Key is stored using operating-system encryption."
@@ -599,9 +599,9 @@ export default function App() {
             <button
               className="primary"
               disabled={!narration || transcribing || rendering || building}
-              onClick={transcribeNarration}
+              onClick={transcribeเสียงบรรยาย}
             >
-              {transcribing ? "Listening to narration..." : transcript ? "Analyze again" : "Analyze long narration"}
+              {transcribing ? "กำลังฟังเสียงบรรยาย..." : transcript ? "วิเคราะห์อีกครั้ง" : "วิเคราะห์เสียงบรรยาย"}
             </button>
           </div>
         )}
@@ -617,8 +617,8 @@ export default function App() {
         <section className="transcriptPanel">
           <div className="timelineHeader">
             <div>
-              <p className="eyebrow">STORY MAP</p>
-              <h3>Timestamped narration</h3>
+              <p className="eyebrow">แผนเรื่อง</p>
+              <h3>เสียงบรรยายพร้อมเวลา</h3>
             </div>
             <div className="timelineMeta">
               <span>{transcript.language ?? "auto language"}</span>
