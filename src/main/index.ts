@@ -20,6 +20,8 @@ import { generateBatchAssets } from "./content-batch-assets";
 import { renderContentBatch } from "./content-batch-render";
 import { ensurePublishPlan } from "./content-publish-planner";
 import { validatePublishItem } from "./content-publish-validation";
+import { createPublishJobs } from "./content-publish-jobs";
+import { loadPublishQueue, savePublishQueue } from "./content-publish-queue-store";
 import {
   createPlaybackUrl,
   installMediaProtocol
@@ -385,6 +387,16 @@ ipcMain.handle("content:get-publish-accounts", async (): Promise<import("../shar
 });
 
 ipcMain.handle("content:validate-publish-item", async (_event, item: import("../shared/content-factory").ContentBatchItem) => validatePublishItem(item));
+
+ipcMain.handle("content:load-publish-jobs", async () => loadPublishQueue(path.join(app.getPath("userData"), "publish")));
+ipcMain.handle("content:create-publish-jobs", async (_event, item: import("../shared/content-factory").ContentBatchItem) => {
+  const root = path.join(app.getPath("userData"), "publish");
+  const current = await loadPublishQueue(root);
+  const replacements = createPublishJobs(item);
+  const platforms = new Set(replacements.map((job) => job.platform));
+  const jobs = [...current.jobs.filter((job) => job.itemId !== item.id || !platforms.has(job.platform)), ...replacements];
+  return savePublishQueue(root, jobs);
+});
 
 ipcMain.handle("content:update-publish-plan", async (_event, batch: import("../shared/content-factory").ContentBatch, itemId:string, publish: import("../shared/content-factory").PublishPlan) => {
   const result = { ...batch, items: batch.items.map((item) => item.id === itemId ? { ...item, publish } : item), updatedAt:new Date().toISOString() };
