@@ -108,6 +108,7 @@ export type PublishJob = {
   result?: PublishResult;
   externalPublishId?: string;
   uploadedBytes?: number;
+  uploadCompleted?: boolean;
   error?: string;
   createdAt: string;
   updatedAt: string;
