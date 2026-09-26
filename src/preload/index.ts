@@ -90,7 +90,8 @@ const api: DesktopApi = {
   chooseOutput: () => ipcRenderer.invoke("render:choose-output"),
   renderTimeline: (plan: TimelinePlan, outputPath: string) =>
     ipcRenderer.invoke("render:timeline", plan, outputPath),
-  onContentBatchRenderProgress: (listener) => {
+  onPublishJobsUpdated: (listener) => { const handler = (_event: IpcRendererEvent, state: Parameters<typeof listener>[0]) => listener(state); ipcRenderer.on("content:publish-jobs-updated", handler); return () => ipcRenderer.removeListener("content:publish-jobs-updated", handler); },
+    onContentBatchRenderProgress: (listener) => {
     const handler = (_event: IpcRendererEvent, progress: Parameters<typeof listener>[0]) => listener(progress);
     ipcRenderer.on("content:batch-render-progress", handler);
     return () => ipcRenderer.removeListener("content:batch-render-progress", handler);
