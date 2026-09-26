@@ -86,6 +86,30 @@ export type PublishAccount = {
   error?: string;
 };
 
+export type PublishJobStatus = "queued" | "blocked" | "publishing" | "published" | "failed";
+
+export type PublishResult = {
+  platform: PublishPlatform;
+  status: "published" | "failed";
+  externalId?: string;
+  url?: string;
+  publishedAt?: string;
+  error?: string;
+};
+
+export type PublishJob = {
+  id: string;
+  itemId: string;
+  platform: PublishPlatform;
+  status: PublishJobStatus;
+  scheduledAt?: string;
+  attempts: number;
+  result?: PublishResult;
+  error?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type PublishPlan = {
   status: PublishStatus;
   title?: string;
