@@ -103,14 +103,14 @@ export default function ContentFactoryPanel({
   };
 
   const importAffiliateProducts = async () => {
-    const urls = affiliateUrls.split(/\\r?\\n/).map((value) => value.trim()).filter(Boolean).slice(0, 100);
+    const urls = affiliateUrls.split(/\r?\n/).map((value) => value.trim()).filter(Boolean).slice(0, 100);
     if (!urls.length || affiliateImporting) return;
     setAffiliateImporting(true); setError(null); setAffiliateImportErrors([]);
     try {
       const products: AffiliateProduct[] = []; const failures: string[] = [];
       for (const url of urls) {
         try { products.push(await window.videoEditor.importAffiliateProduct(url)); }
-        catch (importError) { failures.push(\`${url}: ${importError instanceof Error ? importError.message : String(importError)}\`); }
+        catch (importError) { failures.push(`${url}: ${importError instanceof Error ? importError.message : String(importError)}`); }
       }
       const jobs = await window.videoEditor.createAffiliateJobs(products);
       setAffiliateProducts(products); setAffiliateJobs(jobs); setAffiliateImportErrors(failures);
@@ -216,7 +216,7 @@ export default function ContentFactoryPanel({
   };
 
   const generateBatch = async () => {
-    const topics = batchTopics.split(/\\r?\\n/).map((value) => value.trim()).filter(Boolean).slice(0, 50);
+    const topics = batchTopics.split(/\r?\n/).map((value) => value.trim()).filter(Boolean).slice(0, 50);
     if (!aiConfigured || topics.length === 0) return;
     setBatchGenerating(true);
     setBatchProgress({ completed:0, total:topics.length });
