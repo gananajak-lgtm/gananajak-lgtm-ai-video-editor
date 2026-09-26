@@ -25,7 +25,7 @@ test("recovers TikTok publishing session as processing instead of re-uploading",
   const recovered=recoverInterruptedPublishJobs(jobs,new Date("2026-09-26T10:05:00Z"));
   assert.equal(recovered[0]?.status,"processing");
   assert.equal(recovered[0]?.externalPublishId,"v_pub_existing");
-  assert.match(recovered[0]?.error ?? "",/check its status/i);
+  assert.equal(recovered[0]?.error,undefined); assert.match(recovered[0]?.statusDetail ?? "",/check its status/i);
 });
 
 
