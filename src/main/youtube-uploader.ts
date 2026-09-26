@@ -11,8 +11,11 @@ export type YouTubeUploadInput = {
 
 export async function uploadVideoToYouTube(input: YouTubeUploadInput): Promise<PublishResult> {
   if (!input.item.outputPath) throw new Error("Rendered video path is missing.");
-  const fileInfo = await stat(input.item.outputPath);
-  if (!fileInfo.isFile()) throw new Error("Rendered video file cannot be found.");
+  let fileInfo;
+  try { fileInfo = await stat(input.item.outputPath); }
+  catch { throw new Error("Rendered video file cannot be found. Render the video again or restore the file before retrying."); }
+  if (!fileInfo.isFile()) throw new Error("Rendered video file cannot be found. Render the video again or restore the file before retrying.");
+  if (fileInfo.size <= 0) throw new Error("Rendered video file is empty. Render the video again before publishing.");
   const plan = input.item.publish;
   if (!plan?.title?.trim()) throw new Error("YouTube title is required.");
   const title=plan.title.trim();
