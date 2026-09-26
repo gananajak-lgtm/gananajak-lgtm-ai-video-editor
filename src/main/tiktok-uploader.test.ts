@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import type { ContentBatchItem } from "../shared/content-factory";
-import { buildTikTokCaption, fetchTikTokPublishStatus, initTikTokDirectPost, planTikTokChunks, queryTikTokCreatorInfo, uploadTikTokFile, waitForTikTokPublish } from "./tiktok-uploader";
+import { buildTikTokCaption, fetchTikTokPublishStatus, initTikTokDirectPost, planTikTokChunks, queryTikTokCreatorInfo, uploadTikTokFile, waitForTikTokPublish, validateTikTokMedia } from "./tiktok-uploader";
 
 const item=(outputPath:string):ContentBatchItem=>({id:"tt-1",brief:{topic:"TikTok test",format:"short",language:"en",targetDurationSeconds:30},status:"rendered",outputPath,publish:{status:"ready",title:"Caption",hashtags:["demo"],platforms:["tiktok"]}});
 
@@ -46,4 +46,18 @@ test("polls TikTok processing until publish completes",async(t)=>{
   t.after(()=>{globalThis.fetch=originalFetch;});
   const result=await waitForTikTokPublish({accessToken:"token",publishId:"pub",maxAttempts:3,delayMs:0});
   assert.equal(count,2); assert.deepEqual(result.postIds,["post-9"]);
+});
+
+
+test("rejects TikTok media outside creator and platform limits",()=>{
+  assert.throws(()=>validateTikTokMedia({duration:301,sizeBytes:10_000_000,streams:[{codecType:"video",width:1080,height:1920,fps:30}],maxDurationSec:300}),/creator limit/i);
+  assert.throws(()=>validateTikTokMedia({duration:30,sizeBytes:10_000_000,streams:[{codecType:"video",width:320,height:1920,fps:30}],maxDurationSec:300}),/width/i);
+  assert.throws(()=>validateTikTokMedia({duration:30,sizeBytes:10_000_000,streams:[{codecType:"video",width:1080,height:1920,fps:61}],maxDurationSec:300}),/frame rate/i);
+  assert.doesNotThrow(()=>validateTikTokMedia({duration:30,sizeBytes:10_000_000,streams:[{codecType:"video",width:1080,height:1920,fps:30}],maxDurationSec:300}));
+});
+
+test("plans documented TikTok chunks with a final chunk up to 128 MB",()=>{
+  const size=130*1024*1024;
+  assert.deepEqual(planTikTokChunks(size),{chunkSize:64*1024*1024,totalChunkCount:2});
+  assert.throws(()=>planTikTokChunks(4*1024*1024*1024+1),/4 GB/i);
 });
