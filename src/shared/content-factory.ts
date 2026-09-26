@@ -111,6 +111,7 @@ export type PublishJob = {
   uploadedBytes?: number;
   uploadCompleted?: boolean;
   error?: string;
+  statusDetail?: string;
   createdAt: string;
   updatedAt: string;
 };
