@@ -50,6 +50,8 @@ export default function ContentFactoryPanel({
   const [youtubeConnecting, setYoutubeConnecting] = useState(false);
   const [publishValidation, setPublishValidation] = useState<Record<string, { valid:boolean; issues:Array<{ field:string; message:string; platform?:PublishPlatform }> }>>({});
   const [publishJobs, setPublishJobs] = useState<PublishJob[]>([]);
+  const [publishDrafts, setPublishDrafts] = useState<Record<string, PublishPlan>>({});
+  const [publishSaving, setPublishSaving] = useState<string | null>(null);
   const [affiliateUrls, setAffiliateUrls] = useState("");
   const [affiliateProducts, setAffiliateProducts] = useState<AffiliateProduct[]>([]);
   const [affiliateJobs, setAffiliateJobs] = useState<AffiliateContentJob[]>([]);
@@ -65,13 +67,25 @@ export default function ContentFactoryPanel({
     void window.videoEditor.loadAffiliateQueue().then((saved) => { setAffiliateProducts(saved.products); setAffiliateJobs(saved.jobs); });
   }, []);
 
-  const updatePublish = async (itemId: string, patch: Partial<PublishPlan>) => {
-    if (!batch) return;
-    const item = batch.items.find((entry) => entry.id === itemId);
-    if (!item) return;
-    const publish: PublishPlan = { status:item.publish?.status ?? "draft", ...item.publish, ...patch };
-    const next = await window.videoEditor.updatePublishPlan(batch, itemId, publish);
-    setBatch(next);
+  const getPublishDraft = (item: import("../shared/content-factory").ContentBatchItem): PublishPlan =>
+    publishDrafts[item.id] ?? item.publish ?? { status:"draft" };
+
+  const patchPublishDraft = (item: import("../shared/content-factory").ContentBatchItem, patch: Partial<PublishPlan>) => {
+    const current = getPublishDraft(item);
+    setPublishDrafts((drafts) => ({ ...drafts, [item.id]: { ...current, ...patch } }));
+    setPublishValidation((currentValidation) => { const next={...currentValidation}; delete next[item.id]; return next; });
+  };
+
+  const savePublishDraft = async (itemId: string) => {
+    if (!batch || publishSaving) return;
+    const item=batch.items.find((entry)=>entry.id===itemId); if(!item) return;
+    const publish=getPublishDraft(item);
+    setPublishSaving(itemId); setError(null);
+    try {
+      const next=await window.videoEditor.updatePublishPlan(batch,itemId,publish); setBatch(next);
+      setPublishDrafts((drafts)=>{const copy={...drafts};delete copy[itemId];return copy;});
+    } catch (saveError) { setError(saveError instanceof Error ? saveError.message : String(saveError)); }
+    finally { setPublishSaving(null); }
   };
 
   const validatePublish = async (itemId:string) => {
@@ -105,11 +119,9 @@ export default function ContentFactoryPanel({
     }
   };
 
-  const togglePublishPlatform = async (itemId:string, platform:PublishPlatform) => {
-    const item = batch?.items.find((entry) => entry.id === itemId);
-    if (!item) return;
-    const current = item.publish?.platforms ?? [];
-    await updatePublish(itemId, { platforms:current.includes(platform) ? current.filter((value) => value !== platform) : [...current, platform] });
+  const togglePublishPlatform = (item: import("../shared/content-factory").ContentBatchItem, platform:PublishPlatform) => {
+    const current=getPublishDraft(item).platforms ?? [];
+    patchPublishDraft(item,{platforms:current.includes(platform)?current.filter((value)=>value!==platform):[...current,platform]});
   };
 
   const saveYouTubeOAuth = async () => {
@@ -616,16 +628,16 @@ export default function ContentFactoryPanel({
             <div className="transcriptRow" key={`publish-${item.id}`}>
               <span>{item.publish?.status ?? "draft"}</span>
               <div>
-                <input value={item.publish?.title ?? item.project?.title ?? item.brief.topic} onChange={(event) => void updatePublish(item.id, { title:event.target.value })} aria-label="Publish title" />
-                <textarea value={item.publish?.description ?? ""} onChange={(event) => void updatePublish(item.id, { description:event.target.value })} placeholder="Description" aria-label="Publish description" />
-                <input value={(item.publish?.hashtags ?? []).join(" ")} onChange={(event) => void updatePublish(item.id, { hashtags:event.target.value.split(/\\s+/).map((tag) => tag.replace(/^#/, "")).filter(Boolean) })} placeholder="#hashtags" aria-label="Publish hashtags" />
+                <input value={getPublishDraft(item).title ?? item.project?.title ?? item.brief.topic} onChange={(event) => patchPublishDraft(item, { title:event.target.value })} aria-label="Publish title" />
+                <textarea value={getPublishDraft(item).description ?? ""} onChange={(event) => patchPublishDraft(item, { description:event.target.value })} placeholder="Description" aria-label="Publish description" />
+                <input value={(getPublishDraft(item).hashtags ?? []).join(" ")} onChange={(event) => patchPublishDraft(item, { hashtags:event.target.value.split(/\\s+/).map((tag) => tag.replace(/^#/, "")).filter(Boolean) })} placeholder="#hashtags" aria-label="Publish hashtags" />
                 <div className="keyRow">
-                  {(["youtube","tiktok","facebook","instagram"] as PublishPlatform[]).map((platform) => <label key={platform}><input type="checkbox" checked={item.publish?.platforms?.includes(platform) ?? false} onChange={() => void togglePublishPlatform(item.id, platform)} /> {platform}</label>)}
-                  <input type="datetime-local" value={item.publish?.scheduledAt?.slice(0,16) ?? ""} onChange={(event) => void updatePublish(item.id, { scheduledAt:event.target.value || undefined, status:event.target.value ? "scheduled" : "ready" })} aria-label="Publish schedule" />
+                  {(["youtube","tiktok","facebook","instagram"] as PublishPlatform[]).map((platform) => <label key={platform}><input type="checkbox" checked={getPublishDraft(item).platforms?.includes(platform) ?? false} onChange={() => togglePublishPlatform(item, platform)} /> {platform}</label>)}
+                  <input type="datetime-local" value={getPublishDraft(item).scheduledAt?.slice(0,16) ?? ""} onChange={(event) => patchPublishDraft(item, { scheduledAt:event.target.value || undefined, status:event.target.value ? "scheduled" : "ready" })} aria-label="Publish schedule" />
                 </div>
                 <div className="keyRow">
-                  <button onClick={() => void validatePublish(item.id)}>Validate before publish</button>
-                  <button className="primary" onClick={() => void queuePublish(item.id)}>Queue publish jobs</button>
+                  <button onClick={() => void savePublishDraft(item.id)} disabled={publishSaving === item.id}>{publishSaving === item.id ? "Saving..." : "Save metadata"}</button>\n                   <button onClick={() => void validatePublish(item.id)} disabled={Boolean(publishDrafts[item.id])}>Validate before publish</button>
+                  <button className="primary" onClick={() => void queuePublish(item.id)} disabled={Boolean(publishDrafts[item.id])}>Queue publish jobs</button>
                   {publishJobs.filter((job) => job.itemId === item.id).map((job) => <span className="keyRow" key={job.id}><span className={job.status === "published" ? "aiBadge readyBadge" : "aiBadge"}>{job.platform}: {job.status}</span>{job.platform === "youtube" && job.status !== "published" && <button onClick={() => void publishYouTubeJob(job.id, item.id)} disabled={job.status === "publishing"}>{job.status === "publishing" ? "Uploading..." : job.status === "failed" ? "Retry YouTube upload" : "Upload private to YouTube"}</button>}{job.result?.url && <span className="muted">{job.result.url}</span>}</span>)}
                   {publishValidation[item.id]?.valid && <span className="aiBadge readyBadge">Ready to publish ✓</span>}
                 </div>
