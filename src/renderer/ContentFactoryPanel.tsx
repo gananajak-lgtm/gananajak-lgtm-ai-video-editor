@@ -5,7 +5,8 @@ import type {
   ContentLanguage,
   ContentProject,
   PublishPlatform,
-  PublishPlan
+  PublishPlan,
+  PublishAccount
 } from "../shared/content-factory";
 import type { ContentProviderStatus } from "../shared/types";
 
@@ -41,10 +42,15 @@ export default function ContentFactoryPanel({
   const [providerStatus, setProviderStatus] = useState<ContentProviderStatus>({ replicateConfigured:false, elevenLabsConfigured:false });
   const [replicateToken, setReplicateToken] = useState("");
   const [elevenLabsKey, setElevenLabsKey] = useState("");
+  const [publishAccounts, setPublishAccounts] = useState<PublishAccount[]>([]);
+  const [youtubeClientId, setYoutubeClientId] = useState("");
+  const [youtubeClientSecret, setYoutubeClientSecret] = useState("");
+  const [youtubeConnecting, setYoutubeConnecting] = useState(false);
 
   useEffect(() => {
     void window.videoEditor.getContentProviderStatus().then(setProviderStatus);
     void window.videoEditor.loadContentBatch().then((saved) => { if (saved) setBatch(saved); });
+    void window.videoEditor.getPublishAccounts().then(setPublishAccounts);
   }, []);
 
   const updatePublish = async (itemId: string, patch: Partial<PublishPlan>) => {
@@ -61,6 +67,23 @@ export default function ContentFactoryPanel({
     if (!item) return;
     const current = item.publish?.platforms ?? [];
     await updatePublish(itemId, { platforms:current.includes(platform) ? current.filter((value) => value !== platform) : [...current, platform] });
+  };
+
+  const saveYouTubeOAuth = async () => {
+    if (!youtubeClientId.trim()) return;
+    setError(null);
+    try {
+      setPublishAccounts(await window.videoEditor.configureYouTubeOAuth(youtubeClientId.trim(), youtubeClientSecret.trim() || undefined));
+      setYoutubeClientSecret("");
+    } catch (oauthError) { setError(oauthError instanceof Error ? oauthError.message : String(oauthError)); }
+  };
+
+  const connectYouTube = async () => {
+    if (youtubeConnecting) return;
+    setYoutubeConnecting(true); setError(null);
+    try { setPublishAccounts(await window.videoEditor.connectYouTube()); }
+    catch (oauthError) { setError(oauthError instanceof Error ? oauthError.message : String(oauthError)); }
+    finally { setYoutubeConnecting(false); }
   };
 
   const saveProviderKeys = async () => {
@@ -488,6 +511,25 @@ export default function ContentFactoryPanel({
         <button onClick={saveProviderKeys} disabled={!replicateToken.trim() && !elevenLabsKey.trim()}>Save provider keys</button>
       </div>
             {error && <div className="message errorMessage">{error}</div>}
+
+      <div className="transcriptPanel">
+        <div className="timelineHeader">
+          <div>
+            <p className="eyebrow">PUBLISH ACCOUNTS</p>
+            <h3>Connect publishing platforms</h3>
+            <p className="muted">YouTube OAuth is available now. Other connectors stay disabled until their provider flow is implemented.</p>
+          </div>
+          <span className={publishAccounts.find((account) => account.platform === "youtube")?.status === "connected" ? "aiBadge readyBadge" : "aiBadge"}>
+            YouTube {publishAccounts.find((account) => account.platform === "youtube")?.status ?? "disconnected"}
+          </span>
+        </div>
+        <div className="keyRow">
+          <input value={youtubeClientId} onChange={(event) => setYoutubeClientId(event.target.value)} placeholder="YouTube OAuth client ID" aria-label="YouTube OAuth client ID" />
+          <input type="password" value={youtubeClientSecret} onChange={(event) => setYoutubeClientSecret(event.target.value)} placeholder="YouTube OAuth client secret (optional)" aria-label="YouTube OAuth client secret" />
+          <button onClick={saveYouTubeOAuth} disabled={!youtubeClientId.trim()}>Save YouTube OAuth</button>
+          <button className="primary" onClick={connectYouTube} disabled={youtubeConnecting}>{youtubeConnecting ? "Connecting YouTube..." : "Connect YouTube"}</button>
+        </div>
+      </div>
 
       {batch && (
         <div className="transcriptPanel">
