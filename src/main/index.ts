@@ -58,6 +58,9 @@ import { createAffiliateProduct } from "./affiliate-product-import";
 import { createAffiliateContentJobs } from "./affiliate-content-jobs";
 import { affiliateJobToContentBrief } from "./affiliate-content-planner";
 import { loadAffiliateQueue, saveAffiliateQueue } from "./affiliate-queue-store";
+import { buildMetaAuthorizationUrl, exchangeMetaAuthorizationCode, exchangeMetaLongLivedToken } from "./meta-oauth";
+import { loadMetaOAuthConfig, loadMetaToken, saveMetaOAuthConfig, saveMetaToken } from "./meta-token-store";
+import { listMetaPublishingPages } from "./meta-publishing";
 
 const isDev = !app.isPackaged;
 
@@ -365,6 +368,37 @@ ipcMain.handle("content:configure-youtube-oauth", async (_event, clientId:string
     { platform:"facebook", status:"disconnected" },
     { platform:"instagram", status:"disconnected" }
   ];
+});
+
+let metaOAuthConfig: import("./meta-oauth").MetaOAuthConfig | null = null;
+
+ipcMain.handle("content:configure-meta-oauth", async (_event, appId:string, appSecret:string, redirectUri:string) => {
+  const config={appId:appId.trim(),appSecret:appSecret.trim(),redirectUri:redirectUri.trim()};
+  if(!config.appId || !config.appSecret || !config.redirectUri) throw new Error("Meta App ID, App Secret, and exact redirect URI are required.");
+  const url=new URL(config.redirectUri);
+  if(url.hostname!=="127.0.0.1" || url.protocol!=="http:" || !url.port) throw new Error("Meta desktop redirect URI must use an exact http://127.0.0.1:PORT/path URI.");
+  metaOAuthConfig=config; await saveMetaOAuthConfig(config); return true;
+});
+
+ipcMain.handle("content:connect-meta", async () => {
+  if(!metaOAuthConfig) metaOAuthConfig=await loadMetaOAuthConfig();
+  if(!metaOAuthConfig) throw new Error("Configure Meta OAuth before connecting.");
+  const configured=new URL(metaOAuthConfig.redirectUri), state=createOAuthState();
+  const loopback=await startOAuthLoopback(state,120_000,configured.pathname,Number(configured.port));
+  try{
+    if(loopback.redirectUri!==metaOAuthConfig.redirectUri) throw new Error("Meta OAuth redirect URI does not match the configured callback exactly.");
+    await shell.openExternal(buildMetaAuthorizationUrl({appId:metaOAuthConfig.appId,redirectUri:loopback.redirectUri,state}));
+    const callback=await loopback.callback;
+    const shortToken=await exchangeMetaAuthorizationCode({...metaOAuthConfig,code:callback.code});
+    const longToken=await exchangeMetaLongLivedToken({appId:metaOAuthConfig.appId,appSecret:metaOAuthConfig.appSecret,accessToken:shortToken.access_token});
+    await saveMetaToken(longToken);
+    return listMetaPublishingPages(longToken.access_token);
+  } finally { loopback.close(); }
+});
+
+ipcMain.handle("content:get-meta-destinations", async () => {
+  const token=await loadMetaToken(); if(!token) return [];
+  return listMetaPublishingPages(token.access_token);
 });
 
 let tiktokOAuthConfig: { clientKey:string; clientSecret:string } | null = null;
