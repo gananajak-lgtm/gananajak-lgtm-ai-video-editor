@@ -59,7 +59,7 @@ import { createAffiliateContentJobs } from "./affiliate-content-jobs";
 import { affiliateJobToContentBrief } from "./affiliate-content-planner";
 import { loadAffiliateQueue, saveAffiliateQueue } from "./affiliate-queue-store";
 import { buildMetaAuthorizationUrl, exchangeMetaAuthorizationCode, exchangeMetaLongLivedToken } from "./meta-oauth";
-import { loadMetaOAuthConfig, loadMetaToken, saveMetaOAuthConfig, saveMetaToken } from "./meta-token-store";
+import { loadMetaOAuthConfig, loadMetaToken, loadUsableMetaToken, saveMetaOAuthConfig, saveMetaToken } from "./meta-token-store";
 import { listMetaPublishingPages } from "./meta-publishing";
 import { createFacebookReel, uploadFacebookLocalReel, finishFacebookReel, getFacebookReelStatus, classifyFacebookReelStatus } from "./facebook-reels-uploader";
 import { createInstagramReelContainer, publishInstagramReel, validateInstagramHostedVideoUrl, waitForInstagramContainer } from "./instagram-reels-uploader";
@@ -401,7 +401,7 @@ ipcMain.handle("content:connect-meta", async () => {
 });
 
 ipcMain.handle("content:get-meta-destinations", async () => {
-  const token=await loadMetaToken(); if(!token) return [];
+  const token=await loadUsableMetaToken(); if(!token) return [];
   return (await listMetaPublishingPages(token.access_token)).map(({id,name,instagramBusinessAccountId})=>({id,name,instagramBusinessAccountId}));
 });
 
@@ -455,11 +455,12 @@ ipcMain.handle("content:connect-youtube", async (): Promise<import("../shared/co
 ipcMain.handle("content:get-publish-accounts", async (): Promise<import("../shared/content-factory").PublishAccount[]> => {
   const youtubeTokens=await loadYouTubeTokens();
   const tiktokTokens=await loadTikTokTokens();
+  const metaToken=await loadUsableMetaToken();
   return [
     { platform:"youtube", status:youtubeTokens?.refresh_token || youtubeTokens?.access_token ? "connected" : "disconnected", displayName:youtubeTokens ? "YouTube authorized" : undefined },
     { platform:"tiktok", status:tiktokTokens?.refresh_token || tiktokTokens?.access_token ? "connected" : "disconnected", displayName:tiktokTokens ? "TikTok authorized" : undefined },
-    { platform:"facebook", status:"disconnected" },
-    { platform:"instagram", status:"disconnected" }
+    { platform:"facebook", status:metaToken ? "connected" : "disconnected", displayName:metaToken ? "Meta authorized" : undefined },
+    { platform:"instagram", status:metaToken ? "connected" : "disconnected", displayName:metaToken ? "Meta authorized" : undefined }
   ];
 });
 
@@ -589,7 +590,7 @@ ipcMain.handle("content:publish-facebook-job", async (_event, jobId:string, item
   if(target.scheduledAt && new Date(target.scheduledAt).getTime()>Date.now()) throw new Error("This publish job is scheduled for a future time.");
   if(!item.outputPath) throw new Error("Rendered video path is missing.");
   const pageId=item.publish?.meta?.pageId; if(!pageId) throw new Error("Choose a Facebook Page before publishing.");
-  const token=await loadMetaToken(); if(!token) throw new Error("Connect Meta before publishing.");
+  const token=await loadUsableMetaToken(); if(!token) throw new Error("Meta authorization is missing or expired. Reconnect Meta before publishing.");
   const pages=await listMetaPublishingPages(token.access_token), page=pages.find((entry)=>entry.id===pageId);
   if(!page) throw new Error("The selected Facebook Page is no longer available. Reconnect Meta and choose a Page again.");
   const running=queue.jobs.map((job)=>job.id===jobId?{...job,status:"publishing" as const,attempts:job.attempts+1,error:undefined,updatedAt:new Date().toISOString()}:job);
