@@ -68,7 +68,7 @@ export function validateTikTokMedia(input:{duration:number;sizeBytes:number;stre
 }
 
 
-export async function initTikTokDirectPost(input:{accessToken:string;item:ContentBatchItem;privacyLevel:TikTokPrivacyLevel;disableComment?:boolean;disableDuet?:boolean;disableStitch?:boolean}) {
+export async function initTikTokDirectPost(input:{accessToken:string;item:ContentBatchItem;privacyLevel:TikTokPrivacyLevel;disableComment?:boolean;disableDuet?:boolean;disableStitch?:boolean;isAigc?:boolean;brandOrganic?:boolean;brandedContent?:boolean}) {
   if(!input.item.outputPath) throw new Error("Rendered video path is missing.");
   const info=await stat(input.item.outputPath).catch(()=>null);
   if(!info?.isFile() || info.size<=0) throw new Error("Rendered video file cannot be found or is empty.");
@@ -76,7 +76,7 @@ export async function initTikTokDirectPost(input:{accessToken:string;item:Conten
   if(caption.length>2200) throw new Error("TikTok caption must be 2200 characters or fewer.");
   const chunks=planTikTokChunks(info.size);
   const data=await postJson<{ publish_id:string; upload_url:string }>(`${API}/v2/post/publish/video/init/`,input.accessToken,{
-    post_info:{title:caption,privacy_level:input.privacyLevel,disable_comment:Boolean(input.disableComment),disable_duet:Boolean(input.disableDuet),disable_stitch:Boolean(input.disableStitch)},
+    post_info:{title:caption,privacy_level:input.privacyLevel,disable_comment:Boolean(input.disableComment),disable_duet:Boolean(input.disableDuet),disable_stitch:Boolean(input.disableStitch),brand_content_toggle:Boolean(input.brandedContent),brand_organic_toggle:Boolean(input.brandOrganic),is_aigc:Boolean(input.isAigc)},
     source_info:{source:"FILE_UPLOAD",video_size:info.size,chunk_size:chunks.chunkSize,total_chunk_count:chunks.totalChunkCount}
   });
   if(!data.publish_id || !data.upload_url) throw new Error("TikTok did not return an upload session.");
