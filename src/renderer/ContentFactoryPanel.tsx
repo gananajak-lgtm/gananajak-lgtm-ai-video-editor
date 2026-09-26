@@ -55,6 +55,11 @@ export default function ContentFactoryPanel({
   const [metaAppSecret,setMetaAppSecret]=useState("");
   const [metaRedirectUri,setMetaRedirectUri]=useState("http://127.0.0.1:53682/callback/");
   const [metaConnecting,setMetaConnecting]=useState(false);
+  const [metaAuthMode,setMetaAuthMode]=useState<"broker"|"developer">("broker");
+  const [metaBrokerUrl,setMetaBrokerUrl]=useState("");
+  const [metaBrokerClientId,setMetaBrokerClientId]=useState("");
+  const [metaBrokerSession,setMetaBrokerSession]=useState<{sessionId:string;state:string}|null>(null);
+  const [metaBrokerCode,setMetaBrokerCode]=useState("");
   const [instagramUploadUrl,setInstagramUploadUrl]=useState("");
   const [instagramPublicBaseUrl,setInstagramPublicBaseUrl]=useState("");
   const [instagramHostingToken,setInstagramHostingToken]=useState("");
@@ -199,6 +204,9 @@ export default function ContentFactoryPanel({
     finally { setTikTokConnecting(false); }
   };
 
+  const saveMetaBroker=async()=>{if(!metaBrokerUrl.trim()||!metaBrokerClientId.trim())return;setError(null);try{await window.videoEditor.configureMetaBroker(metaBrokerUrl.trim(),metaBrokerClientId.trim());}catch(oauthError){setError(oauthError instanceof Error?oauthError.message:String(oauthError));}};
+  const startMetaBroker=async()=>{if(metaConnecting)return;setMetaConnecting(true);setError(null);try{setMetaBrokerSession(await window.videoEditor.startMetaBrokerAuth());}catch(oauthError){setError(oauthError instanceof Error?oauthError.message:String(oauthError));}finally{setMetaConnecting(false);}};
+  const completeMetaBroker=async()=>{if(!metaBrokerSession||!metaBrokerCode.trim()||metaConnecting)return;setMetaConnecting(true);setError(null);try{const destinations=await window.videoEditor.completeMetaBrokerAuth(metaBrokerSession.sessionId,metaBrokerCode.trim(),metaBrokerSession.state);setMetaDestinations(destinations);setPublishAccounts(await window.videoEditor.getPublishAccounts());setMetaBrokerCode("");setMetaBrokerSession(null);}catch(oauthError){setError(oauthError instanceof Error?oauthError.message:String(oauthError));}finally{setMetaConnecting(false);}};
   const saveMetaOAuth=async()=>{if(!metaAppId.trim()||!metaAppSecret.trim()||!metaRedirectUri.trim())return;setError(null);try{await window.videoEditor.configureMetaOAuth(metaAppId.trim(),metaAppSecret.trim(),metaRedirectUri.trim());setMetaAppSecret("");}catch(oauthError){setError(oauthError instanceof Error?oauthError.message:String(oauthError));}};
   const connectMeta=async()=>{if(metaConnecting)return;setMetaConnecting(true);setError(null);try{const destinations=await window.videoEditor.connectMeta();setMetaDestinations(destinations);const accounts=await window.videoEditor.getPublishAccounts();setPublishAccounts(accounts);}catch(oauthError){setError(oauthError instanceof Error?oauthError.message:String(oauthError));}finally{setMetaConnecting(false);}};
   const selectMetaDestination=(item:import("../shared/content-factory").ContentBatchItem,pageId:string)=>{const destination=metaDestinations.find((entry)=>entry.id===pageId);const current=getPublishDraft(item);patchPublishDraft(item,{meta:{...current.meta,pageId:destination?.id,pageName:destination?.name,instagramBusinessAccountId:destination?.instagramBusinessAccountId}});};
