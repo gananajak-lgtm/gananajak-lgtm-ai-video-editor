@@ -1,0 +1,18 @@
+import assert from "node:assert/strict";
+import { searchAffiliateCatalog } from "./affiliate-product-search";
+import type { AffiliateProduct } from "../shared/affiliate-factory";
+
+const now=new Date().toISOString();
+const products:AffiliateProduct[]=[
+ {id:"a",platform:"lazada",sourceUrl:"https://lazada.co.th/a",title:"เครื่องดูดฝุ่นไร้สาย Pro",sellerName:"Clean Home",description:"แรงดูดสูง",rating:4.9,soldCount:1200,imageUrls:[],importedAt:now},
+ {id:"b",platform:"shopee",sourceUrl:"https://shopee.co.th/b",title:"แปรงทำความสะอาด",sellerName:"เครื่องดูดฝุ่นไทย",description:"อุปกรณ์ในบ้าน",rating:4.8,soldCount:900,imageUrls:[],importedAt:now},
+ {id:"c",platform:"tiktok-shop",sourceUrl:"https://tiktok.com/c",title:"โคมไฟตั้งโต๊ะ",sellerName:"Light Shop",imageUrls:[],importedAt:now}
+];
+const exact=searchAffiliateCatalog(products,"เครื่องดูดฝุ่นไร้สาย");
+assert.equal(exact.products[0]?.id,"a");
+assert.equal(exact.products.some((p)=>p.id==="c"),false);
+const seller=searchAffiliateCatalog(products,"clean home");
+assert.deepEqual(seller.products.map((p)=>p.id),["a"]);
+assert.equal(searchAffiliateCatalog(products,"ไม่มีสินค้านี้").products.length,0);
+assert.equal(searchAffiliateCatalog(products,"").products.length,3);
+console.log("affiliate product search tests passed");
