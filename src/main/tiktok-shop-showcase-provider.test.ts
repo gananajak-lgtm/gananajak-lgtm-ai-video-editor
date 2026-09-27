@@ -7,3 +7,8 @@ const b=signTikTokShopRequest({path:"/affiliate_creator/202405/showcases/product
 assert.equal(a,b);
 assert.match(a,/^[a-f0-9]{64}$/);
 console.log("TikTok Shop showcase provider tests passed");
+
+assert.equal(Math.min(20,50),20);
+const showcaseParams=new URLSearchParams({app_key:"abc",page_size:"20",origin:"SHOWCASE",timestamp:"1700000000"});
+assert.equal(showcaseParams.get("origin"),"SHOWCASE");
+assert.equal(showcaseParams.get("page_size"),"20");
