@@ -10,9 +10,9 @@ export function validateMetaBrokerConfig(config:MetaBrokerConfig){
  return {baseUrl:url.toString().replace(/\/$/,""),clientId:config.clientId.trim()};
 }
 async function brokerJson<T>(response:Response){const data=await response.json() as T&{error?:string};if(!response.ok)throw new Error(data.error||`Meta Auth Broker failed (HTTP ${response.status}).`);return data;}
-export async function createMetaBrokerSession(config:MetaBrokerConfig,state:string){
+export async function createMetaBrokerSession(config:MetaBrokerConfig,state:string,desktopRedirectUri:string){
  const safe=validateMetaBrokerConfig(config);
- return brokerJson<MetaBrokerSession>(await fetch(`${safe.baseUrl}/meta/oauth/session`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({clientId:safe.clientId,state})}));
+ return brokerJson<MetaBrokerSession>(await fetch(`${safe.baseUrl}/meta/oauth/session`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({clientId:safe.clientId,state,desktopRedirectUri})}));
 }
 export async function exchangeMetaBrokerSession(config:MetaBrokerConfig,input:{sessionId:string;code:string;state:string}){
  const safe=validateMetaBrokerConfig(config);
