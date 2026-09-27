@@ -13,9 +13,11 @@ export class MetaBrokerSessionStore{
 }
 export function validateDesktopRedirectUri(value:string){const url=new URL(value);if(url.protocol!=="http:"||url.hostname!=="127.0.0.1"||!url.port||url.pathname!=="/meta-broker-callback")throw new Error("Desktop callback must be an exact 127.0.0.1 loopback callback.");return url.toString();}
 export function validateBrokerPublicUrl(value:string){const url=new URL(value);if(url.protocol!=="https:")throw new Error("Broker public URL must use HTTPS.");return url.toString().replace(/\/$/,"");}
+export function encodeBrokerState(sessionId:string,state:string){return Buffer.from(JSON.stringify({sessionId,state}),"utf8").toString("base64url");}
+export function decodeBrokerState(value:string):{sessionId:string;state:string}{try{const parsed=JSON.parse(Buffer.from(value,"base64url").toString("utf8")) as {sessionId?:string;state?:string};if(!parsed.sessionId||!parsed.state)throw new Error();return {sessionId:parsed.sessionId,state:parsed.state};}catch{throw new Error("Invalid broker OAuth state.");}}
 export function createMetaAuthorizationUrl(config:MetaBrokerServerConfig,input:{sessionId:string;state:string}){
  const base=validateBrokerPublicUrl(config.publicBaseUrl),redirectUri=`${base}/meta/oauth/callback`;
- const p=new URLSearchParams({client_id:config.appId,redirect_uri:redirectUri,state:input.state,response_type:"code",scope:"pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish"});
+ const p=new URLSearchParams({client_id:config.appId,redirect_uri:redirectUri,state:encodeBrokerState(input.sessionId,input.state),response_type:"code",scope:"pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish"});
  return `https://www.facebook.com/dialog/oauth?${p}`;
 }
 export async function exchangeMetaServerCode(config:MetaBrokerServerConfig,code:string){
