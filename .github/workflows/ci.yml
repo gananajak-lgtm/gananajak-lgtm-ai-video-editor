@@ -10,6 +10,20 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: broker
+          POSTGRES_PASSWORD: broker
+          POSTGRES_DB: broker_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U broker -d broker_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -18,4 +32,7 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm run typecheck
       - run: npm run test:content
+      - run: npm run test:broker:postgres
+        env:
+          META_BROKER_TEST_DATABASE_URL: postgresql://broker:broker@127.0.0.1:5432/broker_test
       - run: npm run build
