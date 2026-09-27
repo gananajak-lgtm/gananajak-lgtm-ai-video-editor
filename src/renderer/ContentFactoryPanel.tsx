@@ -69,6 +69,9 @@ export default function ContentFactoryPanel({
   const [tiktokCreatorInfo, setTikTokCreatorInfo] = useState<{creatorNickname?:string;privacyLevelOptions:import("../shared/content-factory").TikTokPrivacyLevel[];commentDisabled?:boolean;duetDisabled?:boolean;stitchDisabled?:boolean;maxVideoPostDurationSec?:number}|null>(null);
   const [publishDrafts, setPublishDrafts] = useState<Record<string, PublishPlan>>({});
   const [publishSaving, setPublishSaving] = useState<string | null>(null);
+  const [contentMode,setContentMode]=useState<"shorts"|"basket">("shorts");
+  const [productQuery,setProductQuery]=useState("");
+  const [selectedProductId,setSelectedProductId]=useState<string|null>(null);
   const [affiliateUrls, setAffiliateUrls] = useState("");
   const [affiliateProducts, setAffiliateProducts] = useState<AffiliateProduct[]>([]);
   const [affiliateJobs, setAffiliateJobs] = useState<AffiliateContentJob[]>([]);
@@ -529,8 +532,26 @@ export default function ContentFactoryPanel({
     window.setTimeout(() => setCopiedSceneId((current) => current === sceneId ? null : current), 1500);
   };
 
+  const matchingProducts=affiliateProducts.filter((product)=>{const q=productQuery.trim().toLocaleLowerCase();return !q||[product.title,product.sellerName,product.description].filter(Boolean).some((value)=>value!.toLocaleLowerCase().includes(q));});
+  const selectedProduct=affiliateProducts.find((product)=>product.id===selectedProductId)??null;
+
+  if(contentMode==="basket") return (
+    <section className="aiPanel basketFactory">
+      <div className="modeSwitcher"><button onClick={()=>setContentMode("shorts")}>🎬 สร้างคลิป Shorts</button><button className="primary" aria-pressed="true">🛒 สร้างคลิปปักตะกร้า</button></div>
+      <div className="aiPanelHeader"><div><p className="eyebrow">AI SHOPPING VIDEO</p><h3>ค้นหาสินค้า เลือกร้าน แล้วสร้างคลิปขายอัตโนมัติ</h3><p className="muted">ค้นจากสินค้าที่นำเข้าและแหล่งข้อมูลร้านค้าที่เชื่อมต่อ โดยระบบจะไม่แต่งราคา ร้าน หรือยอดขายขึ้นเอง</p></div><span className="aiBadge readyBadge">โหมดปักตะกร้า</span></div>
+      <div className="productSearchBar"><input value={productQuery} onChange={(e)=>setProductQuery(e.target.value)} placeholder="พิมพ์ชื่อสินค้า เช่น เครื่องดูดฝุ่นไร้สาย" autoFocus /><button className="primary">🔎 ค้นหาสินค้า</button></div>
+      <div className="transcriptPanel"><div className="timelineHeader"><div><p className="eyebrow">สินค้าและร้านแนะนำ</p><h3>{matchingProducts.length ? `พบ ${matchingProducts.length} รายการ` : "ยังไม่มีสินค้าในแคตตาล็อก"}</h3></div></div>
+        {!matchingProducts.length && <div className="emptyProductState"><strong>นำเข้าสินค้าจริงก่อน</strong><p className="muted">วางลิงก์สินค้า Affiliate จากร้านที่ต้องการด้านล่าง เมื่อเชื่อม Product Search API แล้ว ช่องค้นหานี้จะดึงร้านและสินค้าแนะนำจากชื่อสินค้าได้โดยตรง</p><textarea value={affiliateUrls} onChange={(e)=>setAffiliateUrls(e.target.value)} placeholder={"วางลิงก์สินค้า 1 ลิงก์ต่อบรรทัด"} rows={3}/><button className="primary" onClick={importAffiliateProducts} disabled={!affiliateUrls.trim()||affiliateImporting}>{affiliateImporting?"กำลังดึงข้อมูลสินค้า...":"นำเข้าข้อมูลสินค้า"}</button></div>}
+        <div className="productResultGrid">{matchingProducts.map((product)=><button type="button" className={selectedProductId===product.id?"productResultCard selected":"productResultCard"} key={product.id} onClick={()=>setSelectedProductId(product.id)}>{product.imageUrls[0]&&<img src={product.imageUrls[0]} alt="" />}<span><strong>{product.title}</strong><small>{product.sellerName??"ไม่ระบุร้าน"} · {product.platform}</small><small>{typeof product.price==="number"?`${product.price.toLocaleString()} ${product.currency??""}`:"ตรวจราคาจากแหล่งข้อมูลสินค้า"}</small></span></button>)}</div>
+      </div>
+      {selectedProduct&&<div className="transcriptPanel selectedProductPanel"><div><p className="eyebrow">สินค้าที่เลือก</p><h3>{selectedProduct.title}</h3><p className="muted">{selectedProduct.sellerName??"ไม่ระบุร้าน"} · {selectedProduct.description??"ไม่มีคำอธิบายสินค้า"}</p></div><div className="keyRow"><select value={language} onChange={(e)=>setLanguage(e.target.value as ContentLanguage)}><option value="th">ภาษาไทย</option><option value="en">English</option></select><input type="number" min={10} max={180} value={duration} onChange={(e)=>setDuration(Number(e.target.value)||30)} aria-label="ความยาวคลิป"/><button className="primary" onClick={async()=>{const jobs=await window.videoEditor.createAffiliateJobs([selectedProduct]);setAffiliateJobs(jobs);await window.videoEditor.saveAffiliateQueue(affiliateProducts,jobs);}} disabled={affiliateLocalRunning}>✨ เตรียมคลิปปักตะกร้าอัตโนมัติ</button><button onClick={createLocalAffiliateVideos} disabled={!affiliateJobs.length||affiliateLocalRunning}>{affiliateLocalRunning?"กำลังสร้างคลิป...":"สร้าง MP4 จากสินค้าที่เลือก"}</button></div></div>}
+      {affiliateImportErrors.length>0&&<div className="message errorMessage">{affiliateImportErrors.join(" · ")}</div>}{error&&<div className="message errorMessage">{error}</div>}
+    </section>
+  );
+
   return (
     <section className="aiPanel">
+      <div className="modeSwitcher"><button className="primary" aria-pressed="true">🎬 สร้างคลิป Shorts</button><button onClick={()=>setContentMode("basket")}>🛒 สร้างคลิปปักตะกร้า</button></div>
       <div className="aiPanelHeader">
         <div>
           <p className="eyebrow">โรงงานสร้างคอนเทนต์ AI</p>
