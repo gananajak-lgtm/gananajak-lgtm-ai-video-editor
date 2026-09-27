@@ -58,7 +58,7 @@ import { loadTikTokTokens, saveTikTokTokens, loadTikTokOAuthConfig, saveTikTokOA
 import { createAffiliateProduct } from "./affiliate-product-import";
 import { searchAffiliateProducts } from "./affiliate-product-search-service";
 import { createTikTokShopShowcaseProvider } from "./tiktok-shop-showcase-provider";
-import { loadTikTokShopCreatorCredentials } from "./tiktok-shop-token-store";
+import { loadTikTokShopCreatorCredentials, getTikTokShopCreatorStatus } from "./tiktok-shop-token-store";
 import { createAffiliateContentJobs } from "./affiliate-content-jobs";
 import { affiliateJobToContentBrief } from "./affiliate-content-planner";
 import { loadAffiliateQueue, saveAffiliateQueue } from "./affiliate-queue-store";
@@ -96,6 +96,7 @@ function createWindow() {
 }
 
 ipcMain.handle("affiliate:load-queue", async () => loadAffiliateQueue());
+ipcMain.handle("affiliate:tiktok-shop-status", async () => getTikTokShopCreatorStatus());
 ipcMain.handle("affiliate:save-queue", async (_event, products:import("../shared/affiliate-factory").AffiliateProduct[], jobs:import("../shared/affiliate-factory").AffiliateContentJob[]) => saveAffiliateQueue({products,jobs}));
 
 ipcMain.handle("affiliate:prepare-batch", async (event, jobs:import("../shared/affiliate-factory").AffiliateContentJob[], language:import("../shared/content-factory").ContentLanguage="th", duration=30) => {
