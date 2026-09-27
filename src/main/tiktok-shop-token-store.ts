@@ -2,7 +2,7 @@ import { app, safeStorage } from "electron";
 import path from "node:path";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import type { TikTokShopCreatorCredentials } from "./tiktok-shop-showcase-provider";
-import type { TikTokShopTokenResponse } from "./tiktok-shop-oauth";
+import { refreshTikTokShopCreatorToken, type TikTokShopTokenResponse } from "./tiktok-shop-oauth";
 
 export type TikTokShopCreatorStatus={connected:boolean;displayName?:string;scopes:string[]};
 export type StoredTikTokShopCreatorCredentials=TikTokShopCreatorCredentials & {refreshToken?:string;openId?:string;grantedScopes?:string[];expiresAt?:number};
@@ -26,5 +26,7 @@ export async function loadTikTokShopCreatorCredentials():Promise<StoredTikTokSho
     return JSON.parse(safeStorage.decryptString(await readFile(credentialsPath()))) as StoredTikTokShopCreatorCredentials;
   }catch{return null;}
 }
+
+export async function loadUsableTikTokShopCreatorCredentials():Promise<StoredTikTokShopCreatorCredentials|null>{let credentials=await loadTikTokShopCreatorCredentials();if(!credentials)return null;if(credentials.expiresAt&&credentials.expiresAt>Date.now())return credentials;if(!credentials.refreshToken)return null;const token=await refreshTikTokShopCreatorToken({appKey:credentials.appKey,appSecret:credentials.appSecret,refreshToken:credentials.refreshToken});const config={appKey:credentials.appKey,appSecret:credentials.appSecret};await saveTikTokShopCreatorToken(config,token);credentials=await loadTikTokShopCreatorCredentials();return credentials;}
 
 export async function getTikTokShopCreatorStatus():Promise<TikTokShopCreatorStatus>{const credentials=await loadTikTokShopCreatorCredentials();return {connected:Boolean(credentials),displayName:credentials?.openId?"TikTok Shop Creator":"TikTok Shop Creator",scopes:credentials?.grantedScopes??[]};}
