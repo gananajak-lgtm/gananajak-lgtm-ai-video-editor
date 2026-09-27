@@ -1,10 +1,11 @@
 import { createServer } from "node:http";
 import { createMetaAuthorizationUrl,decodeBrokerState,exchangeMetaServerCode,MetaBrokerSessionStore,validateDesktopRedirectUri,validateBrokerPublicUrl } from "./meta-auth-broker-core";
+import { FileMetaBrokerSessionStore } from "./meta-auth-broker-file-store";
 import { applyBrokerSecurityHeaders,BrokerRateLimiter,readBrokerJson,requestKey,safeBrokerError } from "./meta-auth-broker-http";
 
 const appId=process.env.META_APP_ID?.trim(),appSecret=process.env.META_APP_SECRET?.trim(),publicBaseUrl=process.env.META_BROKER_PUBLIC_URL?.trim(),clients=new Set((process.env.META_BROKER_CLIENT_IDS??"").split(",").map(v=>v.trim()).filter(Boolean));
 if(!appId||!appSecret||!publicBaseUrl||!clients.size)throw new Error("META_APP_ID, META_APP_SECRET, META_BROKER_PUBLIC_URL, and META_BROKER_CLIENT_IDS are required.");
-validateBrokerPublicUrl(publicBaseUrl);const store=new MetaBrokerSessionStore();
+validateBrokerPublicUrl(publicBaseUrl);const sessionFile=process.env.META_BROKER_SESSION_FILE?.trim();const store=sessionFile?new FileMetaBrokerSessionStore(sessionFile):new MetaBrokerSessionStore();
 const config={appId,appSecret,publicBaseUrl,allowedClientIds:clients};
 const limiter=new BrokerRateLimiter(Number(process.env.META_BROKER_RATE_LIMIT||30),60_000);
 const json=(res:import("node:http").ServerResponse,status:number,body:unknown)=>{applyBrokerSecurityHeaders(res);res.writeHead(status,{"content-type":"application/json"});res.end(JSON.stringify(body));};
