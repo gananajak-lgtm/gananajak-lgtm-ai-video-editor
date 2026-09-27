@@ -350,6 +350,7 @@ export type DesktopApi = {
   completeTikTokShopCreatorAuth: (authCode:string) => Promise<{connected:boolean;displayName?:string;scopes:string[]}>;
   connectTikTokShopCreator: () => Promise<{connected:boolean;displayName?:string;scopes:string[]}>;
   getTikTokShopCreatorStatus: () => Promise<{connected:boolean;displayName?:string;scopes:string[]}>;
+  explainAffiliateProduct: (product:import("./affiliate-factory").AffiliateProduct, query:string) => Promise<string[]>;
   searchAffiliateProducts: (query: string) => Promise<{ products:import("./affiliate-factory").AffiliateProduct[]; source:"catalog"|"catalog+external"; searchedAt:string; query:string; providers:Array<{id:string;label:string;configured:boolean;count:number;error?:string}> }>;
   loadAffiliateQueue: () => Promise<{ products: import("./affiliate-factory").AffiliateProduct[]; jobs: import("./affiliate-factory").AffiliateContentJob[]; updatedAt: string }>;
   saveAffiliateQueue: (products: import("./affiliate-factory").AffiliateProduct[], jobs: import("./affiliate-factory").AffiliateContentJob[]) => Promise<{ products: import("./affiliate-factory").AffiliateProduct[]; jobs: import("./affiliate-factory").AffiliateContentJob[]; updatedAt: string }>;
