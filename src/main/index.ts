@@ -58,7 +58,8 @@ import { loadTikTokTokens, saveTikTokTokens, loadTikTokOAuthConfig, saveTikTokOA
 import { createAffiliateProduct } from "./affiliate-product-import";
 import { searchAffiliateProducts } from "./affiliate-product-search-service";
 import { createTikTokShopShowcaseProvider } from "./tiktok-shop-showcase-provider";
-import { loadTikTokShopCreatorCredentials, getTikTokShopCreatorStatus } from "./tiktok-shop-token-store";
+import { loadTikTokShopCreatorCredentials, getTikTokShopCreatorStatus, loadTikTokShopAppConfig, saveTikTokShopAppConfig, saveTikTokShopCreatorToken } from "./tiktok-shop-token-store";
+import { exchangeTikTokShopCreatorCode } from "./tiktok-shop-oauth";
 import { createAffiliateContentJobs } from "./affiliate-content-jobs";
 import { affiliateJobToContentBrief } from "./affiliate-content-planner";
 import { loadAffiliateQueue, saveAffiliateQueue } from "./affiliate-queue-store";
@@ -97,6 +98,8 @@ function createWindow() {
 
 ipcMain.handle("affiliate:load-queue", async () => loadAffiliateQueue());
 ipcMain.handle("affiliate:tiktok-shop-status", async () => getTikTokShopCreatorStatus());
+ipcMain.handle("affiliate:configure-tiktok-shop",async(_event,appKey:string,appSecret:string)=>{const config={appKey:appKey.trim(),appSecret:appSecret.trim()};if(!config.appKey||!config.appSecret)throw new Error("TikTok Shop App Key and App Secret are required.");await saveTikTokShopAppConfig(config);return {configured:true};});
+ipcMain.handle("affiliate:complete-tiktok-shop-auth",async(_event,authCode:string)=>{const config=await loadTikTokShopAppConfig();if(!config)throw new Error("Configure TikTok Shop app first.");const code=authCode.trim();if(!code)throw new Error("TikTok Shop authorization code is required.");const token=await exchangeTikTokShopCreatorCode({...config,authCode:code});await saveTikTokShopCreatorToken(config,token);return getTikTokShopCreatorStatus();});
 ipcMain.handle("affiliate:save-queue", async (_event, products:import("../shared/affiliate-factory").AffiliateProduct[], jobs:import("../shared/affiliate-factory").AffiliateContentJob[]) => saveAffiliateQueue({products,jobs}));
 
 ipcMain.handle("affiliate:prepare-batch", async (event, jobs:import("../shared/affiliate-factory").AffiliateContentJob[], language:import("../shared/content-factory").ContentLanguage="th", duration=30) => {
