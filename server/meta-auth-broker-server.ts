@@ -6,6 +6,7 @@ import { PostgresMetaBrokerAdapter } from "./meta-auth-broker-postgres";
 import { Pool } from "pg";
 import { applyBrokerSecurityHeaders,BrokerRateLimiter,readBrokerJson,requestKey,safeBrokerError } from "./meta-auth-broker-http";
 
+async function main(){
 const appId=process.env.META_APP_ID?.trim(),appSecret=process.env.META_APP_SECRET?.trim(),publicBaseUrl=process.env.META_BROKER_PUBLIC_URL?.trim(),clients=new Set((process.env.META_BROKER_CLIENT_IDS??"").split(",").map(v=>v.trim()).filter(Boolean));
 if(!appId||!appSecret||!publicBaseUrl||!clients.size)throw new Error("META_APP_ID, META_APP_SECRET, META_BROKER_PUBLIC_URL, and META_BROKER_CLIENT_IDS are required.");
 validateBrokerPublicUrl(publicBaseUrl);const sessionFile=process.env.META_BROKER_SESSION_FILE?.trim(),databaseUrl=process.env.META_BROKER_DATABASE_URL?.trim(),multiInstance=process.env.META_BROKER_MULTI_INSTANCE==="true";let store:import("./meta-auth-broker-core").MetaBrokerSessionStoreContract;if(databaseUrl){const pool=new Pool({connectionString:databaseUrl,max:Number(process.env.META_BROKER_DB_POOL_MAX||10),ssl:process.env.META_BROKER_DB_SSL==="true"?{rejectUnauthorized:true}:undefined});const adapter=new PostgresMetaBrokerAdapter(pool);await adapter.migrate();await adapter.cleanup();store=new TransactionalMetaBrokerSessionStore(adapter);}else{if(multiInstance)throw new Error("META_BROKER_MULTI_INSTANCE requires META_BROKER_DATABASE_URL; local memory/file stores are intentionally refused.");store=sessionFile?new FileMetaBrokerSessionStore(sessionFile):new MetaBrokerSessionStore();}
@@ -19,3 +20,5 @@ const server=createServer(async(req,res)=>{applyBrokerSecurityHeaders(res);try{c
  json(res,404,{error:"Not found."});
  }catch(error){json(res,400,{error:safeBrokerError(error)});}});
 const port=Number(process.env.PORT||8080);server.listen(port,"0.0.0.0",()=>console.log(`Meta Auth Broker listening on :${port}`));
+}
+void main().catch(error=>{console.error("Meta Auth Broker failed to start:",error instanceof Error?error.message:String(error));process.exitCode=1;});
