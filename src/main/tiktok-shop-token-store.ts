@@ -3,6 +3,8 @@ import path from "node:path";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import type { TikTokShopCreatorCredentials } from "./tiktok-shop-showcase-provider";
 
+export type TikTokShopCreatorStatus={connected:boolean;displayName?:string;scopes:string[]};
+
 const credentialsPath=()=>path.join(app.getPath("userData"),"affiliate","tiktok-shop-creator.bin");
 
 export async function saveTikTokShopCreatorCredentials(value:TikTokShopCreatorCredentials){
@@ -16,3 +18,5 @@ export async function loadTikTokShopCreatorCredentials():Promise<TikTokShopCreat
     return JSON.parse(safeStorage.decryptString(await readFile(credentialsPath()))) as TikTokShopCreatorCredentials;
   }catch{return null;}
 }
+
+export async function getTikTokShopCreatorStatus():Promise<TikTokShopCreatorStatus>{const credentials=await loadTikTokShopCreatorCredentials();return {connected:Boolean(credentials),displayName:credentials?"TikTok Shop Creator":undefined,scopes:credentials?["creator.showcase.read"]:[]};}
