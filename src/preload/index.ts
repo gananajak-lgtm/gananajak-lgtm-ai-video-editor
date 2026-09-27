@@ -73,6 +73,7 @@ const api: DesktopApi = {
   completeTikTokShopCreatorAuth: (authCode) => ipcRenderer.invoke("affiliate:complete-tiktok-shop-auth",authCode),
   connectTikTokShopCreator: () => ipcRenderer.invoke("affiliate:connect-tiktok-shop"),
   getTikTokShopCreatorStatus: () => ipcRenderer.invoke("affiliate:tiktok-shop-status"),
+  explainAffiliateProduct: (product,query) => ipcRenderer.invoke("affiliate:explain-product",product,query),
   searchAffiliateProducts: (query) => ipcRenderer.invoke("affiliate:search-products", query),
   loadAffiliateQueue: () => ipcRenderer.invoke("affiliate:load-queue"),
   saveAffiliateQueue: (products, jobs) => ipcRenderer.invoke("affiliate:save-queue", products, jobs),
