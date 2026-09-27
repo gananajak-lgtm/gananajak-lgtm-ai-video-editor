@@ -593,9 +593,7 @@ ipcMain.handle("content:publish-instagram-job", async (_event, jobId:string, ite
  const running=queue.jobs.map((job)=>job.id===jobId?{...job,status:"publishing" as const,attempts:job.attempts+1,error:undefined,updatedAt:new Date().toISOString()}:job);broadcastPublishQueue(await savePublishQueue(root,running));
  try{
   let containerId=target.externalPublishId;
-  if(!containerId){const caption=[item.publish?.caption||item.publish?.title,...(item.publish?.hashtags??[]).map((tag)=>`#${tag.replace(/^#/,"")}`)].filter(Boolean).join("
-
-");const created=await createInstagramReelContainer({igUserId,pageAccessToken:page.accessToken,videoUrl:hostedVideoUrl,caption,shareToFeed:item.publish?.meta?.shareInstagramReelToFeed});containerId=created.id;const withContainer=running.map((job)=>job.id===jobId?{...job,externalPublishId:containerId,updatedAt:new Date().toISOString()}:job);broadcastPublishQueue(await savePublishQueue(root,withContainer));}
+  if(!containerId){const caption=[item.publish?.caption||item.publish?.title,...(item.publish?.hashtags??[]).map((tag)=>`#${tag.replace(/^#/,"")}`)].filter(Boolean).join("\n\n");const created=await createInstagramReelContainer({igUserId,pageAccessToken:page.accessToken,videoUrl:hostedVideoUrl,caption,shareToFeed:item.publish?.meta?.shareInstagramReelToFeed});containerId=created.id;const withContainer=running.map((job)=>job.id===jobId?{...job,externalPublishId:containerId,updatedAt:new Date().toISOString()}:job);broadcastPublishQueue(await savePublishQueue(root,withContainer));}
   await waitForInstagramContainer({containerId,pageAccessToken:page.accessToken});const published=await publishInstagramReel({igUserId,pageAccessToken:page.accessToken,containerId});const result:import("../shared/content-factory").PublishResult={platform:"instagram",status:"published",externalId:published.id,publishedAt:new Date().toISOString()};if(item.publish?.meta?.hostedVideoObjectKey){const hosting=await loadInstagramHostingConfig();if(hosting){try{await deleteInstagramVideo(hosting,item.publish.meta.hostedVideoObjectKey);item.publish.meta.hostedVideoCleanupPending=false;}catch{item.publish.meta.hostedVideoCleanupPending=true;}}}const latest=await loadPublishQueue(root),completed=latest.jobs.map((job)=>job.id===jobId?{...job,status:"published" as const,result,error:undefined,updatedAt:new Date().toISOString()}:job);const saved=await savePublishQueue(root,completed);broadcastPublishQueue(saved);return saved;
  }catch(error){const message=error instanceof Error?error.message:String(error),latest=await loadPublishQueue(root);const processing=message.includes("still processing");const failed=latest.jobs.map((job)=>job.id===jobId?{...job,status:(processing?"processing":"failed") as "processing"|"failed",error:message,updatedAt:new Date().toISOString()}:job);const saved=await savePublishQueue(root,failed);broadcastPublishQueue(saved);if(processing)return saved;throw error;}
 });
@@ -620,9 +618,7 @@ ipcMain.handle("content:publish-facebook-job", async (_event, jobId:string, item
     broadcastPublishQueue(await savePublishQueue(root,sessionJobs));
     const bytes=await readFile(item.outputPath);
     await uploadFacebookLocalReel({videoId:started.video_id,pageAccessToken:page.accessToken,bytes});
-    const description=[item.publish?.description?.trim(),...(item.publish?.hashtags??[]).map((tag)=>`#${tag.replace(/^#/,"")}`)].filter(Boolean).join("
-
-");
+    const description=[item.publish?.description?.trim(),...(item.publish?.hashtags??[]).map((tag)=>`#${tag.replace(/^#/,"")}`)].filter(Boolean).join("\n\n");
     await finishFacebookReel({pageId:page.id,pageAccessToken:page.accessToken,videoId:started.video_id,title:item.publish?.title,description});
     const result:import("../shared/content-factory").PublishResult={platform:"facebook",status:"published",externalId:started.video_id,publishedAt:new Date().toISOString()};
     const latest=await loadPublishQueue(root), completed=latest.jobs.map((job)=>job.id===jobId?{...job,status:"published" as const,result,error:undefined,updatedAt:new Date().toISOString()}:job);
