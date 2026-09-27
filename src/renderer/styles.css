@@ -2368,3 +2368,5 @@ label { font-size: 10px; }
 .shopManualCode{display:flex;gap:7px;margin-top:7px}.shopManualCode input{flex:1}.shopAuthFields details{grid-column:1/-1}.shopAuthFields summary{cursor:pointer;color:var(--muted,#9aa4b2);font-size:12px}@media(max-width:900px){.shopManualCode{flex-direction:column}}
 
 .recommendReasons{display:inline-flex;align-self:flex-start;margin-top:3px;padding:3px 6px;border:1px solid rgba(255,255,255,.12);border-radius:999px;font-size:11px;opacity:.9}
+
+.browserModeBanner{position:sticky;top:8px;z-index:20;display:flex;align-items:center;gap:10px;width:min(1540px,calc(100% - 28px));margin:8px auto;padding:8px 12px;border:1px solid rgba(56,189,248,.28);border-radius:10px;background:rgba(8,47,73,.94);backdrop-filter:blur(12px);font-size:11px;color:#bae6fd}.browserModeBanner strong{color:#f0f9ff;font-size:12px}.browserModeBanner span{color:#7dd3fc}@media(max-width:700px){.browserModeBanner{align-items:flex-start;flex-direction:column;gap:3px;width:calc(100% - 20px)}}
