@@ -33,9 +33,8 @@ jobs:
           if (-not (Test-Path $asar)) { throw "Packaged ASAR not found: $asar" }
           $asarList = & npx asar list $asar
           if ($LASTEXITCODE -ne 0) { throw "Could not inspect packaged ASAR" }
-          $asarPaths = $asarList | ForEach-Object { $_.Replace("\\", "/").TrimStart("/") }
-          if ($asarPaths -notcontains "dist/index.html") { Write-Host ($asarPaths -join "`n"); throw "Packaged renderer dist/index.html is missing from ASAR" }
-          if ($asarPaths -notcontains "dist-electron/src/main/index.js") { throw "Packaged Electron main entry is missing from ASAR" }
+          if (-not ($asarList | Where-Object { $_ -match "[\\\\/]dist[\\\\/]index\\.html$" })) { throw "Packaged renderer dist/index.html is missing from ASAR" }
+          if (-not ($asarList | Where-Object { $_ -match "[\\\\/]dist-electron[\\\\/]src[\\\\/]main[\\\\/]index\\.js$" })) { throw "Packaged Electron main entry is missing from ASAR" }
           $frame = Join-Path $env:RUNNER_TEMP "gananajak-packaged-frame.png"
           & $ffmpeg -y -f lavfi -i "color=c=0x182033:s=320x568:r=30" -frames:v 1 $frame
           if ($LASTEXITCODE -ne 0) { throw "Bundled FFmpeg smoke test failed with exit code $LASTEXITCODE" }
