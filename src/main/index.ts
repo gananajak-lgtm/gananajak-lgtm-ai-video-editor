@@ -1,4 +1,5 @@
 import { createMetaBrokerSession, exchangeMetaBrokerSession, validateMetaBrokerConfig } from "./meta-auth-broker";
+import { explainAffiliateProduct } from "./affiliate-product-search";
 import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell } from "electron";
 import path from "node:path";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
@@ -96,6 +97,7 @@ function createWindow() {
   }
 }
 
+ipcMain.handle("affiliate:explain-product", async (_event, product:import("../shared/affiliate-factory").AffiliateProduct, query:string) => explainAffiliateProduct(product,query));
 ipcMain.handle("affiliate:load-queue", async () => loadAffiliateQueue());
 ipcMain.handle("affiliate:tiktok-shop-status", async () => getTikTokShopCreatorStatus());
 ipcMain.handle("affiliate:configure-tiktok-shop",async(_event,appKey:string,appSecret:string)=>{const config={appKey:appKey.trim(),appSecret:appSecret.trim()};if(!config.appKey||!config.appSecret)throw new Error("TikTok Shop App Key and App Secret are required.");await saveTikTokShopAppConfig(config);return {configured:true};});
