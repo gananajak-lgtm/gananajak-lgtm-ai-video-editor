@@ -459,8 +459,12 @@ export default function App() {
     }
   };
 
+  const browserMode=document.documentElement.dataset.runtime==="browser";
+
   return (
-    <main className="shell">
+    <>
+      {browserMode && <div className="browserModeBanner"><strong>🌐 Browser Mode</strong><span>เปิดใช้งานจากเว็บได้แล้ว · งาน Render / AI / Publish จะย้ายไปทำผ่าน Backend Worker</span></div>}
+      <main className="shell">
       <header className="topbar">
         <div>
           <p className="eyebrow">GANANAJAK LAB</p>
@@ -779,5 +783,6 @@ export default function App() {
         </section>
       )}
     </main>
+    </>
   );
 }
