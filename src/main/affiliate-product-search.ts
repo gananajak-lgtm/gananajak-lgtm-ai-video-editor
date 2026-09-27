@@ -9,30 +9,8 @@ export type AffiliateProductSearchResult={
 
 const text=(value:string|undefined)=>value?.toLocaleLowerCase()??"";
 
-export function searchAffiliateCatalog(products:AffiliateProduct[],query:string,limit=24):AffiliateProductSearchResult{
-  const normalized=query.trim().toLocaleLowerCase();
-  const ranked=products
-    .map((product)=>{
-      const title=text(product.title),seller=text(product.sellerName),description=text(product.description);
-      let score=0;
-      if(!normalized) score=1;
-      else {
-        if(title===normalized) score+=100;
-        if(title.startsWith(normalized)) score+=60;
-        if(title.includes(normalized)) score+=40;
-        if(seller.includes(normalized)) score+=20;
-        if(description.includes(normalized)) score+=10;
-        for(const token of normalized.split(/\s+/).filter(Boolean)){
-          if(title.includes(token)) score+=8;
-          if(seller.includes(token)) score+=4;
-          if(description.includes(token)) score+=2;
-        }
-      }
-      return {product,score};
-    })
-    .filter((entry)=>entry.score>0)
-    .sort((a,b)=>b.score-a.score || (b.product.rating??0)-(a.product.rating??0) || (b.product.soldCount??0)-(a.product.soldCount??0))
-    .slice(0,Math.max(1,Math.min(100,limit)))
-    .map((entry)=>entry.product);
-  return {products:ranked,source:"catalog",searchedAt:new Date().toISOString(),query:query.trim()};
-}
+export function scoreAffiliateProduct(product:AffiliateProduct,query:string){const normalized=query.trim().toLocaleLowerCase(),title=text(product.title),seller=text(product.sellerName),description=text(product.description);let relevance=normalized?0:1;if(normalized){if(title===normalized)relevance+=100;if(title.startsWith(normalized))relevance+=60;if(title.includes(normalized))relevance+=40;if(seller.includes(normalized))relevance+=20;if(description.includes(normalized))relevance+=10;for(const token of normalized.split(/\\s+/).filter(Boolean)){if(title.includes(token))relevance+=8;if(seller.includes(token))relevance+=4;if(description.includes(token))relevance+=2;}}const evidence=(product.rating??0)*2+Math.log10(Math.max(1,(product.soldCount??0)+1))*3+(product.commissionRate??0)*10;return {relevance,evidence,total:relevance*100+evidence};}
+
+export function rankAffiliateProducts(products:AffiliateProduct[],query:string){return products.map(product=>({product,score:scoreAffiliateProduct(product,query)})).filter(x=>x.score.relevance>0).sort((a,b)=>b.score.total-a.score.total).map(x=>x.product);}
+
+export function searchAffiliateCatalog(products:AffiliateProduct[],query:string,limit=24):AffiliateProductSearchResult{const ranked=rankAffiliateProducts(products,query).slice(0,Math.max(1,Math.min(100,limit)));return {products:ranked,source:"catalog",searchedAt:new Date().toISOString(),query:query.trim()};}
