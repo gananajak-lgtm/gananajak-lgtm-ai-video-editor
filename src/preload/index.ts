@@ -66,7 +66,6 @@ const api: DesktopApi = {
   configureMetaOAuth: (appId, appSecret, redirectUri) => ipcRenderer.invoke("content:configure-meta-oauth", appId, appSecret, redirectUri),
   configureMetaBroker: (baseUrl, clientId) => ipcRenderer.invoke("content:configure-meta-broker", baseUrl, clientId),
   startMetaBrokerAuth: () => ipcRenderer.invoke("content:start-meta-broker-auth"),
-  completeMetaBrokerAuth: (sessionId, code, state) => ipcRenderer.invoke("content:complete-meta-broker-auth", sessionId, code, state),
   connectMeta: () => ipcRenderer.invoke("content:connect-meta"),
   getMetaDestinations: () => ipcRenderer.invoke("content:get-meta-destinations"),
   importAffiliateProduct: (sourceUrl) => ipcRenderer.invoke("affiliate:import-product", sourceUrl),
