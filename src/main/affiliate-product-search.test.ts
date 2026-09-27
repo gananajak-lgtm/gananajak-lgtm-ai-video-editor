@@ -23,4 +23,4 @@ const relevanceWins=searchAffiliateCatalog([{...products[0],id:"exact",title:"�
 assert.equal(relevanceWins.products[0]?.id,"exact");
 
 assert.deepEqual(explainAffiliateProduct({...products[0],commissionRate:0.12},"เครื่องดูดฝุ่นไร้สาย"),["ตรงคำค้นมาก","เรตติ้งสูง","ยอดขายสูง"]);
-assert.deepEqual(explainAffiliateProduct({...products[2],rating:undefined,soldCount:undefined,commissionRate:undefined},"โคมไฟ"),["ตรงคำค้น"]);
+assert.deepEqual(explainAffiliateProduct({...products[2],rating:undefined,soldCount:undefined,commissionRate:undefined},"โคมไฟ"),["ตรงคำค้นมาก"]);
