@@ -239,12 +239,13 @@ export default function ContentFactoryPanel({
     finally { setAffiliateImporting(false); }
   };
 
-  const createLocalAffiliateVideos = async () => {
-    if (!affiliateJobs.length || affiliateLocalRunning) return;
+  const createLocalAffiliateVideos = async (jobsOverride?: typeof affiliateJobs) => {
+    const jobsToRender=jobsOverride??affiliateJobs;
+    if (!jobsToRender.length || affiliateLocalRunning) return;
     const outputDir = await window.videoEditor.chooseBatchOutputFolder(); if (!outputDir) return;
-    setAffiliateLocalRunning(true); setError(null); setBatchProgress({ completed:0, total:affiliateJobs.length });
+    setAffiliateLocalRunning(true); setError(null); setBatchProgress({ completed:0, total:jobsToRender.length });
     const unsubscribe = window.videoEditor.onContentBatchProgress((progress) => setBatchProgress({ completed:progress.completed, total:progress.total }));
-    try { setBatch(await window.videoEditor.createLocalAffiliateBatch(affiliateJobs, outputDir, language, Math.max(10, duration))); }
+    try { setBatch(await window.videoEditor.createLocalAffiliateBatch(jobsToRender, outputDir, language, Math.max(10, duration))); }
     catch (localError) { setError(localError instanceof Error ? localError.message : String(localError)); }
     finally { unsubscribe(); setAffiliateLocalRunning(false); }
   };
@@ -553,7 +554,7 @@ export default function ContentFactoryPanel({
         {!matchingProducts.length && <div className="emptyProductState"><strong>นำเข้าสินค้าจริงก่อน</strong><p className="muted">วางลิงก์สินค้า Affiliate จากร้านที่ต้องการด้านล่าง เมื่อเชื่อม Product Search API แล้ว ช่องค้นหานี้จะดึงร้านและสินค้าแนะนำจากชื่อสินค้าได้โดยตรง</p><textarea value={affiliateUrls} onChange={(e)=>setAffiliateUrls(e.target.value)} placeholder={"วางลิงก์สินค้า 1 ลิงก์ต่อบรรทัด"} rows={3}/><button className="primary" onClick={importAffiliateProducts} disabled={!affiliateUrls.trim()||affiliateImporting}>{affiliateImporting?"กำลังดึงข้อมูลสินค้า...":"นำเข้าข้อมูลสินค้า"}</button></div>}
         <div className="productResultGrid">{matchingProducts.map((product)=><button type="button" className={selectedProductId===product.id?"productResultCard selected":"productResultCard"} key={product.id} onClick={()=>setSelectedProductId(product.id)}>{product.imageUrls[0]&&<img src={product.imageUrls[0]} alt="" />}<span><strong>{product.title}</strong><small>{product.sellerName??"ไม่ระบุร้าน"} · {product.platform}</small><small>{typeof product.price==="number"?`${product.price.toLocaleString()} ${product.currency??""}`:"ตรวจราคาจากแหล่งข้อมูลสินค้า"}</small></span></button>)}</div>
       </div>
-      {selectedProduct&&<div className="transcriptPanel selectedProductPanel"><div><p className="eyebrow">สินค้าที่เลือก</p><h3>{selectedProduct.title}</h3><p className="muted">{selectedProduct.sellerName??"ไม่ระบุร้าน"} · {selectedProduct.description??"ไม่มีคำอธิบายสินค้า"}</p></div><div className="keyRow"><select value={language} onChange={(e)=>setLanguage(e.target.value as ContentLanguage)}><option value="th">ภาษาไทย</option><option value="en">English</option></select><input type="number" min={10} max={180} value={duration} onChange={(e)=>setDuration(Number(e.target.value)||30)} aria-label="ความยาวคลิป"/><button className="primary" onClick={async()=>{const jobs=await window.videoEditor.createAffiliateJobs([selectedProduct]);setAffiliateJobs(jobs);await window.videoEditor.saveAffiliateQueue(affiliateProducts,jobs);}} disabled={affiliateLocalRunning}>✨ เตรียมคลิปปักตะกร้าอัตโนมัติ</button><button onClick={createLocalAffiliateVideos} disabled={!affiliateJobs.length||affiliateLocalRunning}>{affiliateLocalRunning?"กำลังสร้างคลิป...":"สร้าง MP4 จากสินค้าที่เลือก"}</button></div></div>}
+      {selectedProduct&&<div className="transcriptPanel selectedProductPanel"><div><p className="eyebrow">สินค้าที่เลือก</p><h3>{selectedProduct.title}</h3><p className="muted">{selectedProduct.sellerName??"ไม่ระบุร้าน"} · {selectedProduct.description??"ไม่มีคำอธิบายสินค้า"}</p></div><div className="keyRow"><select value={language} onChange={(e)=>setLanguage(e.target.value as ContentLanguage)}><option value="th">ภาษาไทย</option><option value="en">English</option></select><input type="number" min={10} max={180} value={duration} onChange={(e)=>setDuration(Number(e.target.value)||30)} aria-label="ความยาวคลิป"/><button className="primary" onClick={async()=>{const jobs=await window.videoEditor.createAffiliateJobs([selectedProduct]);setAffiliateJobs(jobs);await window.videoEditor.saveAffiliateQueue(affiliateProducts,jobs);}} disabled={affiliateLocalRunning}>✨ เตรียมคลิปปักตะกร้าอัตโนมัติ</button><button onClick={()=>void (async()=>{const jobs=await window.videoEditor.createAffiliateJobs([selectedProduct]);setAffiliateJobs(jobs);await window.videoEditor.saveAffiliateQueue(affiliateProducts,jobs);await createLocalAffiliateVideos(jobs);})()} disabled={affiliateLocalRunning}>{affiliateLocalRunning?"กำลังสร้างคลิป...":"สร้าง MP4 จากสินค้าที่เลือก"}</button></div></div>}
       {affiliateImportErrors.length>0&&<div className="message errorMessage">{affiliateImportErrors.join(" · ")}</div>}{error&&<div className="message errorMessage">{error}</div>}
     </section>
   );
