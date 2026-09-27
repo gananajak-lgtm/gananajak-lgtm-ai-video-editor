@@ -346,6 +346,7 @@ export type DesktopApi = {
   connectMeta: () => Promise<Array<{id:string;name:string;instagramBusinessAccountId?:string}>>;
   getMetaDestinations: () => Promise<Array<{id:string;name:string;instagramBusinessAccountId?:string}>>;
   importAffiliateProduct: (sourceUrl: string) => Promise<import("./affiliate-factory").AffiliateProduct>;
+  searchAffiliateProducts: (query: string) => Promise<{ products:import("./affiliate-factory").AffiliateProduct[]; source:"catalog"; searchedAt:string; query:string }>;
   loadAffiliateQueue: () => Promise<{ products: import("./affiliate-factory").AffiliateProduct[]; jobs: import("./affiliate-factory").AffiliateContentJob[]; updatedAt: string }>;
   saveAffiliateQueue: (products: import("./affiliate-factory").AffiliateProduct[], jobs: import("./affiliate-factory").AffiliateContentJob[]) => Promise<{ products: import("./affiliate-factory").AffiliateProduct[]; jobs: import("./affiliate-factory").AffiliateContentJob[]; updatedAt: string }>;
   createAffiliateJobs: (products: import("./affiliate-factory").AffiliateProduct[]) => Promise<import("./affiliate-factory").AffiliateContentJob[]>;
