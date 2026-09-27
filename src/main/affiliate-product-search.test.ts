@@ -17,7 +17,7 @@ assert.equal(searchAffiliateCatalog(products,"ไม่มีสินค้า�
 assert.equal(searchAffiliateCatalog(products,"").products.length,3);
 console.log("affiliate product search tests passed");
 
-const rankedSignals=searchAffiliateCatalog([{...catalog[0],id:"weak",title:"เครื่องดูดฝุ่น",rating:2,soldCount:1},{...catalog[0],id:"strong",title:"เครื่องดูดฝุ่น",rating:5,soldCount:1000}], "เครื่องดูดฝุ่น", 10);
+const rankedSignals=searchAffiliateCatalog([{...products[0],id:"weak",title:"เครื่องดูดฝุ่น",rating:2,soldCount:1},{...products[0],id:"strong",title:"เครื่องดูดฝุ่น",rating:5,soldCount:1000}], "เครื่องดูดฝุ่น", 10);
 assert.equal(rankedSignals.products[0]?.id,"strong");
-const relevanceWins=searchAffiliateCatalog([{...catalog[0],id:"exact",title:"เครื่องดูดฝุ่น",rating:1,soldCount:0},{...catalog[0],id:"seller",title:"ของใช้ในบ้าน",sellerName:"ร้านเครื่องดูดฝุ่น",rating:5,soldCount:999999}], "เครื่องดูดฝุ่น", 10);
+const relevanceWins=searchAffiliateCatalog([{...products[0],id:"exact",title:"เครื่องดูดฝุ่น",rating:1,soldCount:0},{...products[0],id:"seller",title:"ของใช้ในบ้าน",sellerName:"ร้านเครื่องดูดฝุ่น",rating:5,soldCount:999999}], "เครื่องดูดฝุ่น", 10);
 assert.equal(relevanceWins.products[0]?.id,"exact");
