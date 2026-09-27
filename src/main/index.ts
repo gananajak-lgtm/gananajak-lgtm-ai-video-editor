@@ -57,6 +57,8 @@ import { probeMediaInfo } from "./video/probe";
 import { loadTikTokTokens, saveTikTokTokens, loadTikTokOAuthConfig, saveTikTokOAuthConfig } from "./tiktok-token-store";
 import { createAffiliateProduct } from "./affiliate-product-import";
 import { searchAffiliateProducts } from "./affiliate-product-search-service";
+import { createTikTokShopShowcaseProvider } from "./tiktok-shop-showcase-provider";
+import { loadTikTokShopCreatorCredentials } from "./tiktok-shop-token-store";
 import { createAffiliateContentJobs } from "./affiliate-content-jobs";
 import { affiliateJobToContentBrief } from "./affiliate-content-planner";
 import { loadAffiliateQueue, saveAffiliateQueue } from "./affiliate-queue-store";
@@ -131,7 +133,7 @@ ipcMain.handle("affiliate:create-jobs", async (_event, products:import("../share
 ipcMain.handle("affiliate:import-product", async (_event, sourceUrl:string) => createAffiliateProduct({sourceUrl}));
 ipcMain.handle("affiliate:search-products", async (_event, query:string) => {
   const queue=await loadAffiliateQueue();
-  return searchAffiliateProducts({catalog:queue.products,query});
+  return searchAffiliateProducts({catalog:queue.products,query,providers:[createTikTokShopShowcaseProvider(loadTikTokShopCreatorCredentials)]});
 });
 
 ipcMain.handle("media:select-images", async () => {
