@@ -8,7 +8,7 @@ export type AffiliateExternalSearchProvider={
   search(query:string,limit:number):Promise<AffiliateProduct[]>;
 };
 
-export type UnifiedAffiliateSearchResult=AffiliateProductSearchResult & {
+export type UnifiedAffiliateSearchResult=Omit<AffiliateProductSearchResult,"source"> & {
   source:"catalog"|"catalog+external";
   providers:Array<{id:string;label:string;configured:boolean;count:number;error?:string}>;
 };
