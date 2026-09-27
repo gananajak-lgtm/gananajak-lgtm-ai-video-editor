@@ -6,7 +6,7 @@ export interface MetaBrokerSessionStoreContract{create(input:Omit<MetaBrokerSess
 export class MetaBrokerSessionStore implements MetaBrokerSessionStoreContract{
  private sessions=new Map<string,MetaBrokerSession>();
  constructor(private ttlMs=5*60_000){}
- create(input:Omit<Session,"id"|"createdAt"|"used">){this.prune();const session:MetaBrokerSession={...input,id:randomBytes(24).toString("base64url"),createdAt:Date.now(),used:false};this.sessions.set(session.id,session);return session;}
+ create(input:Omit<MetaBrokerSession,"id"|"createdAt"|"used">){this.prune();const session:MetaBrokerSession={...input,id:randomBytes(24).toString("base64url"),createdAt:Date.now(),used:false};this.sessions.set(session.id,session);return session;}
  get(id:string){const session=this.sessions.get(id);if(!session)return null;if(Date.now()-session.createdAt>this.ttlMs){this.sessions.delete(id);return null;}return session;}
  complete(id:string,code:string){const session=this.get(id);if(!session)throw new Error("Broker session is missing or expired.");if(session.used)throw new Error("Broker session was already used.");session.code=code;return session;}
  consume(id:string,state:string){const session=this.get(id);if(!session)throw new Error("Broker session is missing or expired.");if(session.used)throw new Error("Broker session was already used.");if(session.state!==state)throw new Error("Broker session state mismatch.");if(!session.code)throw new Error("Meta authorization has not completed yet.");session.used=true;return session;}
