@@ -56,7 +56,7 @@ import { queryTikTokCreatorInfo, initTikTokDirectPost, uploadTikTokFile, waitFor
 import { probeMediaInfo } from "./video/probe";
 import { loadTikTokTokens, saveTikTokTokens, loadTikTokOAuthConfig, saveTikTokOAuthConfig } from "./tiktok-token-store";
 import { createAffiliateProduct } from "./affiliate-product-import";
-import { searchAffiliateCatalog } from "./affiliate-product-search";
+import { searchAffiliateProducts } from "./affiliate-product-search-service";
 import { createAffiliateContentJobs } from "./affiliate-content-jobs";
 import { affiliateJobToContentBrief } from "./affiliate-content-planner";
 import { loadAffiliateQueue, saveAffiliateQueue } from "./affiliate-queue-store";
@@ -131,7 +131,7 @@ ipcMain.handle("affiliate:create-jobs", async (_event, products:import("../share
 ipcMain.handle("affiliate:import-product", async (_event, sourceUrl:string) => createAffiliateProduct({sourceUrl}));
 ipcMain.handle("affiliate:search-products", async (_event, query:string) => {
   const queue=await loadAffiliateQueue();
-  return searchAffiliateCatalog(queue.products,query);
+  return searchAffiliateProducts({catalog:queue.products,query});
 });
 
 ipcMain.handle("media:select-images", async () => {
