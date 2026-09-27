@@ -1,5 +1,5 @@
 import type { AffiliateProduct } from "../shared/affiliate-factory";
-import { searchAffiliateCatalog, type AffiliateProductSearchResult } from "./affiliate-product-search";
+import { rankAffiliateProducts, searchAffiliateCatalog, type AffiliateProductSearchResult } from "./affiliate-product-search";
 
 export type AffiliateExternalSearchProvider={
   id:string;
@@ -35,6 +35,6 @@ export async function searchAffiliateProducts(input:{catalog:AffiliateProduct[];
       providerStates.push({id:provider.id,label:provider.label,configured,count:0,error:error instanceof Error?error.message:String(error)});
     }
   }
-  const merged=dedupe([...external,...local.products]).slice(0,limit);
+  const merged=rankAffiliateProducts(dedupe([...external,...local.products]),input.query).slice(0,limit);
   return {products:merged,source:external.length?"catalog+external":"catalog",searchedAt:new Date().toISOString(),query:input.query.trim(),providers:providerStates};
 }
