@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { searchAffiliateCatalog } from "./affiliate-product-search";
+import { explainAffiliateProduct, searchAffiliateCatalog } from "./affiliate-product-search";
 import type { AffiliateProduct } from "../shared/affiliate-factory";
 
 const now=new Date().toISOString();
@@ -21,3 +21,6 @@ const rankedSignals=searchAffiliateCatalog([{...products[0],id:"weak",title:"เ
 assert.equal(rankedSignals.products[0]?.id,"strong");
 const relevanceWins=searchAffiliateCatalog([{...products[0],id:"exact",title:"เครื่องดูดฝุ่น",rating:1,soldCount:0},{...products[0],id:"seller",title:"ของใช้ในบ้าน",sellerName:"ร้านเครื่องดูดฝุ่น",rating:5,soldCount:999999}], "เครื่องดูดฝุ่น", 10);
 assert.equal(relevanceWins.products[0]?.id,"exact");
+
+assert.deepEqual(explainAffiliateProduct({...products[0],commissionRate:0.12},"เครื่องดูดฝุ่นไร้สาย"),["ตรงคำค้นมาก","เรตติ้งสูง","ยอดขายสูง"]);
+assert.deepEqual(explainAffiliateProduct({...products[2],rating:undefined,soldCount:undefined,commissionRate:undefined},"โคมไฟ"),["ตรงคำค้น"]);
