@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 
 export type MetaBrokerServerConfig={appId:string;appSecret:string;publicBaseUrl:string;allowedClientIds:Set<string>;sessionTtlMs?:number};
 export type MetaBrokerSession={id:string;clientId:string;state:string;desktopRedirectUri:string;createdAt:number;used:boolean;code?:string};
-export interface MetaBrokerSessionStoreContract{create(input:Omit<MetaBrokerSession,"id"|"createdAt"|"used">):MetaBrokerSession;get(id:string):MetaBrokerSession|null;complete(id:string,code:string):MetaBrokerSession;consume(id:string,state:string):MetaBrokerSession;}
+export interface MetaBrokerSessionStoreContract{create(input:Omit<MetaBrokerSession,"id"|"createdAt"|"used">):MetaBrokerSession|Promise<MetaBrokerSession>;get(id:string):MetaBrokerSession|null|Promise<MetaBrokerSession|null>;complete(id:string,code:string):MetaBrokerSession|Promise<MetaBrokerSession>;consume(id:string,state:string):MetaBrokerSession|Promise<MetaBrokerSession>;}
 export class MetaBrokerSessionStore implements MetaBrokerSessionStoreContract{
  private sessions=new Map<string,MetaBrokerSession>();
  constructor(private ttlMs=5*60_000){}
