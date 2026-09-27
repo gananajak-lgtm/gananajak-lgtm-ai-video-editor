@@ -1,0 +1,6 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { decodeBrokerState,encodeBrokerState,MetaBrokerSessionStore,validateDesktopRedirectUri } from "./meta-auth-broker-core";
+test("broker OAuth state carries the session without exposing secrets",()=>{const encoded=encodeBrokerState("session","desktop-state");assert.deepEqual(decodeBrokerState(encoded),{sessionId:"session",state:"desktop-state"});});
+test("broker accepts only exact desktop loopback callbacks",()=>{assert.match(validateDesktopRedirectUri("http://127.0.0.1:54321/meta-broker-callback"),/127\.0\.0\.1/);assert.throws(()=>validateDesktopRedirectUri("https://example.com/meta-broker-callback"),/loopback/);assert.throws(()=>validateDesktopRedirectUri("http://localhost:54321/meta-broker-callback"),/loopback/);});
+test("broker sessions are single-use and state-bound",()=>{const store=new MetaBrokerSessionStore();const session=store.create({clientId:"desktop",state:"state",desktopRedirectUri:"http://127.0.0.1:54321/meta-broker-callback"});store.complete(session.id,"code");assert.throws(()=>store.consume(session.id,"wrong"),/state mismatch/);assert.equal(store.consume(session.id,"state").code,"code");assert.throws(()=>store.consume(session.id,"state"),/already used/);});
