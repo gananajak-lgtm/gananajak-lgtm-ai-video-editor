@@ -24,13 +24,19 @@ function normalizeProduct(raw:ShowcaseProduct):AffiliateProduct|null{
 export function createTikTokShopShowcaseProvider(loadCredentials:()=>Promise<TikTokShopCreatorCredentials|null>):AffiliateExternalSearchProvider{
   return {id:"tiktok-shop-showcase",label:"TikTok Shop Showcase",configured:async()=>Boolean(await loadCredentials()),search:async(query,limit)=>{
     const credentials=await loadCredentials();if(!credentials)return [];
-    const path="/affiliate_creator/202405/showcases/products";
-    const params=new URLSearchParams({app_key:credentials.appKey,page_size:String(Math.min(50,Math.max(1,limit))),timestamp:String(Math.floor(Date.now()/1000))});
-    params.set("sign",signTikTokShopRequest({path,query:params,appSecret:credentials.appSecret}));
-    const response=await fetch(`https://open-api.tiktokglobalshop.com${path}?${params}`,{headers:{"content-type":"application/json","x-tts-access-token":credentials.accessToken}});
-    const payload=await response.json() as {code?:number;message?:string;data?:{products?:ShowcaseProduct[]}};
-    if(!response.ok||payload.code!==0)throw new Error(payload.message||"TikTok Shop Showcase search failed.");
-    const needle=query.trim().toLocaleLowerCase();
-    return (payload.data?.products??[]).map(normalizeProduct).filter((product):product is AffiliateProduct=>Boolean(product)).filter((product)=>!needle||product.title.toLocaleLowerCase().includes(needle)||product.sellerName?.toLocaleLowerCase().includes(needle)).slice(0,limit);
+    const path="/affiliate_creator/202405/showcases/products",needle=query.trim().toLocaleLowerCase(),matches:AffiliateProduct[]=[];
+    let pageToken:string|undefined,pages=0,seen=0;
+    do{
+      const params=new URLSearchParams({app_key:credentials.appKey,page_size:"20",origin:"SHOWCASE",timestamp:String(Math.floor(Date.now()/1000))});
+      if(pageToken)params.set("page_token",pageToken);
+      params.set("sign",signTikTokShopRequest({path,query:params,appSecret:credentials.appSecret}));
+      const response=await fetch(`https://open-api.tiktokglobalshop.com${path}?${params}`,{headers:{"content-type":"application/json","x-tts-access-token":credentials.accessToken}});
+      const payload=await response.json() as {code?:number;message?:string;data?:{products?:ShowcaseProduct[];next_page_token?:string}};
+      if(!response.ok||payload.code!==0)throw new Error(payload.message||"TikTok Shop Showcase search failed.");
+      const products=payload.data?.products??[];seen+=products.length;
+      for(const raw of products){const product=normalizeProduct(raw);if(product&&(!needle||product.title.toLocaleLowerCase().includes(needle)||product.sellerName?.toLocaleLowerCase().includes(needle)))matches.push(product);if(matches.length>=limit)return matches.slice(0,limit);}
+      pageToken=payload.data?.next_page_token;pages+=1;
+    }while(pageToken&&seen<2000&&pages<100);
+    return matches.slice(0,limit);
   }};
 }
