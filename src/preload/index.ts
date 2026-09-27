@@ -69,6 +69,7 @@ const api: DesktopApi = {
   connectMeta: () => ipcRenderer.invoke("content:connect-meta"),
   getMetaDestinations: () => ipcRenderer.invoke("content:get-meta-destinations"),
   importAffiliateProduct: (sourceUrl) => ipcRenderer.invoke("affiliate:import-product", sourceUrl),
+  getTikTokShopCreatorStatus: () => ipcRenderer.invoke("affiliate:tiktok-shop-status"),
   searchAffiliateProducts: (query) => ipcRenderer.invoke("affiliate:search-products", query),
   loadAffiliateQueue: () => ipcRenderer.invoke("affiliate:load-queue"),
   saveAffiliateQueue: (products, jobs) => ipcRenderer.invoke("affiliate:save-queue", products, jobs),
