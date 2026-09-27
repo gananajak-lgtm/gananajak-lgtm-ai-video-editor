@@ -5,7 +5,7 @@ import { applyBrokerSecurityHeaders,BrokerRateLimiter,readBrokerJson,requestKey,
 
 const appId=process.env.META_APP_ID?.trim(),appSecret=process.env.META_APP_SECRET?.trim(),publicBaseUrl=process.env.META_BROKER_PUBLIC_URL?.trim(),clients=new Set((process.env.META_BROKER_CLIENT_IDS??"").split(",").map(v=>v.trim()).filter(Boolean));
 if(!appId||!appSecret||!publicBaseUrl||!clients.size)throw new Error("META_APP_ID, META_APP_SECRET, META_BROKER_PUBLIC_URL, and META_BROKER_CLIENT_IDS are required.");
-validateBrokerPublicUrl(publicBaseUrl);const sessionFile=process.env.META_BROKER_SESSION_FILE?.trim();const store=sessionFile?new FileMetaBrokerSessionStore(sessionFile):new MetaBrokerSessionStore();
+validateBrokerPublicUrl(publicBaseUrl);const sessionFile=process.env.META_BROKER_SESSION_FILE?.trim(),multiInstance=process.env.META_BROKER_MULTI_INSTANCE==="true";if(multiInstance)throw new Error("META_BROKER_MULTI_INSTANCE requires a shared transactional store adapter; local memory/file stores are intentionally refused.");const store=sessionFile?new FileMetaBrokerSessionStore(sessionFile):new MetaBrokerSessionStore();
 const config={appId,appSecret,publicBaseUrl,allowedClientIds:clients};
 const limiter=new BrokerRateLimiter(Number(process.env.META_BROKER_RATE_LIMIT||30),60_000);
 const json=(res:import("node:http").ServerResponse,status:number,body:unknown)=>{applyBrokerSecurityHeaders(res);res.writeHead(status,{"content-type":"application/json"});res.end(JSON.stringify(body));};
