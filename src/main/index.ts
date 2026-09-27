@@ -88,7 +88,7 @@ function createWindow() {
   if (isDev) {
     void window.loadURL("http://localhost:5173");
   } else {
-    void window.loadFile(path.join(__dirname, "../../dist/index.html"));
+    void window.loadFile(path.join(__dirname, "../../../dist/index.html"));
   }
 }
 
