@@ -2366,3 +2366,5 @@ label { font-size: 10px; }
 .shopAuthFields{display:grid;grid-template-columns:1fr 1fr auto;gap:7px;width:100%;align-items:center}.shopAuthFields input{min-width:0}@media(max-width:900px){.shopAuthFields{grid-template-columns:1fr}}
 
 .shopManualCode{display:flex;gap:7px;margin-top:7px}.shopManualCode input{flex:1}.shopAuthFields details{grid-column:1/-1}.shopAuthFields summary{cursor:pointer;color:var(--muted,#9aa4b2);font-size:12px}@media(max-width:900px){.shopManualCode{flex-direction:column}}
+
+.recommendReasons{display:inline-flex;align-self:flex-start;margin-top:3px;padding:3px 6px;border:1px solid rgba(255,255,255,.12);border-radius:999px;font-size:11px;opacity:.9}
