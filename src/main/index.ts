@@ -58,7 +58,7 @@ import { loadTikTokTokens, saveTikTokTokens, loadTikTokOAuthConfig, saveTikTokOA
 import { createAffiliateProduct } from "./affiliate-product-import";
 import { searchAffiliateProducts } from "./affiliate-product-search-service";
 import { createTikTokShopShowcaseProvider } from "./tiktok-shop-showcase-provider";
-import { loadTikTokShopCreatorCredentials, getTikTokShopCreatorStatus, loadTikTokShopAppConfig, saveTikTokShopAppConfig, saveTikTokShopCreatorToken } from "./tiktok-shop-token-store";
+import { loadTikTokShopCreatorCredentials, loadUsableTikTokShopCreatorCredentials, getTikTokShopCreatorStatus, loadTikTokShopAppConfig, saveTikTokShopAppConfig, saveTikTokShopCreatorToken } from "./tiktok-shop-token-store";
 import { exchangeTikTokShopCreatorCode } from "./tiktok-shop-oauth";
 import { createAffiliateContentJobs } from "./affiliate-content-jobs";
 import { affiliateJobToContentBrief } from "./affiliate-content-planner";
@@ -138,7 +138,7 @@ ipcMain.handle("affiliate:create-jobs", async (_event, products:import("../share
 ipcMain.handle("affiliate:import-product", async (_event, sourceUrl:string) => createAffiliateProduct({sourceUrl}));
 ipcMain.handle("affiliate:search-products", async (_event, query:string) => {
   const queue=await loadAffiliateQueue();
-  return searchAffiliateProducts({catalog:queue.products,query,providers:[createTikTokShopShowcaseProvider(loadTikTokShopCreatorCredentials)]});
+  return searchAffiliateProducts({catalog:queue.products,query,providers:[createTikTokShopShowcaseProvider(loadUsableTikTokShopCreatorCredentials)]});
 });
 
 ipcMain.handle("media:select-images", async () => {
