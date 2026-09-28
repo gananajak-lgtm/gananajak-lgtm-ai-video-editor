@@ -243,8 +243,19 @@ export default function ContentFactoryPanel({
         catch (importError) { failures.push(`${url}: ${importError instanceof Error ? importError.message : String(importError)}`); }
       }
       const jobs = await window.videoEditor.createAffiliateJobs(products);
-      setAffiliateProducts(products); setAffiliateJobs(jobs); setAffiliateImportErrors(failures);
-      await window.videoEditor.saveAffiliateQueue(products, jobs);
+      // Importing one link must not erase the existing catalog or completed jobs.
+      const previousBySource=new Map(affiliateProducts.map(entry=>[entry.sourceUrl,entry]));
+      const reconciled=products.map(entry=>{
+        const existing=previousBySource.get(entry.sourceUrl);
+        return existing?{...existing,...entry,id:existing.id,
+          localImagePaths:existing.localImagePaths,affiliateUrl:existing.affiliateUrl}:entry;
+      });
+      const nextProducts=Array.from(new Map([...affiliateProducts,...reconciled].map(entry=>[entry.id,entry])).values());
+      const newById=new Map(reconciled.map(entry=>[entry.id,entry]));
+      const nextJobs=[...affiliateJobs.filter(job=>!newById.has(job.product.id)),
+        ...jobs.map((job,index)=>({...job,product:reconciled[index]}))];
+      setAffiliateProducts(nextProducts);setAffiliateJobs(nextJobs);setAffiliateImportErrors(failures);
+      await window.videoEditor.saveAffiliateQueue(nextProducts,nextJobs);
       if (!products.length && failures.length) setError("No valid affiliate products were imported.");
     } catch (importError) { setError(importError instanceof Error ? importError.message : String(importError)); }
     finally { setAffiliateImporting(false); }
