@@ -10,7 +10,7 @@ export async function runAssetPlan(
   workDir: string,
   onProgress?: (progress: AssetRunProgress) => void
 ): Promise<AssetPlan> {
-  const runnableKinds = new Set(["image", "voice"]);
+  const runnableKinds = new Set(["image", "video", "voice"]);
   const queue = new AssetJobQueue(plan.jobs.filter((job) => runnableKinds.has(job.kind)).map((job) => ({ ...job, status: job.status === "failed" ? "queued" : job.status, error: job.status === "failed" ? undefined : job.error })));
   const assets: GeneratedAsset[] = [...plan.assets];
   const assetIndexByJobId = new Map(plan.jobs.flatMap((job) => job.outputAssetId ? [[job.id, job.outputAssetId] as const] : []));
