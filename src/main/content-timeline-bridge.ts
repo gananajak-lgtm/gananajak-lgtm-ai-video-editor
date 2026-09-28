@@ -33,8 +33,8 @@ export function timedSceneSubtitles(sceneId:string,text:string,start:number,dura
     // Prefer breaks at whitespace, but never skip a cue for Thai unspaced text.
     for(let delta=0;delta<=10;delta++){
       const forward=expected+delta,backward=expected-delta;
-      if(forward>last+1 && forward<units.length && /\\s/u.test(units[forward-1]??"")){split=forward;break;}
-      if(backward>last+1 && backward<units.length && /\\s/u.test(units[backward-1]??"")){split=backward;break;}
+      if(forward>last+1 && forward<units.length && /\s/u.test(units[forward-1]??"")){split=forward;break;}
+      if(backward>last+1 && backward<units.length && /\s/u.test(units[backward-1]??"")){split=backward;break;}
     }
     bounds.push(Math.max(last+1,Math.min(units.length-(count-i),split)));
   }
