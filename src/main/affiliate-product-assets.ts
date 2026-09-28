@@ -3,6 +3,7 @@ import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
 import path from "node:path";
 import type { AffiliateProduct } from "../shared/affiliate-factory";
+import { readManagedProductPhoto } from "./affiliate-local-images";
 import type { ContentProject, GeneratedAsset } from "../shared/content-factory";
 
 const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
@@ -80,20 +81,27 @@ async function downloadImage(sourceUrl:string, fetcher:typeof fetch):Promise<{by
   throw new Error("Product image redirect limit exceeded.");
 }
 
-export async function stageAffiliateProductImages(product:AffiliateProduct,project:ContentProject,root:string,fetcher:typeof fetch=fetch):Promise<ContentProject>{
-  if(!product.imageUrls.length)return project;
+export async function stageAffiliateProductImages(product:AffiliateProduct,project:ContentProject,root:string,fetcher:typeof fetch=fetch,managedPhotoRoot?:string):Promise<ContentProject>{
+  const candidates=[...(product.localImagePaths??[]).map(ref=>({ref,local:true})),...product.imageUrls.map(ref=>({ref,local:false}))];
+  if(!candidates.length)return project;
   await mkdir(root,{recursive:true});const assets:GeneratedAsset[]=[];const jobs=[];
   const cache=new Map<string,Awaited<ReturnType<typeof downloadImage>>>();
   const rejected=new Map<string,string>();
   for(const scene of project.scenes){
     let selected:{sourceUrl:string;image:Awaited<ReturnType<typeof downloadImage>>}|null=null;
     // A broken product thumbnail should not prevent using another genuine image.
-    for(let offset=0;offset<product.imageUrls.length;offset++){
-      const sourceUrl=product.imageUrls[((scene.order-1)+offset)%product.imageUrls.length];
+    for(let offset=0;offset<candidates.length;offset++){
+      const candidate=candidates[((scene.order-1)+offset)%candidates.length];
+      const sourceUrl=candidate.ref;
       if(!sourceUrl||rejected.has(sourceUrl))continue;
       try{
         let image=cache.get(sourceUrl);
-        if(!image){image=await downloadImage(sourceUrl,fetcher);cache.set(sourceUrl,image);}
+        if(!image){
+          image=candidate.local
+            ? await readManagedProductPhoto(sourceUrl,managedPhotoRoot??"")
+            : await downloadImage(sourceUrl,fetcher);
+          cache.set(sourceUrl,image);
+        }
         selected={sourceUrl,image};
         break;
       }catch(error){
