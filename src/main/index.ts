@@ -64,6 +64,7 @@ import { exchangeTikTokShopCreatorCode } from "./tiktok-shop-oauth";
 import { createAffiliateContentJobs } from "./affiliate-content-jobs";
 import { affiliateJobToContentBrief } from "./affiliate-content-planner";
 import { buildAffiliatePublishPlan, assertAffiliateBinding } from "./affiliate-publish-planner";
+import { getAffiliatePublishReadiness } from "./affiliate-publish-readiness";
 import { stageAffiliateProductImages } from "./affiliate-product-assets";
 import { loadAffiliateQueue, saveAffiliateQueue } from "./affiliate-queue-store";
 import { buildMetaAuthorizationUrl, exchangeMetaAuthorizationCode, exchangeMetaLongLivedToken } from "./meta-oauth";
@@ -140,6 +141,7 @@ ipcMain.handle("affiliate:create-local-batch", async (event, jobs:import("../sha
 });
 
 ipcMain.handle("affiliate:create-jobs", async (_event, products:import("../shared/affiliate-factory").AffiliateProduct[]) => createAffiliateContentJobs(products));
+ipcMain.handle("affiliate:publish-readiness", async (_event, item:import("../shared/content-factory").ContentBatchItem, job:import("../shared/affiliate-factory").AffiliateContentJob) => getAffiliatePublishReadiness(item,job));
 
 ipcMain.handle("affiliate:import-product", async (_event, sourceUrl:string) => createAffiliateProduct({sourceUrl}));
 ipcMain.handle("affiliate:search-products", async (_event, query:string) => {
