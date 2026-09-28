@@ -53,7 +53,7 @@ test("content factory flows from topic project through generated assets into a r
   assert.ok(timeline.clips[0].imagePath.endsWith(".png"));
   assert.equal(timeline.clips[0].videoDuration,4);
   assert.ok(timeline.clips.slice(1).every((clip) => !clip.videoPath && clip.imagePath.endsWith(".png")));
-  assert.equal(timeline.subtitles?.length,project.scenes.length);
+  assert.ok((timeline.subtitles?.length??0)>=project.scenes.length, "long narration may create multiple subtitle cues per scene");
   assert.equal(timeline.width,1080);
   assert.equal(timeline.height,1920);
   assert.equal(timeline.duration,project.scenes.length * 6);
