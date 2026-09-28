@@ -57,6 +57,7 @@ import { queryTikTokCreatorInfo, initTikTokDirectPost, uploadTikTokFile, waitFor
 import { probeMediaInfo } from "./video/probe";
 import { loadTikTokTokens, saveTikTokTokens, loadTikTokOAuthConfig, saveTikTokOAuthConfig } from "./tiktok-token-store";
 import { importAffiliateProductMetadata } from "./affiliate-product-import";
+import { captureAffiliatePageInBrowser } from "./affiliate-browser-capture";
 import { searchAffiliateProducts } from "./affiliate-product-search-service";
 import { createTikTokShopShowcaseProvider } from "./tiktok-shop-showcase-provider";
 import { loadTikTokShopCreatorCredentials, loadUsableTikTokShopCreatorCredentials, getTikTokShopCreatorStatus, loadTikTokShopAppConfig, saveTikTokShopAppConfig, saveTikTokShopCreatorToken } from "./tiktok-shop-token-store";
@@ -153,7 +154,16 @@ ipcMain.handle("affiliate:create-publish-jobs",async(_event,item:import("../shar
   const saved=await savePublishQueue(root,jobs);broadcastPublishQueue(saved);return saved;
 });
 
-ipcMain.handle("affiliate:import-product", async (_event, sourceUrl:string) => importAffiliateProductMetadata(sourceUrl));
+ipcMain.handle("affiliate:import-product", async (_event, sourceUrl:string) => {
+  const product=await importAffiliateProductMetadata(sourceUrl);
+  if(product.imageUrls.length)return product;
+  // Use a visible, user-initiated browser session when static HTML lacks product images.
+  try{return await captureAffiliatePageInBrowser(product,45_000);}
+  catch{return product;}
+});
+ipcMain.handle("affiliate:capture-browser-product", async (_event, product:import("../shared/affiliate-factory").AffiliateProduct) =>
+  captureAffiliatePageInBrowser(product,90_000)
+);
 ipcMain.handle("affiliate:select-product-photos",async(_event,product:import("../shared/affiliate-factory").AffiliateProduct)=>{
   if(!product?.id || !/^affiliate-product-[a-f0-9-]{36}$/.test(product.id))throw new Error("Invalid product ID.");
   const result=await dialog.showOpenDialog({title:"Select actual product reference photos",properties:["openFile","multiSelections"],filters:[{name:"Product photos",extensions:["png","jpg","jpeg","webp"]}]});
