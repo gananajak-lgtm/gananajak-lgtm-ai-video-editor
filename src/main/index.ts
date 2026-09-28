@@ -158,8 +158,7 @@ ipcMain.handle("affiliate:import-product", async (_event, sourceUrl:string) => {
   const product=await importAffiliateProductMetadata(sourceUrl);
   if(product.imageUrls.length)return product;
   // Use a visible, user-initiated browser session when static HTML lacks product images.
-  try{return await captureAffiliatePageInBrowser(product,45_000);}
-  catch{return product;}
+  return captureAffiliatePageInBrowser(product,45_000);
 });
 ipcMain.handle("affiliate:capture-browser-product", async (_event, product:import("../shared/affiliate-factory").AffiliateProduct) =>
   captureAffiliatePageInBrowser(product,90_000)
