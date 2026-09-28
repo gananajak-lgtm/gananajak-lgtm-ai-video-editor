@@ -128,6 +128,7 @@ export type PublishPlan = {
   error?: string;
   tiktok?: { privacyLevel?:TikTokPrivacyLevel; disableComment?:boolean; disableDuet?:boolean; disableStitch?:boolean; creatorNickname?:string; isAigc?:boolean; commercialContent?:boolean; brandOrganic?:boolean; brandedContent?:boolean; musicUsageConfirmed?:boolean };
   meta?: { pageId?:string; pageName?:string; instagramBusinessAccountId?:string; shareInstagramReelToFeed?:boolean; hostedVideoUrl?:string; hostedVideoObjectKey?:string; hostedVideoSize?:number; hostedVideoCleanupPending?:boolean };
+  affiliate?: { productId:string; platform:import("./affiliate-factory").AffiliatePlatform; sourceUrl:string; affiliateUrl?:string; sellerName?:string; attachProduct:boolean };
 };
 
 export type ContentBatchStatus = "queued" | "preparing" | "ready" | "generating-assets" | "assets-ready" | "rendering" | "rendered" | "failed";
