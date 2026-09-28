@@ -18,6 +18,39 @@ function latestAssetFor(assets: GeneratedAsset[], sceneId: string, kind: Generat
   return matches.at(-1);
 }
 
+/** Spread long narration across shorter, readable subtitle cues. */
+export function timedSceneSubtitles(sceneId:string,text:string,start:number,duration:number):SubtitleCue[] {
+  const trimmed=text.trim();
+  if(!trimmed)return [];
+  const units=Array.from(new Intl.Segmenter("th",{granularity:"grapheme"}).segment(trimmed),part=>part.segment);
+  const count=Math.max(1,Math.min(Math.ceil(units.length/52),Math.floor(duration/1.4)));
+  if(count===1)return [{id:`subtitle-${sceneId}`,start,end:start+duration,text:trimmed}];
+  const bounds=[0];
+  for(let i=1;i<count;i++){
+    const expected=Math.round(i*units.length/count);
+    const last=bounds[bounds.length-1];
+    let split=expected;
+    // Prefer breaks at whitespace, but never skip a cue for Thai unspaced text.
+    for(let delta=0;delta<=10;delta++){
+      const forward=expected+delta,backward=expected-delta;
+      if(forward>last+1 && forward<units.length && /\\s/u.test(units[forward-1]??"")){split=forward;break;}
+      if(backward>last+1 && backward<units.length && /\\s/u.test(units[backward-1]??"")){split=backward;break;}
+    }
+    bounds.push(Math.max(last+1,Math.min(units.length-(count-i),split)));
+  }
+  bounds.push(units.length);
+  const weights=bounds.slice(1).map((boundary,i)=>Math.max(1,boundary-bounds[i]));
+  const total=weights.reduce((a,b)=>a+b,0);
+  let elapsed=0;
+  return weights.map((weight,i)=>{
+    const cueStart=start+duration*elapsed/total;
+    elapsed+=weight;
+    return {id:`subtitle-${sceneId}-${i+1}`,start:cueStart,
+      end:i===weights.length-1?start+duration:start+duration*elapsed/total,
+      text:units.slice(bounds[i],bounds[i+1]).join("").trim()};
+  });
+}
+
 function voiceFor(assets: GeneratedAsset[], sceneId: string) {
   return latestAssetFor(assets, sceneId, "voice");
 }
@@ -55,7 +88,7 @@ export function bridgeGeneratedAssets(project: ContentProject): ContentTimelineB
     }
 
     if (voice) narrationSegments.push({ sceneId:scene.id, filePath:voice.filePath, start, duration, text:scene.narration });
-    subtitles.push({ id:`subtitle-${scene.id}`, start, end:start + duration, text:scene.narration });
+    subtitles.push(...timedSceneSubtitles(scene.id,scene.narration,start,duration));
 
     for (const asset of sceneAssets.filter((item) => item.kind === "sfx")) {
       sfxLayers.push({ id:`${asset.id}-layer`, filePath:asset.filePath, kind:"sfx", start, duration:asset.duration ?? Math.min(3,duration), volume:0.55, loop:false, fadeIn:0.05, fadeOut:0.15, origin:"auto-sfx", label:"AI Content Factory SFX" });
