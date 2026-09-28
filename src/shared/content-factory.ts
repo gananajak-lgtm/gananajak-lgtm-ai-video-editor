@@ -114,6 +114,7 @@ export type PublishJob = {
   statusDetail?: string;
   createdAt: string;
   updatedAt: string;
+  affiliate?: { productId:string; platform:import("./affiliate-factory").AffiliatePlatform; sourceUrl:string; affiliateUrl?:string; sellerName?:string; attachProduct:boolean };
 };
 
 export type PublishPlan = {
