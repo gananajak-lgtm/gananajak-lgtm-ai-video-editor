@@ -65,6 +65,7 @@ import { createAffiliateContentJobs } from "./affiliate-content-jobs";
 import { affiliateJobToContentBrief } from "./affiliate-content-planner";
 import { buildAffiliatePublishPlan, assertAffiliateBinding } from "./affiliate-publish-planner";
 import { getAffiliatePublishReadiness } from "./affiliate-publish-readiness";
+import { createAffiliateVideoPublishJobs } from "./affiliate-publish-jobs";
 import { stageAffiliateProductImages } from "./affiliate-product-assets";
 import { loadAffiliateQueue, saveAffiliateQueue } from "./affiliate-queue-store";
 import { buildMetaAuthorizationUrl, exchangeMetaAuthorizationCode, exchangeMetaLongLivedToken } from "./meta-oauth";
@@ -142,6 +143,11 @@ ipcMain.handle("affiliate:create-local-batch", async (event, jobs:import("../sha
 
 ipcMain.handle("affiliate:create-jobs", async (_event, products:import("../shared/affiliate-factory").AffiliateProduct[]) => createAffiliateContentJobs(products));
 ipcMain.handle("affiliate:publish-readiness", async (_event, item:import("../shared/content-factory").ContentBatchItem, job:import("../shared/affiliate-factory").AffiliateContentJob) => getAffiliatePublishReadiness(item,job));
+ipcMain.handle("affiliate:create-publish-jobs",async(_event,item:import("../shared/content-factory").ContentBatchItem,job:import("../shared/affiliate-factory").AffiliateContentJob)=>{
+  const root=path.join(app.getPath("userData"),"publish"),current=await loadPublishQueue(root),replacements=createAffiliateVideoPublishJobs(item,job),platforms=new Set(replacements.map(entry=>entry.platform));
+  const jobs=[...current.jobs.filter(entry=>entry.itemId!==item.id||!platforms.has(entry.platform)),...replacements];
+  const saved=await savePublishQueue(root,jobs);broadcastPublishQueue(saved);return saved;
+});
 
 ipcMain.handle("affiliate:import-product", async (_event, sourceUrl:string) => createAffiliateProduct({sourceUrl}));
 ipcMain.handle("affiliate:search-products", async (_event, query:string) => {
