@@ -76,6 +76,7 @@ const api: DesktopApi = {
   explainAffiliateProduct: (product,query) => ipcRenderer.invoke("affiliate:explain-product",product,query),
   searchAffiliateProducts: (query) => ipcRenderer.invoke("affiliate:search-products", query),
   loadAffiliateQueue: () => ipcRenderer.invoke("affiliate:load-queue"),
+  getAffiliateAccessGuide: (platform) => ipcRenderer.invoke("affiliate:access-guide",platform),
   saveAffiliateQueue: (products, jobs) => ipcRenderer.invoke("affiliate:save-queue", products, jobs),
   createAffiliateJobs: (products) => ipcRenderer.invoke("affiliate:create-jobs", products),
   getAffiliatePublishReadiness: (item,job) => ipcRenderer.invoke("affiliate:publish-readiness",item,job),
