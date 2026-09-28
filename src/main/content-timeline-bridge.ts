@@ -51,7 +51,7 @@ export function bridgeGeneratedAssets(project: ContentProject): ContentTimelineB
       const imageId = `${scene.id}-generated-image`;
       descriptors.push({ id:imageId, filePath:visual.filePath, summary:scene.visualIntent, characters:[], actions:[], setting:[], mood:[], shotType:"unknown" });
       matches.push({ sceneId:scene.id, imageId, score:1, reason:"Generated specifically for this content scene." });
-      shots.push({ id:`${scene.id}-generated-shot`, sceneId:scene.id, imageId, imagePath:visual.filePath, start, duration, motion:scene.order % 2 === 0 ? "slow-zoom-out" : "slow-zoom-in", reason:"Content Factory generated asset synced to narration." });
+      shots.push({ id:`${scene.id}-generated-shot`, sceneId:scene.id, imageId, imagePath:visual.filePath, start, duration, motion:scene.order % 3 === 0 ? "pan-right" : scene.order % 2 === 0 ? "slow-zoom-out" : "slow-zoom-in", reason:image?.provider==="affiliate-product" ? "Verified product image with gentle motion synced to narration." : "Content Factory generated asset synced to narration." });
     }
 
     if (voice) narrationSegments.push({ sceneId:scene.id, filePath:voice.filePath, start, duration, text:scene.narration });
@@ -93,6 +93,7 @@ export function buildGeneratedTimeline(project: ContentProject, narrationPath: s
     subtitles: bridge.subtitles,
     transitionDuration: 0.25,
     quality: "high",
+    subtitleStyle:{fontFamily:"",scale:1.08,position:"bottom"},
     exportSubtitleSidecar: true,
     narrationOffset: 0
   };
