@@ -56,7 +56,7 @@ import { createTikTokPkce, exchangeTikTokAuthorizationCode, refreshTikTokAccessT
 import { queryTikTokCreatorInfo, initTikTokDirectPost, uploadTikTokFile, waitForTikTokPublish, validateTikTokMedia, fetchTikTokPublishStatus, enforceTikTokCreatorRestrictions } from "./tiktok-uploader";
 import { probeMediaInfo } from "./video/probe";
 import { loadTikTokTokens, saveTikTokTokens, loadTikTokOAuthConfig, saveTikTokOAuthConfig } from "./tiktok-token-store";
-import { createAffiliateProduct } from "./affiliate-product-import";
+import { importAffiliateProductMetadata } from "./affiliate-product-import";
 import { searchAffiliateProducts } from "./affiliate-product-search-service";
 import { createTikTokShopShowcaseProvider } from "./tiktok-shop-showcase-provider";
 import { loadTikTokShopCreatorCredentials, loadUsableTikTokShopCreatorCredentials, getTikTokShopCreatorStatus, loadTikTokShopAppConfig, saveTikTokShopAppConfig, saveTikTokShopCreatorToken } from "./tiktok-shop-token-store";
@@ -153,7 +153,7 @@ ipcMain.handle("affiliate:create-publish-jobs",async(_event,item:import("../shar
   const saved=await savePublishQueue(root,jobs);broadcastPublishQueue(saved);return saved;
 });
 
-ipcMain.handle("affiliate:import-product", async (_event, sourceUrl:string) => createAffiliateProduct({sourceUrl}));
+ipcMain.handle("affiliate:import-product", async (_event, sourceUrl:string) => importAffiliateProductMetadata(sourceUrl));
 ipcMain.handle("affiliate:select-product-photos",async(_event,product:import("../shared/affiliate-factory").AffiliateProduct)=>{
   if(!product?.id || !/^affiliate-product-[a-f0-9-]{36}$/.test(product.id))throw new Error("Invalid product ID.");
   const result=await dialog.showOpenDialog({title:"Select actual product reference photos",properties:["openFile","multiSelections"],filters:[{name:"Product photos",extensions:["png","jpg","jpeg","webp"]}]});
