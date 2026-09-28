@@ -349,6 +349,7 @@ export type DesktopApi = {
   connectMeta: () => Promise<Array<{id:string;name:string;instagramBusinessAccountId?:string}>>;
   getMetaDestinations: () => Promise<Array<{id:string;name:string;instagramBusinessAccountId?:string}>>;
   importAffiliateProduct: (sourceUrl: string) => Promise<import("./affiliate-factory").AffiliateProduct>;
+  selectAffiliateProductPhotos: (product: import("./affiliate-factory").AffiliateProduct) => Promise<import("./affiliate-factory").AffiliateProduct>;
   configureTikTokShopApp: (appKey:string,appSecret:string) => Promise<{configured:boolean}>;
   completeTikTokShopCreatorAuth: (authCode:string) => Promise<{connected:boolean;displayName?:string;scopes:string[]}>;
   connectTikTokShopCreator: () => Promise<{connected:boolean;displayName?:string;scopes:string[]}>;
