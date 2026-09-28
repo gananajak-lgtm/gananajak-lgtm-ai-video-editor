@@ -63,7 +63,7 @@ import { loadTikTokShopCreatorCredentials, loadUsableTikTokShopCreatorCredential
 import { exchangeTikTokShopCreatorCode } from "./tiktok-shop-oauth";
 import { createAffiliateContentJobs } from "./affiliate-content-jobs";
 import { affiliateJobToContentBrief } from "./affiliate-content-planner";
-import { buildAffiliatePublishPlan, assertAffiliateBinding } from "./affiliate-publish-planner";
+import { buildAffiliatePublishPlan, assertAffiliateBinding, assertQueuedAffiliateBinding } from "./affiliate-publish-planner";
 import { getAffiliatePublishReadiness } from "./affiliate-publish-readiness";
 import { createAffiliateVideoPublishJobs } from "./affiliate-publish-jobs";
 import { getAffiliateAccessGuide } from "./affiliate-access-guide";
@@ -552,6 +552,7 @@ ipcMain.handle("content:publish-tiktok-job", async (_event, jobId:string, item:i
   const root=path.join(app.getPath("userData"),"publish"), queue=await loadPublishQueue(root);
   const target=queue.jobs.find((job)=>job.id===jobId && job.platform==="tiktok");
   if(!target) throw new Error("TikTok publish job was not found.");
+  assertQueuedAffiliateBinding(target,item);
   if(target.status==="publishing") throw new Error("This TikTok upload is already in progress.");
   if(target.status==="published") throw new Error("This TikTok publish job is already complete.");
   if(target.scheduledAt && new Date(target.scheduledAt).getTime()>Date.now()) throw new Error("This publish job is scheduled for a future time.");
@@ -610,7 +611,8 @@ ipcMain.handle("content:stage-instagram-video",async(_event,item:import("../shar
 
 ipcMain.handle("content:publish-instagram-job", async (_event, jobId:string, item:import("../shared/content-factory").ContentBatchItem) => {
  const root=path.join(app.getPath("userData"),"publish"),queue=await loadPublishQueue(root),target=queue.jobs.find((job)=>job.id===jobId&&job.platform==="instagram");
- if(!target) throw new Error("Instagram publish job was not found.");if(target.status==="publishing") throw new Error("This Instagram publish is already in progress.");if(target.status==="published") throw new Error("This Instagram publish job is already complete.");if(target.scheduledAt&&new Date(target.scheduledAt).getTime()>Date.now()) throw new Error("This publish job is scheduled for a future time.");
+ if(!target) throw new Error("Instagram publish job was not found.");
+  assertQueuedAffiliateBinding(target,item);if(target.status==="publishing") throw new Error("This Instagram publish is already in progress.");if(target.status==="published") throw new Error("This Instagram publish job is already complete.");if(target.scheduledAt&&new Date(target.scheduledAt).getTime()>Date.now()) throw new Error("This publish job is scheduled for a future time.");
  const pageId=item.publish?.meta?.pageId,igUserId=item.publish?.meta?.instagramBusinessAccountId;if(!pageId||!igUserId) throw new Error("Choose a Facebook Page linked to an Instagram Professional account.");
  const hostedVideoUrl=validateInstagramHostedVideoUrl(item.publish?.meta?.hostedVideoUrl?.trim()??"");
  const token=await loadMetaToken();if(!token) throw new Error("Connect Meta before publishing.");const pages=await listMetaPublishingPages(token.access_token),page=pages.find((entry)=>entry.id===pageId&&entry.instagramBusinessAccountId===igUserId);if(!page) throw new Error("The selected Instagram account is no longer linked to this Facebook Page. Reconnect Meta.");
@@ -626,6 +628,7 @@ ipcMain.handle("content:publish-facebook-job", async (_event, jobId:string, item
   const root=path.join(app.getPath("userData"),"publish"), queue=await loadPublishQueue(root);
   const target=queue.jobs.find((job)=>job.id===jobId && job.platform==="facebook");
   if(!target) throw new Error("Facebook publish job was not found.");
+  assertQueuedAffiliateBinding(target,item);
   if(target.status==="publishing") throw new Error("This Facebook upload is already in progress.");
   if(target.status==="published") throw new Error("This Facebook publish job is already complete.");
   if(target.scheduledAt && new Date(target.scheduledAt).getTime()>Date.now()) throw new Error("This publish job is scheduled for a future time.");
@@ -659,6 +662,7 @@ ipcMain.handle("content:publish-youtube-job", async (_event, jobId: string, item
   const queue = await loadPublishQueue(root);
   const target = queue.jobs.find((job) => job.id === jobId && job.platform === "youtube");
   if (!target) throw new Error("YouTube publish job was not found.");
+  assertQueuedAffiliateBinding(target,item);
   if (target.status === "publishing") throw new Error("This YouTube upload is already in progress.");
   if (target.status === "published") throw new Error("This YouTube publish job is already complete.");
   if (target.scheduledAt && new Date(target.scheduledAt).getTime() > Date.now()) throw new Error("This publish job is scheduled for a future time.");
