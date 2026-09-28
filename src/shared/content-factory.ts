@@ -49,6 +49,8 @@ export type AssetJob = {
   outputAssetId?: string;
   error?: string;
   statusDetail?: string;
+  referenceAssetId?: string;
+  referenceImagePath?: string;
   createdAt: string;
   updatedAt: string;
 };
