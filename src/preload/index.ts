@@ -33,6 +33,7 @@ const api: DesktopApi = {
     ipcRenderer.invoke("ai:save-openai-key", apiKey),
   getContentProviderStatus: () => ipcRenderer.invoke("content:provider-status"),
   saveReplicateApiToken: (token) => ipcRenderer.invoke("content:save-replicate-token", token),
+  saveReplicateVideoModel: (model) => ipcRenderer.invoke("content:save-replicate-video-model", model),
   saveElevenLabsApiKey: (apiKey) => ipcRenderer.invoke("content:save-elevenlabs-key", apiKey),
   generateContentProject: (brief) =>
     ipcRenderer.invoke("content:generate-project", brief),
