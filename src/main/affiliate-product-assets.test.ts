@@ -41,3 +41,20 @@ test("uses another genuine product thumbnail when the first image fails",async()
   assert.equal(brokenCalls,1);
  }finally{await rm(root,{recursive:true,force:true});}
 });
+
+test("stages selected local product photos without network access",async()=>{
+ const root=await mkdtemp(path.join(os.tmpdir(),"affiliate-local-product-"));
+ try{
+  const managed=path.join(root,"photos"),work=path.join(root,"work");
+  await import("node:fs/promises").then(fs=>fs.mkdir(managed,{recursive:true}));
+  const photo=path.join(managed,"selected.png");
+  const bytes=new Uint8Array([137,80,78,71,13,10,26,10,1,2,3,4]);
+  await import("node:fs/promises").then(fs=>fs.writeFile(photo,bytes));
+  const project=buildLocalTestProject({topic:"รองเท้าจริง",format:"short",language:"th",targetDurationSeconds:20});
+  const product={id:"p",platform:"shopee" as const,sourceUrl:"https://shopee.co.th/product/1/2",title:"รองเท้า",imageUrls:[],localImagePaths:[photo],importedAt:new Date().toISOString()};
+  const noNetwork=async()=>{throw new Error("Unexpected network request");};
+  const result=await stageAffiliateProductImages(product,project,work,noNetwork as typeof fetch,managed);
+  assert.equal(result.assetPlan?.assets.length,project.scenes.length);
+  assert.ok(result.assetPlan?.assets.every(asset=>asset.filePath.endsWith(".png")&&asset.source==="imported"));
+ }finally{await rm(root,{recursive:true,force:true});}
+});
