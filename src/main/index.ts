@@ -63,6 +63,7 @@ import { loadTikTokShopCreatorCredentials, loadUsableTikTokShopCreatorCredential
 import { exchangeTikTokShopCreatorCode } from "./tiktok-shop-oauth";
 import { createAffiliateContentJobs } from "./affiliate-content-jobs";
 import { affiliateJobToContentBrief } from "./affiliate-content-planner";
+import { stageAffiliateProductImages } from "./affiliate-product-assets";
 import { loadAffiliateQueue, saveAffiliateQueue } from "./affiliate-queue-store";
 import { buildMetaAuthorizationUrl, exchangeMetaAuthorizationCode, exchangeMetaLongLivedToken } from "./meta-oauth";
 import { loadMetaOAuthConfig, loadMetaToken, loadUsableMetaToken, saveMetaOAuthConfig, saveMetaToken, loadMetaBrokerConfig, saveMetaBrokerConfig } from "./meta-token-store";
@@ -124,7 +125,10 @@ ipcMain.handle("affiliate:create-local-batch", async (event, jobs:import("../sha
       item.status="preparing";
       const project=buildLocalTestProject(item.brief); item.project=project; item.status="generating-assets";
       const root=path.join(app.getPath("userData"),"content-assets",project.id,"affiliate-local-test");
-      item.project=await generateLocalTestAssets(project,root); item.status="assets-ready";
+      const product=jobs[index]?.product;
+      item.project=product?.imageUrls.length?await stageAffiliateProductImages(product,project,root):await generateLocalTestAssets(project,root);
+      if(item.project.assetPlan&&!item.project.assetPlan.assets.some((asset)=>asset.kind==="voice")) item.project=await generateLocalTestAssets(project,root);
+      item.status="assets-ready";
       const rendered=await renderContentBatch({...batch,items:[item]},outputDir,workRoot);
       Object.assign(item,ensurePublishPlan(rendered.items[0]));
     }catch(error){item.status="failed";item.failedStage=item.project?.assetPlan?"render":item.project?"assets":"project";item.error=error instanceof Error?error.message:String(error);}
