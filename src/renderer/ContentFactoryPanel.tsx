@@ -701,11 +701,11 @@ export default function ContentFactoryPanel({
         <div className="timelineHeader"><div><p className="eyebrow">AI Video</p><h3>วิดีโอสินค้าจากภาพอ้างอิง</h3><p className="muted">โหมดคลิปปักตะกร้าจะใช้ภาพสินค้าจริงเป็น reference เพื่อสร้างภาพเคลื่อนไหวก่อน และใช้ motion จากภาพนิ่งเป็น fallback เมื่อยังไม่ได้ตั้งโมเดลวิดีโอ</p></div><span className={providerStatus.affiliateVideoReady ? "aiBadge readyBadge" : "aiBadge"}>{providerStatus.affiliateVideoReady ? "AI Video พร้อม ✓" : "ใช้ Motion Fallback"}</span></div>
         <div className="keyRow">
           <input type="password" value={replicateToken} onChange={(e) => setReplicateToken(e.target.value)} placeholder={providerStatus.replicateConfigured ? "Replicate token saved ✓" : "Replicate API token"} />
-          <input value={replicateVideoModel} onChange={(e)=>setReplicateVideoModel(e.target.value)} placeholder="โมเดลวิดีโอ Replicate: owner/model" aria-label="Replicate video model" />
+          <input value={replicateVideoModel} onChange={(e)=>setReplicateVideoModel(e.target.value)} placeholder="ตัวอย่าง: kwaivgi/kling-v2.1 (Image-to-Video)" aria-label="Replicate video model" />
           <input type="password" value={elevenLabsKey} onChange={(e) => setElevenLabsKey(e.target.value)} placeholder={providerStatus.elevenLabsConfigured ? "ElevenLabs key saved ✓" : "ElevenLabs API key"} />
           <button onClick={saveProviderKeys} disabled={!replicateToken.trim() && !elevenLabsKey.trim() && replicateVideoModel===(providerStatus.videoModel ?? "")}>บันทึกผู้ให้บริการ</button>
         </div>
-        <p className="muted">ต้องใช้โมเดล Image-to-Video ที่รับภาพอ้างอิง หากยังไม่ตั้งค่า ระบบยังสร้างคลิปต่อได้ด้วยภาพสินค้าจริงและ motion fallback</p>
+        <p className="muted">ตัวอย่างที่มี adapter รองรับ: kwaivgi/kling-v2.1 (วิดีโอ 5 วินาทีต่อช็อต) · โมเดลอื่นอาจใช้ชื่อ input ต่างกันและต้องทดสอบก่อนใช้งานจริง หากไม่ได้ตั้งค่า ระบบใช้ภาพสินค้าและ motion fallback ซึ่งไม่ใช่ AI Video</p>
       </div>
             {error && <div className="message errorMessage">{error}</div>}
 
