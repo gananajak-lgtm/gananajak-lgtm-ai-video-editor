@@ -126,8 +126,7 @@ ipcMain.handle("affiliate:create-local-batch", async (event, jobs:import("../sha
       const project=buildLocalTestProject(item.brief); item.project=project; item.status="generating-assets";
       const root=path.join(app.getPath("userData"),"content-assets",project.id,"affiliate-local-test");
       const product=jobs[index]?.product;
-      item.project=product?.imageUrls.length?await stageAffiliateProductImages(product,project,root):await generateLocalTestAssets(project,root);
-      if(item.project.assetPlan&&!item.project.assetPlan.assets.some((asset)=>asset.kind==="voice")) item.project=await generateLocalTestAssets(project,root);
+      if(product?.imageUrls.length){const staged=await stageAffiliateProductImages(product,project,root);const placeholders=await generateLocalTestAssets(project,root);const productImages=staged.assetPlan?.assets.filter((asset)=>asset.kind==="image")??[];const voices=placeholders.assetPlan?.assets.filter((asset)=>asset.kind==="voice")??[];const imageJobs=staged.assetPlan?.jobs.filter((job)=>job.kind==="image")??[];const voiceJobs=placeholders.assetPlan?.jobs.filter((job)=>job.kind==="voice")??[];item.project={...staged,assetPlan:{projectId:project.id,assets:[...productImages,...voices],jobs:[...imageJobs,...voiceJobs]}};}else item.project=await generateLocalTestAssets(project,root);
       item.status="assets-ready";
       const rendered=await renderContentBatch({...batch,items:[item]},outputDir,workRoot);
       Object.assign(item,ensurePublishPlan(rendered.items[0]));
