@@ -36,9 +36,9 @@ export function createAffiliateProduct(input:{sourceUrl:string;title?:string;ima
 
 /** Extract only publisher-provided public metadata; never infer a price from a URL. */
 export function extractPublicProductMetadata(html:string,sourceUrl:string):Pick<AffiliateProduct,"title"|"imageUrls"|"description"|"sellerName"|"price"|"currency"> {
-  const tags=Array.from(html.matchAll(/<meta\\b[^>]*>/gi),match=>match[0]);
-  const attrs=(tag:string)=>Object.fromEntries(Array.from(tag.matchAll(/([\\w:-]+)\\s*=\\s*(?:"([^"]*)"|'([^']*)')/g),m=>[m[1].toLowerCase(),m[2]??m[3]]));
-  const decoded=(text:string)=>text.replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&#(\\d+);/g,(_,n:string)=>String.fromCodePoint(Number(n))).trim();
+  const tags=Array.from(html.matchAll(/<meta\b[^>]*>/gi),match=>match[0]);
+  const attrs=(tag:string)=>Object.fromEntries(Array.from(tag.matchAll(/([\w:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g),m=>[m[1].toLowerCase(),m[2]??m[3]]));
+  const decoded=(text:string)=>text.replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&#(\d+);/g,(_,n:string)=>String.fromCodePoint(Number(n))).trim();
   const meta=new Map<string,string>();
   for(const tag of tags){
     const a=attrs(tag),key=(a.property??a.name??"").toLowerCase();
@@ -49,7 +49,7 @@ export function extractPublicProductMetadata(html:string,sourceUrl:string):Pick<
     if(!value)return;
     try{
       const url=new URL(value,sourceUrl);
-      if(url.protocol==="https:"&&!url.username&&!url.password&&!url.port&& !/(^|\\.)localhost$/.test(url.hostname)&&!imageUrls.includes(url.toString()))
+      if(url.protocol==="https:"&&!url.username&&!url.password&&!url.port&& !/(^|\.)localhost$/.test(url.hostname)&&!imageUrls.includes(url.toString()))
         imageUrls.push(url.toString());
     }catch{/* Ignore unusable metadata. */}
   };
@@ -58,9 +58,9 @@ export function extractPublicProductMetadata(html:string,sourceUrl:string):Pick<
   pushImage(meta.get("twitter:image"));
   const title=meta.get("og:title")??meta.get("twitter:title")??productTitleFromUrl(sourceUrl)??"Imported product";
   const priceText=meta.get("product:price:amount")??meta.get("og:price:amount");
-  const price=priceText&&/^\\d+(?:\\.\\d+)?$/.test(priceText)?Number(priceText):undefined;
+  const price=priceText&&/^\d+(?:\.\d+)?$/.test(priceText)?Number(priceText):undefined;
   const currency=meta.get("product:price:currency")??meta.get("og:price:currency");
-  return {title:title.slice(0,240),imageUrls:imageUrls.slice(0,12),description:meta.get("og:description")?.slice(0,2000),sellerName:meta.get("product:brand"),price:Number.isFinite(price)?price:undefined,currency};
+  return {title:title.slice(0,240),imageUrls:imageUrls.slice(0,12),description:meta.get("og:description")?.slice(0,2000),sellerName:meta.get("product:brand"),price:typeof price==="number"&&Number.isFinite(price)?price:undefined,currency};
 }
 
 /** Fetch only known storefront hosts; block redirects to arbitrary addresses and bound response size/time. */
