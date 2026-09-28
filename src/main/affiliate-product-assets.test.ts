@@ -23,3 +23,21 @@ test("rejects non-image content and enforces declared size limit",async()=>{
   await assert.rejects(()=>stageAffiliateProductImages(product,project,root,huge as typeof fetch),/12 MB/);
  } finally {await rm(root,{recursive:true,force:true});}
 });
+
+test("uses another genuine product thumbnail when the first image fails",async()=>{
+ const root=await mkdtemp(path.join(os.tmpdir(),"affiliate-assets-"));
+ try{
+  const project=buildLocalTestProject({topic:"สินค้า",format:"short",language:"th",targetDurationSeconds:20});
+  const bytes=new Uint8Array([137,80,78,71,13,10,26,10,1,2,3,4]);
+  let brokenCalls=0;
+  const fetcher=async(url:string)=>{
+   if(url.endsWith("/broken.png")){brokenCalls++;return new Response("missing",{status:404});}
+   return new Response(bytes,{status:200,headers:{"content-type":"image/png"}});
+  };
+  const product={id:"p",platform:"shopee" as const,sourceUrl:"https://shop.example/p",title:"test",imageUrls:["https://cdn.example.com/broken.png","https://cdn.example.com/good.png"],importedAt:new Date().toISOString()};
+  const result=await stageAffiliateProductImages(product,project,root,fetcher as typeof fetch);
+  assert.equal(result.assetPlan?.assets.length,project.scenes.length);
+  assert.ok(result.assetPlan?.assets.every(asset=>asset.sourcePrompt==="https://cdn.example.com/good.png"));
+  assert.equal(brokenCalls,1);
+ }finally{await rm(root,{recursive:true,force:true});}
+});
