@@ -259,11 +259,16 @@ export default function ContentFactoryPanel({
   };
 
   const saveProviderKeys = async () => {
-    let status = providerStatus;
-    if (replicateToken.trim()) status = await window.videoEditor.saveReplicateApiToken(replicateToken);
-    status = await window.videoEditor.saveReplicateVideoModel(replicateVideoModel);
-    if (elevenLabsKey.trim()) status = await window.videoEditor.saveElevenLabsApiKey(elevenLabsKey);
-    setProviderStatus(status); setReplicateToken(""); setElevenLabsKey("");
+    setError(null);
+    try {
+      let status = providerStatus;
+      if (replicateToken.trim()) status = await window.videoEditor.saveReplicateApiToken(replicateToken);
+      status = await window.videoEditor.saveReplicateVideoModel(replicateVideoModel);
+      if (elevenLabsKey.trim()) status = await window.videoEditor.saveElevenLabsApiKey(elevenLabsKey);
+      setProviderStatus(status); setReplicateToken(""); setElevenLabsKey("");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : String(error));
+    }
   };
   const [assetProgress, setAssetProgress] = useState({ completed:0, total:0, kind:undefined as string | undefined });
   const [renderProgress, setRenderProgress] = useState(0);
