@@ -1,0 +1,143 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { bridgeGeneratedAssets, buildGeneratedTimeline, timedSceneSubtitles } from "./content-timeline-bridge";
+import { buildContentProject } from "./content-scene-planner";
+import { buildAssetPlan } from "./content-asset-planner";
+
+test("bridge maps generated scene assets into the existing visual plan", () => {
+  const base = buildContentProject(
+    "demo",
+    "Island of the Dolls",
+    { topic: "Island of the Dolls", format: "short", language: "en", targetDurationSeconds: 30 },
+    "The canal is quiet. Dolls hang from the trees."
+  );
+  const plan = buildAssetPlan(base);
+  const project = {
+    ...base,
+    assetPlan: {
+      ...plan,
+      assets: base.scenes.flatMap((scene, index) => [
+        { id: `img-${index}`, projectId: base.id, sceneId: scene.id, kind: "image" as const, filePath: `/tmp/${index}.png` },
+        { id: `voice-${index}`, projectId: base.id, sceneId: scene.id, kind: "voice" as const, filePath: `/tmp/${index}.mp3`, duration: scene.estimatedDuration }
+      ])
+    }
+  };
+  const result = bridgeGeneratedAssets(project);
+  assert.equal(result.visualPlan.shots.length, base.scenes.length);
+  assert.equal(result.narrationSegments.length, base.scenes.length);
+  assert.equal(result.missingSceneIds.length, 0);
+  assert.equal(result.readyForNarrationAssembly, true);
+  if (base.scenes.length > 1) {
+    assert.equal(result.visualPlan.shots[1].start, base.scenes[0].estimatedDuration);
+  } else {
+    assert.equal(result.visualPlan.shots[0].start, 0);
+  }
+});
+
+
+test("generated timeline prefers imported Meta video and keeps image fallback", () => {
+  const base = buildContentProject(
+    "hybrid",
+    "Mysterious canal",
+    { topic: "Mysterious canal", format: "short", language: "en", targetDurationSeconds: 15 },
+    "A quiet canal disappears into the mist."
+  );
+  const scene = base.scenes[0];
+  const project = {
+    ...base,
+    assetPlan: {
+      projectId: base.id,
+      jobs: [],
+      assets: [
+        { id:"img", projectId:base.id, sceneId:scene.id, kind:"image" as const, filePath:"/tmp/fallback.png" },
+        { id:"video", projectId:base.id, sceneId:scene.id, kind:"video" as const, filePath:"/tmp/meta.mp4", provider:"meta-ai-manual", source:"meta-manual" as const, duration:5 },
+        { id:"voice", projectId:base.id, sceneId:scene.id, kind:"voice" as const, filePath:"/tmp/voice.mp3", duration:7.5 }
+      ]
+    }
+  };
+  const timeline = buildGeneratedTimeline(project, "/tmp/narration.m4a");
+  assert.equal(timeline.clips[0].videoPath, "/tmp/meta.mp4");
+  assert.equal(timeline.clips[0].imagePath, "/tmp/fallback.png");
+  assert.equal(timeline.clips[0].videoDuration, 5);
+  assert.equal(timeline.clips[0].duration, 7.5);
+  assert.equal(timeline.duration, 7.5);
+});
+
+
+test("fallback scene planner creates Meta-ready video jobs", () => {
+  const base = buildContentProject(
+    "meta-ready",
+    "Forest mystery",
+    { topic:"Forest mystery", format:"short", language:"en", targetDurationSeconds:20 },
+    "The path vanishes into fog."
+  );
+  const plan = buildAssetPlan(base);
+  assert.ok(base.scenes.every((scene) => Boolean(scene.videoPrompt)));
+  assert.equal(plan.jobs.filter((job) => job.kind === "video").length, base.scenes.length);
+});
+
+
+test("bridge falls back to estimated scene duration when voice duration is invalid", () => {
+  const base = buildContentProject(
+    "duration-guard",
+    "Broken probe",
+    { topic:"Broken probe", format:"short", language:"en", targetDurationSeconds:12 },
+    "A single scene waits in silence."
+  );
+  const scene = base.scenes[0];
+  const project = {
+    ...base,
+    assetPlan: {
+      projectId: base.id,
+      jobs: [],
+      assets: [
+        { id:"img", projectId:base.id, sceneId:scene.id, kind:"image" as const, filePath:"/tmp/fallback.png" },
+        { id:"voice", projectId:base.id, sceneId:scene.id, kind:"voice" as const, filePath:"/tmp/voice.mp3", duration:0 }
+      ]
+    }
+  };
+  const timeline = buildGeneratedTimeline(project,"/tmp/narration.m4a");
+  assert.equal(timeline.clips[0].duration,scene.estimatedDuration);
+  assert.equal(timeline.duration,scene.estimatedDuration);
+});
+
+
+test("generated timeline prefers the latest asset when legacy duplicates exist", () => {
+  const project=buildContentProject("legacy-duplicates","Legacy duplicate assets",{topic:"Legacy duplicate assets",format:"short",language:"en",targetDurationSeconds:30},"One scene.");
+  const scene=project.scenes[0];
+  project.assetPlan={
+    projectId:project.id,
+    jobs:[],
+    assets:[
+      {id:"image-old",projectId:project.id,sceneId:scene.id,kind:"image",filePath:"/tmp/old.png"},
+      {id:"image-new",projectId:project.id,sceneId:scene.id,kind:"image",filePath:"/tmp/new.png"},
+      {id:"voice-old",projectId:project.id,sceneId:scene.id,kind:"voice",filePath:"/tmp/old.mp3",duration:4},
+      {id:"voice-new",projectId:project.id,sceneId:scene.id,kind:"voice",filePath:"/tmp/new.mp3",duration:6},
+      {id:"video-old",projectId:project.id,sceneId:scene.id,kind:"video",filePath:"/tmp/old.mp4",duration:3},
+      {id:"video-new",projectId:project.id,sceneId:scene.id,kind:"video",filePath:"/tmp/new.mp4",duration:5}
+    ]
+  };
+  const timeline=buildGeneratedTimeline(project,"/tmp/narration.m4a");
+  assert.equal(timeline.clips[0].imagePath,"/tmp/new.png");
+  assert.equal(timeline.clips[0].videoPath,"/tmp/new.mp4");
+  assert.equal(timeline.clips[0].videoDuration,5);
+  assert.equal(timeline.clips[0].duration,6);
+});
+
+test("affiliate product images get gentle varied motion and timed subtitles",()=>{const project:any={id:"p",title:"x",brief:{},script:"",createdAt:"",updatedAt:"",scenes:[{id:"s1",order:1,narration:"หนึ่ง",visualIntent:"สินค้า",estimatedDuration:3},{id:"s2",order:2,narration:"สอง",visualIntent:"สินค้า",estimatedDuration:3}],assetPlan:{assets:[{id:"i1",projectId:"p",sceneId:"s1",kind:"image",filePath:"a.jpg",provider:"affiliate-product"},{id:"v1",projectId:"p",sceneId:"s1",kind:"voice",filePath:"a.mp3",duration:2},{id:"i2",projectId:"p",sceneId:"s2",kind:"image",filePath:"b.jpg",provider:"affiliate-product"},{id:"v2",projectId:"p",sceneId:"s2",kind:"voice",filePath:"b.mp3",duration:4}],jobs:[]}};const bridge=bridgeGeneratedAssets(project);assert.equal(bridge.subtitles[0].end,2);assert.equal(bridge.subtitles[1].start,2);assert.notEqual(bridge.visualPlan.shots[0].motion,bridge.visualPlan.shots[1].motion);});
+
+test("long Thai narration is split into consecutive readable timed subtitle cues",()=>{
+ const text="คืนนี้พรานสิงห์เดินผ่านป่าลึกที่ไร้เสียงนกและเสียงลม ท่ามกลางความมืดมิดเขาได้ยินเสียงกระซิบเรียกชื่ออยู่หลังต้นไม้ใหญ่ แต่เมื่อหันกลับไปกลับไม่พบใครอยู่ตรงนั้น";
+ const cues=timedSceneSubtitles("thai-scene",text,4,9);
+ assert.ok(cues.length>1);
+ assert.equal(cues[0].start,4);
+ assert.equal(cues.at(-1)?.end,13);
+ assert.ok(cues.every((cue,i)=>cue.text.length>0&&cue.end>cue.start&&(i===0||Math.abs(cue.start-cues[i-1].end)<0.000001)));
+ assert.equal(cues.map(cue=>cue.text).join("").replace(/\s/g,""),text.replace(/\s/g,""));
+ assert.ok(cues.every(cue=>Array.from(cue.text).length<70));
+});
+test("short scene subtitles retain their original single cue",()=>{
+ const cues=timedSceneSubtitles("short","สวัสดีครับ",2,2.5);
+ assert.deepEqual(cues,[{id:"subtitle-short",start:2,end:4.5,text:"สวัสดีครับ"}]);
+ assert.deepEqual(timedSceneSubtitles("empty","  ",0,5),[]);
+});

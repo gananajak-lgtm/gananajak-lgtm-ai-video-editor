@@ -1,0 +1,7 @@
+import type { IncomingMessage,ServerResponse } from "node:http";
+export const BROKER_MAX_BODY_BYTES=16*1024;
+export function applyBrokerSecurityHeaders(res:ServerResponse){res.setHeader("cache-control","no-store");res.setHeader("x-content-type-options","nosniff");res.setHeader("referrer-policy","no-referrer");res.setHeader("content-security-policy","default-src 'none'; frame-ancestors 'none'; base-uri 'none'");}
+export async function readBrokerJson<T>(req:IncomingMessage,maxBytes=BROKER_MAX_BODY_BYTES):Promise<T>{let raw="",size=0;for await(const chunk of req){const bytes=Buffer.isBuffer(chunk)?chunk:Buffer.from(chunk);size+=bytes.length;if(size>maxBytes)throw new Error("Broker request body is too large.");raw+=bytes.toString("utf8");}if(!raw)throw new Error("Broker request body is required.");return JSON.parse(raw) as T;}
+export class BrokerRateLimiter{private buckets=new Map<string,{count:number;resetAt:number}>();constructor(private limit=30,private windowMs=60_000){}allow(key:string,now=Date.now()){const current=this.buckets.get(key);if(!current||now>=current.resetAt){this.buckets.set(key,{count:1,resetAt:now+this.windowMs});return true;}if(current.count>=this.limit)return false;current.count+=1;return true;}}
+export function requestKey(req:IncomingMessage){return req.socket.remoteAddress||"unknown";}
+export function safeBrokerError(error:unknown){const message=error instanceof Error?error.message:String(error);return /token|secret|code=/i.test(message)?"Broker request failed.":message;}

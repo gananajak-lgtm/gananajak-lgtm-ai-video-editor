@@ -1,0 +1,3 @@
+import test from "node:test";import assert from "node:assert/strict";import { getAffiliateAccessGuide } from "./affiliate-access-guide";
+test("Shopee beginners can create videos without Open API",()=>{const guide=getAffiliateAccessGuide("shopee");assert.equal(guide.mode,"beginner-manual");assert.equal(guide.canCreateVideos,true);assert.equal(guide.canSearchExternal,false);assert.equal(guide.canAutoAttachProduct,false);assert.match(guide.headline,/ไม่ต้องมี Open API/);});
+test("connected TikTok Shop search does not imply automatic product attachment",()=>{const guide=getAffiliateAccessGuide("tiktok-shop",true);assert.equal(guide.canSearchExternal,true);assert.equal(guide.canAutoAttachProduct,false);});

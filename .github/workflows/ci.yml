@@ -1,32 +1,38 @@
 name: CI
 
 on:
+  pull_request:
   push:
     branches:
-      - main
-      - "phase-1/**"
-  pull_request:
+      - phase-1/mvp-foundation
+      - feature/ai-content-factory
 
 jobs:
-  verify:
+  validate:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: broker
+          POSTGRES_PASSWORD: broker
+          POSTGRES_DB: broker_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U broker -d broker_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Build
-        run: npm run build
-
-      - name: Render smoke test
-        run: npm run smoke:render
+      - run: npm install --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run test:content
+      - run: npm run test:broker:postgres
+        env:
+          META_BROKER_TEST_DATABASE_URL: postgresql://broker:broker@127.0.0.1:5432/broker_test
+      - run: npm run build

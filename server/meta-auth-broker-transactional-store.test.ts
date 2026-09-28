@@ -1,0 +1,5 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { TransactionalMetaBrokerSessionStore,type TransactionalMetaBrokerAdapter } from "./meta-auth-broker-transactional-store";
+import type { MetaBrokerSession } from "./meta-auth-broker-core";
+test("transactional store delegates atomic completion and consume",async()=>{let current:MetaBrokerSession|null=null;const adapter:TransactionalMetaBrokerAdapter={async create(s){current={...s};},async get(id){return current?.id===id?{...current}:null;},async complete(id,code){if(!current||current.id!==id||current.used)return null;current.code=code;return {...current};},async consume(id,state){if(!current||current.id!==id||current.used||current.state!==state||!current.code)return null;current.used=true;return {...current};}};const store=new TransactionalMetaBrokerSessionStore(adapter);const session=await store.create({clientId:"desktop",state:"state",desktopRedirectUri:"http://127.0.0.1:54321/meta-broker-callback"});await store.complete(session.id,"code");assert.equal((await store.consume(session.id,"state")).used,true);await assert.rejects(()=>store.consume(session.id,"state"),/already used/);});

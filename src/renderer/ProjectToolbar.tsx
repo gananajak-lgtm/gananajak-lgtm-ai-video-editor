@@ -11,7 +11,7 @@ function fileName(filePath: string) {
   return filePath.split(/[\\/]/).pop() ?? filePath;
 }
 
-export default function ProjectToolbar({
+export default function โปรเจกต์Toolbar({
   title,
   projectPath,
   autosaveState,
@@ -21,26 +21,26 @@ export default function ProjectToolbar({
 }: Props) {
   const statusText =
     autosaveState === "saving"
-      ? "Autosaving..."
+      ? "กำลังบันทึกอัตโนมัติ..."
       : autosaveState === "saved"
-        ? "Autosaved"
+        ? "บันทึกอัตโนมัติแล้ว"
         : autosaveState === "error"
-          ? "Autosave error"
-          : "Ready";
+          ? "บันทึกอัตโนมัติไม่สำเร็จ"
+          : "พร้อม";
 
   return (
     <section className="projectToolbar">
       <div className="projectIdentity">
         <label>
-          Project
+          โปรเจกต์
           <input
             value={title}
             onChange={(event) => onTitleChange(event.target.value)}
-            placeholder="Untitled project"
+            placeholder="โปรเจกต์ไม่มีชื่อ"
           />
         </label>
-        <span title={projectPath ?? "Autosave recovery only"}>
-          {projectPath ? fileName(projectPath) : "Not saved to a project file yet"}
+        <span title={projectPath ?? "กู้คืนจากการบันทึกอัตโนมัติเท่านั้น"}>
+          {projectPath ? fileName(projectPath) : "ยังไม่ได้บันทึกเป็นไฟล์โปรเจกต์"}
         </span>
       </div>
 
@@ -54,9 +54,9 @@ export default function ProjectToolbar({
         >
           {statusText}
         </span>
-        <button onClick={onOpen}>Open project</button>
+        <button onClick={onOpen}>เปิดโปรเจกต์</button>
         <button className="primary" onClick={onSave}>
-          Save project
+          บันทึกโปรเจกต์
         </button>
       </div>
     </section>

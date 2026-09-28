@@ -55,13 +55,13 @@ function validateTimelinePlan(plan: TimelinePlan) {
   }
 
   for (const clip of plan.clips) {
-    if (!clip.imagePath || !Number.isFinite(clip.duration) || clip.duration <= 0) {
+    if ((!clip.imagePath && !clip.videoPath) || !Number.isFinite(clip.duration) || clip.duration <= 0) {
       throw new Error(`Invalid timeline clip: ${clip.id}`);
     }
   }
 }
 
-function transitionDurations(plan: TimelinePlan) {
+export function transitionDurations(plan: TimelinePlan) {
   return plan.clips.slice(0, -1).map((clip, index) => {
     const next = plan.clips[index + 1];
     return Math.max(
@@ -144,9 +144,12 @@ function escapeFilterPath(filePath: string) {
     .replace(/\]/g, "\\]");
 }
 
-function createVideoFilter(
+export type VisualInputBinding = { primary: number; fallback?: number };
+
+export function createVideoFilter(
   plan: TimelinePlan,
-  subtitlePath: string | null
+  subtitlePath: string | null,
+  bindings: VisualInputBinding[] = plan.clips.map((_, index) => ({ primary:index, fallback:index + plan.clips.length }))
 ) {
   const transitions = transitionDurations(plan);
 
@@ -154,18 +157,31 @@ function createVideoFilter(
     const extra = transitions[index] ?? 0;
     const renderDuration = clip.duration + extra;
 
+    if (clip.videoPath) {
+      const sourceDuration = clip.videoDuration ?? renderDuration;
+      if (clip.imagePath && sourceDuration + 0.04 < renderDuration) {
+        const videoDuration = Math.max(0.04, Math.min(sourceDuration, renderDuration));
+        const fallbackDuration = Math.max(0.04, renderDuration - videoDuration);
+        return [
+          `[${bindings[index].primary}:v]scale=${plan.width}:${plan.height}:force_original_aspect_ratio=increase,crop=${plan.width}:${plan.height},setsar=1,trim=duration=${fixed(videoDuration)},setpts=PTS-STARTPTS,fps=${plan.fps},settb=AVTB,format=yuv420p[vclip${index}];`,
+          `[${bindings[index].fallback ?? bindings[index].primary}:v]scale=${plan.width}:${plan.height}:force_original_aspect_ratio=increase,crop=${plan.width}:${plan.height},setsar=1,${motionFilter(clip.motion, fallbackDuration, plan.width, plan.height, plan.fps)},trim=duration=${fixed(fallbackDuration)},setpts=PTS-STARTPTS,fps=${plan.fps},settb=AVTB,format=yuv420p[vfallback${index}];`,
+          `[vclip${index}][vfallback${index}]concat=n=2:v=1:a=0[v${index}]`
+        ].join("");
+      }
+      return [
+        `[${bindings[index].primary}:v]`,
+        `scale=${plan.width}:${plan.height}:force_original_aspect_ratio=increase,`,
+        `crop=${plan.width}:${plan.height},setsar=1,`,
+        `trim=duration=${fixed(renderDuration)},setpts=PTS-STARTPTS,fps=${plan.fps},settb=AVTB,format=yuv420p[v${index}]`
+      ].join("");
+    }
+
     return [
       `[${index}:v]`,
       `scale=${plan.width}:${plan.height}:force_original_aspect_ratio=increase,`,
       `crop=${plan.width}:${plan.height},`,
       "setsar=1,",
-      motionFilter(
-        clip.motion,
-        renderDuration,
-        plan.width,
-        plan.height,
-        plan.fps
-      ),
+      motionFilter(clip.motion, renderDuration, plan.width, plan.height, plan.fps),
       ",",
       `trim=duration=${fixed(renderDuration)},setpts=PTS-STARTPTS,fps=${plan.fps},settb=AVTB,format=yuv420p[v${index}]`
     ].join("");
@@ -451,21 +467,25 @@ export async function renderTimeline(
     const args: string[] = ["-y"];
     const transitions = transitionDurations(plan);
 
+    const bindings: VisualInputBinding[] = [];
+    let nextInput = 0;
     for (const [index, clip] of plan.clips.entries()) {
       const renderDuration = clip.duration + (transitions[index] ?? 0);
-      args.push(
-        "-loop",
-        "1",
-        "-framerate",
-        String(plan.fps),
-        "-t",
-        fixed(renderDuration),
-        "-i",
-        clip.imagePath
-      );
+      const binding: VisualInputBinding = { primary:nextInput++ };
+      if (clip.videoPath) {
+        args.push("-t", fixed(Math.min(clip.videoDuration ?? renderDuration, renderDuration)), "-i", clip.videoPath);
+        if (clip.imagePath && (clip.videoDuration ?? renderDuration) + 0.04 < renderDuration) {
+          const fallbackDuration = renderDuration - (clip.videoDuration ?? 0);
+          binding.fallback = nextInput++;
+          args.push("-loop", "1", "-framerate", String(plan.fps), "-t", fixed(fallbackDuration), "-i", clip.imagePath);
+        }
+      } else {
+        args.push("-loop", "1", "-framerate", String(plan.fps), "-t", fixed(renderDuration), "-i", clip.imagePath);
+      }
+      bindings.push(binding);
     }
 
-    const narrationInput = plan.clips.length;
+    const narrationInput = nextInput;
     args.push("-i", plan.narration);
 
     const activeLayers = (plan.audioLayers ?? []).filter(
@@ -481,7 +501,7 @@ export async function renderTimeline(
       args.push("-i", layer.filePath);
     }
 
-    const video = createVideoFilter(plan, subtitlePath);
+    const video = createVideoFilter(plan, subtitlePath, bindings);
     const audio = createAudioFilter(plan, narrationInput, activeLayers);
     const filterScriptPath = path.join(workDirectory, "filter.ffgraph");
 

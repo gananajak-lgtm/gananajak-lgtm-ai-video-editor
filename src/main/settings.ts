@@ -5,9 +5,14 @@ import type { AiSettingsStatus } from "../shared/types";
 
 type PersistedSettings = {
   openAiApiKeyEncrypted?: string;
+  replicateApiTokenEncrypted?: string;
+  elevenLabsApiKeyEncrypted?: string;
+  replicateVideoModel?: string;
 };
 
 let sessionApiKey: string | null = null;
+let sessionReplicateToken: string | null = null;
+let sessionElevenLabsKey: string | null = null;
 
 function settingsPath() {
   return path.join(app.getPath("userData"), "settings.json");
@@ -93,4 +98,66 @@ export async function saveOpenAiApiKey(
   await writeSettings(settings);
 
   return { configured: true, persistedSecurely: true };
+}
+
+
+async function getEncryptedSecret(
+  sessionValue: string | null,
+  environmentName: string,
+  settingsKey: "replicateApiTokenEncrypted" | "elevenLabsApiKeyEncrypted"
+): Promise<string | null> {
+  if (sessionValue) return sessionValue;
+  const environmentValue = process.env[environmentName]?.trim();
+  if (environmentValue) return environmentValue;
+  if (!safeStorage.isEncryptionAvailable()) return null;
+  const settings = await readSettings();
+  const encrypted = settings[settingsKey];
+  if (!encrypted) return null;
+  try { return safeStorage.decryptString(Buffer.from(encrypted, "base64")); } catch { return null; }
+}
+
+async function saveEncryptedSecret(
+  value: string,
+  settingsKey: "replicateApiTokenEncrypted" | "elevenLabsApiKeyEncrypted"
+): Promise<boolean> {
+  if (!safeStorage.isEncryptionAvailable()) return false;
+  const settings = await readSettings();
+  if (!value) delete settings[settingsKey];
+  else settings[settingsKey] = safeStorage.encryptString(value).toString("base64");
+  await writeSettings(settings);
+  return Boolean(value);
+}
+
+export async function getReplicateApiToken() {
+  return getEncryptedSecret(sessionReplicateToken, "REPLICATE_API_TOKEN", "replicateApiTokenEncrypted");
+}
+
+export async function saveReplicateApiToken(value: string) {
+  sessionReplicateToken = value.trim() || null;
+  return saveEncryptedSecret(value.trim(), "replicateApiTokenEncrypted");
+}
+
+export async function getElevenLabsApiKey() {
+  return getEncryptedSecret(sessionElevenLabsKey, "ELEVENLABS_API_KEY", "elevenLabsApiKeyEncrypted");
+}
+
+export async function saveElevenLabsApiKey(value: string) {
+  sessionElevenLabsKey = value.trim() || null;
+  return saveEncryptedSecret(value.trim(), "elevenLabsApiKeyEncrypted");
+}
+
+export async function getReplicateVideoModel(): Promise<string | null> {
+  const fromEnvironment=process.env.REPLICATE_VIDEO_MODEL?.trim();
+  if(fromEnvironment) return fromEnvironment;
+  const settings=await readSettings();
+  return settings.replicateVideoModel?.trim() || null;
+}
+
+export async function saveReplicateVideoModel(value:string): Promise<string | null> {
+  const normalized=value.trim();
+  const settings=await readSettings();
+  if(normalized) settings.replicateVideoModel=normalized;
+  else delete settings.replicateVideoModel;
+  await writeSettings(settings);
+  return normalized || null;
 }
