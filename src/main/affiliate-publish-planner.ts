@@ -16,3 +16,27 @@ export function assertAffiliateBinding(plan:PublishPlan,job:AffiliateContentJob)
   if((binding.affiliateUrl??"")!==(job.product.affiliateUrl??""))throw new Error("Affiliate URL binding mismatch. Refusing to publish the wrong product link.");
   return true;
 }
+
+/** Refuse publishing when the queued affiliate binding and the current video disagree. */
+export function assertQueuedAffiliateBinding(
+  queued: import("../shared/content-factory").PublishJob,
+  item: ContentBatchItem
+): true {
+  if (queued.itemId !== item.id) {
+    throw new Error("Publish job and video item mismatch. Refusing to publish.");
+  }
+  const stored = queued.affiliate;
+  const current = item.publish?.affiliate;
+  if (!stored && !current) return true;
+  if (!stored || !current ||
+    stored.productId !== current.productId ||
+    stored.platform !== current.platform ||
+    stored.sourceUrl !== current.sourceUrl ||
+    (stored.affiliateUrl ?? "") !== (current.affiliateUrl ?? "")) {
+    throw new Error("Queued affiliate product binding differs from the current video. Refusing to publish.");
+  }
+  if (stored.attachProduct && !current.attachProduct) {
+    throw new Error("Queued product attachment is no longer requested. Refusing to publish.");
+  }
+  return true;
+}
