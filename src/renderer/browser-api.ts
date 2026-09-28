@@ -15,7 +15,7 @@ export function installBrowserApi(){
   if(window.videoEditor)return false;
   const base:Partial<DesktopApi>={
     getAiSettingsStatus:async()=>({configured:false,persistedSecurely:false}),
-    getContentProviderStatus:async()=>({replicateConfigured:false,elevenLabsConfigured:false}),
+    getContentProviderStatus:async()=>({replicateConfigured:false,elevenLabsConfigured:false,affiliateVideoReady:false}),
     loadAutosaveProject:async()=>loadAutosave(),
     autosaveProject:async(project)=>{localStorage.setItem(AUTOSAVE_KEY,JSON.stringify(project));},
     getPublishAccounts:async()=>[],
