@@ -133,7 +133,7 @@ test("long Thai narration is split into consecutive readable timed subtitle cues
  assert.equal(cues[0].start,4);
  assert.equal(cues.at(-1)?.end,13);
  assert.ok(cues.every((cue,i)=>cue.text.length>0&&cue.end>cue.start&&(i===0||Math.abs(cue.start-cues[i-1].end)<0.000001)));
- assert.equal(cues.map(cue=>cue.text).join("").replace(/\\s/g,""),text.replace(/\\s/g,""));
+ assert.equal(cues.map(cue=>cue.text).join("").replace(/\s/g,""),text.replace(/\s/g,""));
  assert.ok(cues.every(cue=>Array.from(cue.text).length<70));
 });
 test("short scene subtitles retain their original single cue",()=>{
