@@ -30,7 +30,7 @@ import {
   createPlaybackUrl,
   installMediaProtocol
 } from "./mediaProtocol";
-import { getAiSettingsStatus, saveOpenAiApiKey, getReplicateApiToken, saveReplicateApiToken, getElevenLabsApiKey, saveElevenLabsApiKey } from "./settings";
+import { getAiSettingsStatus, saveOpenAiApiKey, getReplicateApiToken, saveReplicateApiToken, getElevenLabsApiKey, saveElevenLabsApiKey, getReplicateVideoModel, saveReplicateVideoModel } from "./settings";
 import {
   autosaveProject,
   findMissingMedia,
@@ -132,7 +132,7 @@ ipcMain.handle("affiliate:create-local-batch", async (event, jobs:import("../sha
       const project=buildLocalTestProject(item.brief); item.project=project; item.status="generating-assets";
       const root=path.join(app.getPath("userData"),"content-assets",project.id,"affiliate-local-test");
       const product=jobs[index]?.product;
-      if(product?.imageUrls.length){const staged=await stageAffiliateProductImages(product,project,root);const imageAssets=staged.assetPlan?.assets.filter((asset)=>asset.kind==="image")??[];const imageJobs=staged.assetPlan?.jobs.filter((job)=>job.kind==="image")??[];const voicePlan=buildAssetPlan(project,{includeVideo:false,includeVoice:true,includeSfx:false});const voiceOnly={...voicePlan,jobs:voicePlan.jobs.filter((job)=>job.kind==="voice"),assets:[]};let voiceAssets:import("../shared/content-factory").AssetPlan;if(await getElevenLabsApiKey()){voiceAssets=await runAssetPlan(voiceOnly,createDefaultAssetProviderRegistry(),root);}else{const placeholders=await generateLocalTestAssets(project,root);voiceAssets={projectId:project.id,assets:placeholders.assetPlan?.assets.filter((asset)=>asset.kind==="voice")??[],jobs:placeholders.assetPlan?.jobs.filter((job)=>job.kind==="voice")??[]};}const videoPlan=buildAffiliateReferenceVideoPlan(product,project,imageAssets);let videoAssets:import("../shared/content-factory").AssetPlan={projectId:project.id,assets:[],jobs:videoPlan.jobs};if(process.env.REPLICATE_VIDEO_MODEL?.trim()){videoAssets=await runAssetPlan(videoAssets,createDefaultAssetProviderRegistry(),root);}item.project={...staged,assetPlan:{projectId:project.id,assets:[...imageAssets,...videoAssets.assets,...voiceAssets.assets],jobs:[...imageJobs,...videoAssets.jobs,...voiceAssets.jobs]}};}else item.project=await generateLocalTestAssets(project,root);
+      if(product?.imageUrls.length){const staged=await stageAffiliateProductImages(product,project,root);const imageAssets=staged.assetPlan?.assets.filter((asset)=>asset.kind==="image")??[];const imageJobs=staged.assetPlan?.jobs.filter((job)=>job.kind==="image")??[];const voicePlan=buildAssetPlan(project,{includeVideo:false,includeVoice:true,includeSfx:false});const voiceOnly={...voicePlan,jobs:voicePlan.jobs.filter((job)=>job.kind==="voice"),assets:[]};let voiceAssets:import("../shared/content-factory").AssetPlan;if(await getElevenLabsApiKey()){voiceAssets=await runAssetPlan(voiceOnly,createDefaultAssetProviderRegistry(),root);}else{const placeholders=await generateLocalTestAssets(project,root);voiceAssets={projectId:project.id,assets:placeholders.assetPlan?.assets.filter((asset)=>asset.kind==="voice")??[],jobs:placeholders.assetPlan?.jobs.filter((job)=>job.kind==="voice")??[]};}const videoPlan=buildAffiliateReferenceVideoPlan(product,project,imageAssets);let videoAssets:import("../shared/content-factory").AssetPlan={projectId:project.id,assets:[],jobs:videoPlan.jobs};const videoModel=await getReplicateVideoModel();if(videoModel && await getReplicateApiToken()){videoAssets=await runAssetPlan(videoAssets,createDefaultAssetProviderRegistry(videoModel),root);}item.project={...staged,assetPlan:{projectId:project.id,assets:[...imageAssets,...videoAssets.assets,...voiceAssets.assets],jobs:[...imageJobs,...videoAssets.jobs,...voiceAssets.jobs]}};}else item.project=await generateLocalTestAssets(project,root);
       item.status="assets-ready";
       const rendered=await renderContentBatch({...batch,items:[item]},outputDir,workRoot);
       Object.assign(item,rendered.items[0]);const job=jobs[index];if(job){item.publish=buildAffiliatePublishPlan(item,job);assertAffiliateBinding(item.publish,job);}else Object.assign(item,ensurePublishPlan(item));
@@ -288,15 +288,22 @@ ipcMain.handle("ai:save-openai-key", async (_event, apiKey: string) => {
 });
 
 async function contentProviderStatus() {
+  const [replicateToken,elevenLabsKey,videoModel]=await Promise.all([getReplicateApiToken(),getElevenLabsApiKey(),getReplicateVideoModel()]);
   return {
-    replicateConfigured: Boolean(await getReplicateApiToken()),
-    elevenLabsConfigured: Boolean(await getElevenLabsApiKey())
+    replicateConfigured:Boolean(replicateToken),
+    elevenLabsConfigured:Boolean(elevenLabsKey),
+    videoModel:videoModel ?? undefined,
+    affiliateVideoReady:Boolean(replicateToken && videoModel)
   };
 }
 
 ipcMain.handle("content:provider-status", contentProviderStatus);
 ipcMain.handle("content:save-replicate-token", async (_event, token: string) => {
   await saveReplicateApiToken(token);
+  return contentProviderStatus();
+});
+ipcMain.handle("content:save-replicate-video-model", async (_event, model: string) => {
+  await saveReplicateVideoModel(model);
   return contentProviderStatus();
 });
 ipcMain.handle("content:save-elevenlabs-key", async (_event, apiKey: string) => {
