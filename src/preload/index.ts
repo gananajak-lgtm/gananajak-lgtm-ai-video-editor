@@ -79,6 +79,7 @@ const api: DesktopApi = {
   saveAffiliateQueue: (products, jobs) => ipcRenderer.invoke("affiliate:save-queue", products, jobs),
   createAffiliateJobs: (products) => ipcRenderer.invoke("affiliate:create-jobs", products),
   getAffiliatePublishReadiness: (item,job) => ipcRenderer.invoke("affiliate:publish-readiness",item,job),
+  createAffiliatePublishJobs: (item,job) => ipcRenderer.invoke("affiliate:create-publish-jobs",item,job),
   prepareAffiliateBatch: (jobs, language, duration) => ipcRenderer.invoke("affiliate:prepare-batch", jobs, language, duration),
   createLocalAffiliateBatch: (jobs, outputDir, language, duration) => ipcRenderer.invoke("affiliate:create-local-batch", jobs, outputDir, language, duration),
   resumeContentBatch: (batch) =>
