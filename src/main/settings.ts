@@ -7,6 +7,7 @@ type PersistedSettings = {
   openAiApiKeyEncrypted?: string;
   replicateApiTokenEncrypted?: string;
   elevenLabsApiKeyEncrypted?: string;
+  replicateVideoModel?: string;
 };
 
 let sessionApiKey: string | null = null;
@@ -143,4 +144,20 @@ export async function getElevenLabsApiKey() {
 export async function saveElevenLabsApiKey(value: string) {
   sessionElevenLabsKey = value.trim() || null;
   return saveEncryptedSecret(value.trim(), "elevenLabsApiKeyEncrypted");
+}
+
+export async function getReplicateVideoModel(): Promise<string | null> {
+  const fromEnvironment=process.env.REPLICATE_VIDEO_MODEL?.trim();
+  if(fromEnvironment) return fromEnvironment;
+  const settings=await readSettings();
+  return settings.replicateVideoModel?.trim() || null;
+}
+
+export async function saveReplicateVideoModel(value:string): Promise<string | null> {
+  const normalized=value.trim();
+  const settings=await readSettings();
+  if(normalized) settings.replicateVideoModel=normalized;
+  else delete settings.replicateVideoModel;
+  await writeSettings(settings);
+  return normalized || null;
 }
