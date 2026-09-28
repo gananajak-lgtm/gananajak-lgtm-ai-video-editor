@@ -249,7 +249,7 @@ export default function ContentFactoryPanel({
     const outputDir = await window.videoEditor.chooseBatchOutputFolder(); if (!outputDir) return;
     setAffiliateLocalRunning(true); setError(null); setBatchProgress({ completed:0, total:jobsToRender.length });
     const unsubscribe = window.videoEditor.onContentBatchProgress((progress) => setBatchProgress({ completed:progress.completed, total:progress.total }));
-    try { setBatch(await window.videoEditor.createLocalAffiliateBatch(jobsToRender, outputDir, language, Math.max(10, duration))); }
+    try { const created=await window.videoEditor.createLocalAffiliateBatch(jobsToRender, outputDir, language, Math.max(10, duration)); setBatch(created); const renderedItem=created.items.find((item)=>item.publish?.affiliate?.productId===jobsToRender[0]?.product.id)??created.items[0]; if(renderedItem&&jobsToRender[0]) setAffiliateReadiness(await window.videoEditor.getAffiliatePublishReadiness(renderedItem,jobsToRender[0])); }
     catch (localError) { setError(localError instanceof Error ? localError.message : String(localError)); }
     finally { unsubscribe(); setAffiliateLocalRunning(false); }
   };
