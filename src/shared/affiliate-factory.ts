@@ -9,6 +9,8 @@ export type AffiliateProduct = {
   price?:number;
   currency?:string;
   imageUrls:string[];
+  /** User-selected real product photos, copied into app-managed storage. */
+  localImagePaths?:string[];
   commissionRate?:number;
   affiliateUrl?:string;
   sellerName?:string;
