@@ -1,4 +1,5 @@
-import { readFile, mkdir, writeFile } from "node:fs/promises";
+import { readFile, mkdir, writeFile, rm } from "node:fs/promises";
+import { probeMediaInfo } from "../video/probe";
 import path from "node:path";
 import type { AssetJob, GeneratedAsset } from "../../shared/content-factory";
 import type { AssetGenerationContext, AssetProvider } from "../content-asset-provider";
@@ -106,6 +107,17 @@ export class ReplicateReferenceVideoProvider implements AssetProvider {
     await mkdir(context.workDir,{recursive:true});
     const filePath=path.join(context.workDir,`${job.id}.mp4`);
     await writeFile(filePath,bytes);
-    return {id:`asset-${job.id}`,projectId:job.projectId,sceneId:job.sceneId,kind:"video",filePath,provider:this.id,mimeType:"video/mp4",source:"generated",sourcePrompt:job.prompt};
+    let duration:number;
+    try{
+      const media=await probeMediaInfo(filePath);
+      const video=media.streams.find(stream=>stream.codecType==="video");
+      if(!video || !Number.isFinite(media.duration) || media.duration<=0)
+        throw new Error("Replicate returned an MP4 file without a valid video stream.");
+      duration=media.duration;
+    }catch(error){
+      await rm(filePath,{force:true});
+      throw new Error(`Replicate video output failed media validation: ${error instanceof Error?error.message:String(error)}`);
+    }
+    return {id:`asset-${job.id}`,projectId:job.projectId,sceneId:job.sceneId,kind:"video",filePath,provider:this.id,mimeType:"video/mp4",duration,source:"generated",sourcePrompt:job.prompt};
   }
 }
