@@ -356,6 +356,7 @@ export type DesktopApi = {
   saveAffiliateQueue: (products: import("./affiliate-factory").AffiliateProduct[], jobs: import("./affiliate-factory").AffiliateContentJob[]) => Promise<{ products: import("./affiliate-factory").AffiliateProduct[]; jobs: import("./affiliate-factory").AffiliateContentJob[]; updatedAt: string }>;
   createAffiliateJobs: (products: import("./affiliate-factory").AffiliateProduct[]) => Promise<import("./affiliate-factory").AffiliateContentJob[]>;
   getAffiliatePublishReadiness: (item: import("./content-factory").ContentBatchItem, job: import("./affiliate-factory").AffiliateContentJob) => Promise<{video:{ready:boolean;issues:string[]};productAttachment:{ready:boolean;status:"verified"|"unverified"|"not-requested";issues:string[]}}>;
+  createAffiliatePublishJobs: (item:import("./content-factory").ContentBatchItem,job:import("./affiliate-factory").AffiliateContentJob) => Promise<{jobs:import("./content-factory").PublishJob[];updatedAt:string}>;
   prepareAffiliateBatch: (jobs: import("./affiliate-factory").AffiliateContentJob[], language?: import("./content-factory").ContentLanguage, duration?: number) => Promise<import("./content-factory").ContentBatch>;
   createLocalAffiliateBatch: (jobs: import("./affiliate-factory").AffiliateContentJob[], outputDir: string, language?: import("./content-factory").ContentLanguage, duration?: number) => Promise<import("./content-factory").ContentBatch>;
   resumeContentBatch: (batch: ContentBatch) => Promise<ContentBatch>;
