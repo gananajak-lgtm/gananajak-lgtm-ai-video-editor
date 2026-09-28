@@ -68,6 +68,7 @@ import { getAffiliatePublishReadiness } from "./affiliate-publish-readiness";
 import { createAffiliateVideoPublishJobs } from "./affiliate-publish-jobs";
 import { getAffiliateAccessGuide } from "./affiliate-access-guide";
 import { stageAffiliateProductImages } from "./affiliate-product-assets";
+import { importLocalProductPhotos } from "./affiliate-local-images";
 import { buildAffiliateReferenceVideoPlan } from "./affiliate-reference-video-planner";
 import { loadAffiliateQueue, saveAffiliateQueue } from "./affiliate-queue-store";
 import { buildMetaAuthorizationUrl, exchangeMetaAuthorizationCode, exchangeMetaLongLivedToken } from "./meta-oauth";
@@ -132,7 +133,7 @@ ipcMain.handle("affiliate:create-local-batch", async (event, jobs:import("../sha
       const project=buildLocalTestProject(item.brief); item.project=project; item.status="generating-assets";
       const root=path.join(app.getPath("userData"),"content-assets",project.id,"affiliate-local-test");
       const product=jobs[index]?.product;
-      if(product?.imageUrls.length){const staged=await stageAffiliateProductImages(product,project,root);const imageAssets=staged.assetPlan?.assets.filter((asset)=>asset.kind==="image")??[];const imageJobs=staged.assetPlan?.jobs.filter((job)=>job.kind==="image")??[];const voicePlan=buildAssetPlan(project,{includeVideo:false,includeVoice:true,includeSfx:false});const voiceOnly={...voicePlan,jobs:voicePlan.jobs.filter((job)=>job.kind==="voice"),assets:[]};let voiceAssets:import("../shared/content-factory").AssetPlan;if(await getElevenLabsApiKey()){voiceAssets=await runAssetPlan(voiceOnly,createDefaultAssetProviderRegistry(),root);}else{const placeholders=await generateLocalTestAssets(project,root);voiceAssets={projectId:project.id,assets:placeholders.assetPlan?.assets.filter((asset)=>asset.kind==="voice")??[],jobs:placeholders.assetPlan?.jobs.filter((job)=>job.kind==="voice")??[]};}const videoPlan=buildAffiliateReferenceVideoPlan(product,project,imageAssets);let videoAssets:import("../shared/content-factory").AssetPlan={projectId:project.id,assets:[],jobs:videoPlan.jobs};const videoModel=await getReplicateVideoModel();if(videoModel && await getReplicateApiToken()){videoAssets=await runAssetPlan(videoAssets,createDefaultAssetProviderRegistry(videoModel),root);}item.project={...staged,assetPlan:{projectId:project.id,assets:[...imageAssets,...videoAssets.assets,...voiceAssets.assets],jobs:[...imageJobs,...videoAssets.jobs,...voiceAssets.jobs]}};}else item.project=await generateLocalTestAssets(project,root);
+      if(product?.imageUrls.length||product?.localImagePaths?.length){const staged=await stageAffiliateProductImages(product,project,root,fetch,path.join(app.getPath("userData"),"affiliate-factory","photos"));const imageAssets=staged.assetPlan?.assets.filter((asset)=>asset.kind==="image")??[];const imageJobs=staged.assetPlan?.jobs.filter((job)=>job.kind==="image")??[];const voicePlan=buildAssetPlan(project,{includeVideo:false,includeVoice:true,includeSfx:false});const voiceOnly={...voicePlan,jobs:voicePlan.jobs.filter((job)=>job.kind==="voice"),assets:[]};let voiceAssets:import("../shared/content-factory").AssetPlan;if(await getElevenLabsApiKey()){voiceAssets=await runAssetPlan(voiceOnly,createDefaultAssetProviderRegistry(),root);}else{const placeholders=await generateLocalTestAssets(project,root);voiceAssets={projectId:project.id,assets:placeholders.assetPlan?.assets.filter((asset)=>asset.kind==="voice")??[],jobs:placeholders.assetPlan?.jobs.filter((job)=>job.kind==="voice")??[]};}const videoPlan=buildAffiliateReferenceVideoPlan(product,project,imageAssets);let videoAssets:import("../shared/content-factory").AssetPlan={projectId:project.id,assets:[],jobs:videoPlan.jobs};const videoModel=await getReplicateVideoModel();if(videoModel && await getReplicateApiToken()){videoAssets=await runAssetPlan(videoAssets,createDefaultAssetProviderRegistry(videoModel),root);}item.project={...staged,assetPlan:{projectId:project.id,assets:[...imageAssets,...videoAssets.assets,...voiceAssets.assets],jobs:[...imageJobs,...videoAssets.jobs,...voiceAssets.jobs]}};}else item.project=await generateLocalTestAssets(project,root);
       item.status="assets-ready";
       const rendered=await renderContentBatch({...batch,items:[item]},outputDir,workRoot);
       Object.assign(item,rendered.items[0]);const job=jobs[index];if(job){item.publish=buildAffiliatePublishPlan(item,job);assertAffiliateBinding(item.publish,job);}else Object.assign(item,ensurePublishPlan(item));
@@ -153,6 +154,14 @@ ipcMain.handle("affiliate:create-publish-jobs",async(_event,item:import("../shar
 });
 
 ipcMain.handle("affiliate:import-product", async (_event, sourceUrl:string) => createAffiliateProduct({sourceUrl}));
+ipcMain.handle("affiliate:select-product-photos",async(_event,product:import("../shared/affiliate-factory").AffiliateProduct)=>{
+  if(!product?.id || !/^affiliate-product-[a-f0-9-]{36}$/.test(product.id))throw new Error("Invalid product ID.");
+  const result=await dialog.showOpenDialog({title:"Select actual product reference photos",properties:["openFile","multiSelections"],filters:[{name:"Product photos",extensions:["png","jpg","jpeg","webp"]}]});
+  if(result.canceled||!result.filePaths.length)return product;
+  const photoRoot=path.join(app.getPath("userData"),"affiliate-factory","photos");
+  const localImagePaths=await importLocalProductPhotos(result.filePaths,photoRoot);
+  return {...product,localImagePaths:[...(product.localImagePaths??[]),...localImagePaths]};
+});
 ipcMain.handle("affiliate:search-products", async (_event, query:string) => {
   const queue=await loadAffiliateQueue();
   return searchAffiliateProducts({catalog:queue.products,query,providers:[createTikTokShopShowcaseProvider(loadUsableTikTokShopCreatorCredentials)]});
