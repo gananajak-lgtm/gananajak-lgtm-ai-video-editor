@@ -70,6 +70,7 @@ const api: DesktopApi = {
   connectMeta: () => ipcRenderer.invoke("content:connect-meta"),
   getMetaDestinations: () => ipcRenderer.invoke("content:get-meta-destinations"),
   importAffiliateProduct: (sourceUrl) => ipcRenderer.invoke("affiliate:import-product", sourceUrl),
+  captureAffiliateProductFromBrowser: (product) => ipcRenderer.invoke("affiliate:capture-browser-product", product),
   selectAffiliateProductPhotos: (product) => ipcRenderer.invoke("affiliate:select-product-photos", product),
   configureTikTokShopApp: (appKey,appSecret) => ipcRenderer.invoke("affiliate:configure-tiktok-shop",appKey,appSecret),
   completeTikTokShopCreatorAuth: (authCode) => ipcRenderer.invoke("affiliate:complete-tiktok-shop-auth",authCode),
