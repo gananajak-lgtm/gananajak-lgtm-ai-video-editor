@@ -84,10 +84,24 @@ export async function stageAffiliateProductImages(product:AffiliateProduct,proje
   if(!product.imageUrls.length)return project;
   await mkdir(root,{recursive:true});const assets:GeneratedAsset[]=[];const jobs=[];
   const cache=new Map<string,Awaited<ReturnType<typeof downloadImage>>>();
+  const rejected=new Map<string,string>();
   for(const scene of project.scenes){
-    const sourceUrl=product.imageUrls[(scene.order-1)%product.imageUrls.length];if(!sourceUrl)continue;
-    let image=cache.get(sourceUrl);
-    if(!image){image=await downloadImage(sourceUrl,fetcher);cache.set(sourceUrl,image);}
+    let selected:{sourceUrl:string;image:Awaited<ReturnType<typeof downloadImage>>}|null=null;
+    // A broken product thumbnail should not prevent using another genuine image.
+    for(let offset=0;offset<product.imageUrls.length;offset++){
+      const sourceUrl=product.imageUrls[((scene.order-1)+offset)%product.imageUrls.length];
+      if(!sourceUrl||rejected.has(sourceUrl))continue;
+      try{
+        let image=cache.get(sourceUrl);
+        if(!image){image=await downloadImage(sourceUrl,fetcher);cache.set(sourceUrl,image);}
+        selected={sourceUrl,image};
+        break;
+      }catch(error){
+        rejected.set(sourceUrl,error instanceof Error?error.message:String(error));
+      }
+    }
+    if(!selected)throw new Error(`No safe, usable product image is available. ${Array.from(rejected.values()).join(" · ")}`);
+    const {sourceUrl,image}=selected;
     const filePath=path.join(root,`product-scene-${scene.order}.${image.ext}`);
     await writeFile(filePath,image.bytes);
     const asset:GeneratedAsset={id:`product-image-${project.id}-${scene.order}`,projectId:project.id,sceneId:scene.id,kind:"image",filePath,provider:"affiliate-product",mimeType:image.mimeType,source:"imported",sourcePrompt:sourceUrl};assets.push(asset);
