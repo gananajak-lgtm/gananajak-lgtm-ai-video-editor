@@ -63,6 +63,7 @@ import { loadTikTokShopCreatorCredentials, loadUsableTikTokShopCreatorCredential
 import { exchangeTikTokShopCreatorCode } from "./tiktok-shop-oauth";
 import { createAffiliateContentJobs } from "./affiliate-content-jobs";
 import { affiliateJobToContentBrief } from "./affiliate-content-planner";
+import { buildAffiliatePublishPlan, assertAffiliateBinding } from "./affiliate-publish-planner";
 import { stageAffiliateProductImages } from "./affiliate-product-assets";
 import { loadAffiliateQueue, saveAffiliateQueue } from "./affiliate-queue-store";
 import { buildMetaAuthorizationUrl, exchangeMetaAuthorizationCode, exchangeMetaLongLivedToken } from "./meta-oauth";
@@ -129,7 +130,7 @@ ipcMain.handle("affiliate:create-local-batch", async (event, jobs:import("../sha
       if(product?.imageUrls.length){const staged=await stageAffiliateProductImages(product,project,root);const imageAssets=staged.assetPlan?.assets.filter((asset)=>asset.kind==="image")??[];const imageJobs=staged.assetPlan?.jobs.filter((job)=>job.kind==="image")??[];const voicePlan=buildAssetPlan(project,{includeVideo:false,includeVoice:true,includeSfx:false});const voiceOnly={...voicePlan,jobs:voicePlan.jobs.filter((job)=>job.kind==="voice"),assets:[]};let voiceAssets:import("../shared/content-factory").AssetPlan;if(await getElevenLabsApiKey()){voiceAssets=await runAssetPlan(voiceOnly,createDefaultAssetProviderRegistry(),root);}else{const placeholders=await generateLocalTestAssets(project,root);voiceAssets={projectId:project.id,assets:placeholders.assetPlan?.assets.filter((asset)=>asset.kind==="voice")??[],jobs:placeholders.assetPlan?.jobs.filter((job)=>job.kind==="voice")??[]};}item.project={...staged,assetPlan:{projectId:project.id,assets:[...imageAssets,...voiceAssets.assets],jobs:[...imageJobs,...voiceAssets.jobs]}};}else item.project=await generateLocalTestAssets(project,root);
       item.status="assets-ready";
       const rendered=await renderContentBatch({...batch,items:[item]},outputDir,workRoot);
-      Object.assign(item,ensurePublishPlan(rendered.items[0]));
+      Object.assign(item,rendered.items[0]);const job=jobs[index];if(job){item.publish=buildAffiliatePublishPlan(item,job);assertAffiliateBinding(item.publish,job);}else Object.assign(item,ensurePublishPlan(item));
     }catch(error){item.status="failed";item.failedStage=item.project?.assetPlan?"render":item.project?"assets":"project";item.error=error instanceof Error?error.message:String(error);}
     items[index]=item;batch={...batch,items,updatedAt:new Date().toISOString()};await saveBatchState(batch);
     if(!event.sender.isDestroyed()) event.sender.send("content:batch-progress",{completed:index+1,total:items.length,item});
