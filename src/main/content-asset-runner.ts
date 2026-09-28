@@ -11,7 +11,7 @@ export async function runAssetPlan(
   onProgress?: (progress: AssetRunProgress) => void
 ): Promise<AssetPlan> {
   const runnableKinds = new Set(["image", "voice"]);
-  for (const job of plan.jobs) if (job.kind === "video") { try { registry.resolve("video"); runnableKinds.add("video"); break; } catch { /* manual video remains optional without a configured provider */ } }
+  if (plan.jobs.some((job)=>job.kind==="video" && Boolean(job.referenceImagePath))) { try { registry.resolve("video"); runnableKinds.add("video"); } catch { /* reference video falls back to the imported product image */ } }
   const queue = new AssetJobQueue(plan.jobs.filter((job) => runnableKinds.has(job.kind)).map((job) => ({ ...job, status: job.status === "failed" ? "queued" : job.status, error: job.status === "failed" ? undefined : job.error })));
   const assets: GeneratedAsset[] = [...plan.assets];
   const assetIndexByJobId = new Map(plan.jobs.flatMap((job) => job.outputAssetId ? [[job.id, job.outputAssetId] as const] : []));
