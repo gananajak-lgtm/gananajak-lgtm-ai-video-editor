@@ -41,8 +41,9 @@ export default function ContentFactoryPanel({
   const [error, setError] = useState<string | null>(null);
   const [rendering, setRendering] = useState(false);
   const [pipelineStage, setPipelineStage] = useState<"idle" | "assets" | "render" | "ready">("idle");
-  const [providerStatus, setProviderStatus] = useState<ContentProviderStatus>({ replicateConfigured:false, elevenLabsConfigured:false });
+  const [providerStatus, setProviderStatus] = useState<ContentProviderStatus>({ replicateConfigured:false, elevenLabsConfigured:false, affiliateVideoReady:false });
   const [replicateToken, setReplicateToken] = useState("");
+  const [replicateVideoModel,setReplicateVideoModel]=useState("");
   const [elevenLabsKey, setElevenLabsKey] = useState("");
   const [publishAccounts, setPublishAccounts] = useState<PublishAccount[]>([]);
   const [youtubeClientId, setYoutubeClientId] = useState("");
@@ -94,7 +95,7 @@ export default function ContentFactoryPanel({
   const [affiliateReadiness,setAffiliateReadiness]=useState<{video:{ready:boolean;issues:string[]};productAttachment:{ready:boolean;status:"verified"|"unverified"|"not-requested";issues:string[]}}|null>(null);
 
   useEffect(() => {
-    void window.videoEditor.getContentProviderStatus().then(setProviderStatus);
+    void window.videoEditor.getContentProviderStatus().then((status)=>{ setProviderStatus(status); setReplicateVideoModel(status.videoModel ?? ""); });
     void window.videoEditor.loadContentBatch().then((saved) => { if (saved) setBatch(saved); });
     void window.videoEditor.getPublishAccounts().then(setPublishAccounts);
     void window.videoEditor.getMetaDestinations().then(setMetaDestinations).catch(()=>undefined);
@@ -260,6 +261,7 @@ export default function ContentFactoryPanel({
   const saveProviderKeys = async () => {
     let status = providerStatus;
     if (replicateToken.trim()) status = await window.videoEditor.saveReplicateApiToken(replicateToken);
+    status = await window.videoEditor.saveReplicateVideoModel(replicateVideoModel);
     if (elevenLabsKey.trim()) status = await window.videoEditor.saveElevenLabsApiKey(elevenLabsKey);
     setProviderStatus(status); setReplicateToken(""); setElevenLabsKey("");
   };
@@ -695,10 +697,15 @@ export default function ContentFactoryPanel({
         )}
       </div>
 
-      <div className="keyRow">
-        <input type="password" value={replicateToken} onChange={(e) => setReplicateToken(e.target.value)} placeholder={providerStatus.replicateConfigured ? "Replicate token saved ✓" : "Replicate API token"} />
-        <input type="password" value={elevenLabsKey} onChange={(e) => setElevenLabsKey(e.target.value)} placeholder={providerStatus.elevenLabsConfigured ? "ElevenLabs key saved ✓" : "ElevenLabs API key"} />
-        <button onClick={saveProviderKeys} disabled={!replicateToken.trim() && !elevenLabsKey.trim()}>บันทึกคีย์ผู้ให้บริการ</button>
+      <div className="transcriptPanel">
+        <div className="timelineHeader"><div><p className="eyebrow">AI Video</p><h3>วิดีโอสินค้าจากภาพอ้างอิง</h3><p className="muted">โหมดคลิปปักตะกร้าจะใช้ภาพสินค้าจริงเป็น reference เพื่อสร้างภาพเคลื่อนไหวก่อน และใช้ motion จากภาพนิ่งเป็น fallback เมื่อยังไม่ได้ตั้งโมเดลวิดีโอ</p></div><span className={providerStatus.affiliateVideoReady ? "aiBadge readyBadge" : "aiBadge"}>{providerStatus.affiliateVideoReady ? "AI Video พร้อม ✓" : "ใช้ Motion Fallback"}</span></div>
+        <div className="keyRow">
+          <input type="password" value={replicateToken} onChange={(e) => setReplicateToken(e.target.value)} placeholder={providerStatus.replicateConfigured ? "Replicate token saved ✓" : "Replicate API token"} />
+          <input value={replicateVideoModel} onChange={(e)=>setReplicateVideoModel(e.target.value)} placeholder="โมเดลวิดีโอ Replicate: owner/model" aria-label="Replicate video model" />
+          <input type="password" value={elevenLabsKey} onChange={(e) => setElevenLabsKey(e.target.value)} placeholder={providerStatus.elevenLabsConfigured ? "ElevenLabs key saved ✓" : "ElevenLabs API key"} />
+          <button onClick={saveProviderKeys} disabled={!replicateToken.trim() && !elevenLabsKey.trim() && replicateVideoModel===(providerStatus.videoModel ?? "")}>บันทึกผู้ให้บริการ</button>
+        </div>
+        <p className="muted">ต้องใช้โมเดล Image-to-Video ที่รับภาพอ้างอิง หากยังไม่ตั้งค่า ระบบยังสร้างคลิปต่อได้ด้วยภาพสินค้าจริงและ motion fallback</p>
       </div>
             {error && <div className="message errorMessage">{error}</div>}
 
