@@ -33,3 +33,11 @@ test("recovers interrupted Facebook session for status checking",()=>{const now=
 
 test("guards interrupted TikTok session when upload completion is unknown",()=>{const now=new Date("2026-09-27T00:00:00.000Z");const [job]=recoverInterruptedPublishJobs([{id:"tt-incomplete",itemId:"item",platform:"tiktok",status:"publishing",attempts:1,externalPublishId:"publish-id",createdAt:now.toISOString(),updatedAt:now.toISOString()}],now);assert.equal(job.status,"failed");assert.match(job.error??"",/upload completion was not recorded/i);});
 test("recovers fully uploaded TikTok session as processing",()=>{const now=new Date("2026-09-27T00:00:00.000Z");const [job]=recoverInterruptedPublishJobs([{id:"tt-uploaded",itemId:"item",platform:"tiktok",status:"publishing",attempts:1,externalPublishId:"publish-id",uploadCompleted:true,createdAt:now.toISOString(),updatedAt:now.toISOString()}],now);assert.equal(job.status,"processing");});
+
+test("generic publish queue cannot claim automatic affiliate attachment",()=>{
+ const item=rendered();
+ item.publish!.affiliate={productId:"p",platform:"shopee",sourceUrl:"https://shop.example/p",attachProduct:true};
+ const jobs=createPublishJobs(item,new Date("2026-09-26T00:00:00Z"));
+ assert.ok(jobs.every(job=>job.affiliate?.attachProduct===false));
+ assert.equal(item.publish!.affiliate!.attachProduct,true);
+});
