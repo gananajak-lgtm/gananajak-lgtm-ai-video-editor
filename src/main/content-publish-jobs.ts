@@ -8,7 +8,7 @@ export function createPublishJobs(item: ContentBatchItem, now = new Date()): Pub
   const createdAt=now.toISOString();
   return (item.publish?.platforms ?? []).map((platform)=>({
     id:randomUUID(), itemId:item.id, platform, status:item.publish?.scheduledAt && new Date(item.publish.scheduledAt).getTime() > now.getTime() ? "blocked" : "queued", scheduledAt:item.publish?.scheduledAt,
-    attempts:0, affiliate:item.publish?.affiliate ? {...item.publish.affiliate} : undefined, createdAt, updatedAt:createdAt
+    attempts:0, affiliate:item.publish?.affiliate ? {...item.publish.affiliate,attachProduct:false} : undefined, createdAt, updatedAt:createdAt
   }));
 }
 
