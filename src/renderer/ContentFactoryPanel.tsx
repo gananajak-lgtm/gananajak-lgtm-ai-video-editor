@@ -88,6 +88,8 @@ export default function ContentFactoryPanel({
   const [affiliateProducts, setAffiliateProducts] = useState<AffiliateProduct[]>([]);
   const [affiliateJobs, setAffiliateJobs] = useState<AffiliateContentJob[]>([]);
   const [affiliateImporting, setAffiliateImporting] = useState(false);
+  const [affiliatePhotoSelecting,setAffiliatePhotoSelecting]=useState(false);
+  const [affiliatePhotoPreview,setAffiliatePhotoPreview]=useState<string|null>(null);
   const [affiliateLocalRunning, setAffiliateLocalRunning] = useState(false);
   const [affiliatePreparing,setAffiliatePreparing]=useState(false);
   const [affiliateImportErrors, setAffiliateImportErrors] = useState<string[]>([]);
@@ -247,6 +249,28 @@ export default function ContentFactoryPanel({
     finally { setAffiliateImporting(false); }
   };
 
+  const selectAffiliatePhotos=async(product:AffiliateProduct)=>{
+    if(affiliatePhotoSelecting)return;
+    setAffiliatePhotoSelecting(true);setError(null);
+    try{
+      const updated=await window.videoEditor.selectAffiliateProductPhotos(product);
+      const nextProducts=Array.from(new Map([...affiliateProducts,updated].map(entry=>[entry.id,entry])).values());
+      const nextJobs=affiliateJobs.map(job=>job.product.id===updated.id?{...job,product:updated}:job);
+      await window.videoEditor.saveAffiliateQueue(nextProducts,nextJobs);
+      setAffiliateProducts(nextProducts);setAffiliateJobs(nextJobs);
+      setProductSearchResults(old=>old?.map(item=>item.id===updated.id?updated:item)??null);
+      const first=updated.localImagePaths?.[0];
+      if(first)setAffiliatePhotoPreview(await window.videoEditor.readImagePreview(first));
+    }catch(error){setError(error instanceof Error?error.message:String(error));}
+    finally{setAffiliatePhotoSelecting(false);}
+  };
+  useEffect(()=>{
+    const file=affiliateProducts.find(product=>product.id===selectedProductId)?.localImagePaths?.[0];
+    if(!file){setAffiliatePhotoPreview(null);return;}
+    let active=true;
+    void window.videoEditor.readImagePreview(file).then(image=>{if(active)setAffiliatePhotoPreview(image);}).catch(()=>{if(active)setAffiliatePhotoPreview(null);});
+    return ()=>{active=false;};
+  },[selectedProductId,affiliateProducts]);
   const createLocalAffiliateVideos = async (jobsOverride?: typeof affiliateJobs) => {
     const jobsToRender=jobsOverride??affiliateJobs;
     if (!jobsToRender.length || affiliateLocalRunning) return;
@@ -589,6 +613,13 @@ export default function ContentFactoryPanel({
         </div>
         {affiliateVideoFailures.length>0&&<ul className="readinessIssues">{affiliateVideoFailures.map(job=><li key={job.id}>ช็อต {job.sceneId}: {job.error??"สร้างวิดีโอ AI ไม่สำเร็จ"}</li>)}</ul>}
         {affiliatePreviewItem.status==="failed"&&<p className="message errorMessage">{affiliatePreviewItem.error??"การสร้างคลิปไม่สำเร็จ"}</p>}
+      </div>}
+      {selectedProduct&&<div className="transcriptPanel">
+        <div className="timelineHeader"><div><p className="eyebrow">ภาพอ้างอิงสินค้าจริง</p><h3>เพิ่มรูปภาพจากเครื่อง</h3>
+        <p className="muted">Shopee อาจไม่อนุญาตให้ดึงรูปโดยตรง เลือกรูปสินค้าจริงที่บันทึกจากหน้าสินค้าไว้ในเครื่อง (PNG/JPG/WebP, ไม่เกิน 12 MB ต่อรูป) เพื่อให้ AI ใช้รูปอ้างอิง</p></div>
+        <span className={selectedProduct.localImagePaths?.length?"aiBadge readyBadge":"aiBadge"}>{selectedProduct.localImagePaths?.length?`มีภาพอ้างอิง ${selectedProduct.localImagePaths.length} รูป`:"ยังไม่มีรูปที่เลือก"}</span></div>
+        <div className="keyRow"><button className="primary" disabled={affiliatePhotoSelecting} onClick={()=>void selectAffiliatePhotos(selectedProduct)}>{affiliatePhotoSelecting?"กำลังเพิ่มรูป...":"📷 เลือกรูปสินค้าจากเครื่อง"}</button>
+        {affiliatePhotoPreview&&<img src={affiliatePhotoPreview} alt="รูปสินค้าที่เลือกเพื่อใช้สร้างวิดีโอ" style={{maxWidth:110,maxHeight:110,objectFit:"contain"}}/>}</div>
       </div>}
       {selectedProduct&&affiliateReadiness&&<div className="transcriptPanel readinessPanel"><div className="readinessRow"><span className={affiliateReadiness.video.ready?"aiBadge readyBadge":"aiBadge"}>{affiliateReadiness.video.ready?"🟢 พร้อมโพสต์วิดีโอ":"⚪ วิดีโอยังไม่พร้อมโพสต์"}</span><span className={affiliateReadiness.productAttachment.ready?"aiBadge readyBadge":"aiBadge"}>{affiliateReadiness.productAttachment.status==="not-requested"?"⚪ ไม่ได้ขอแนบสินค้า":affiliateReadiness.productAttachment.ready?"🟢 พร้อมแนบสินค้า":"🟡 การแนบสินค้ายังไม่พร้อม"}</span></div>{affiliateReadiness.video.issues.length>0&&<ul className="readinessIssues">{affiliateReadiness.video.issues.map((issue,index)=><li key={`video-${index}`}>{issue}</li>)}</ul>}{affiliateReadiness.productAttachment.issues.length>0&&<ul className="readinessIssues">{affiliateReadiness.productAttachment.issues.map((issue,index)=><li key={`attach-${index}`}>{issue}</li>)}</ul>}</div>}{selectedProduct&&<div className="transcriptPanel selectedProductPanel"><div><p className="eyebrow">สินค้าที่เลือก</p><h3>{selectedProduct.title}</h3><p className="muted">{selectedProduct.sellerName??"ไม่ระบุร้าน"} · {selectedProduct.description??"ไม่มีคำอธิบายสินค้า"}</p></div><div className="keyRow"><select value={language} onChange={(e)=>setLanguage(e.target.value as ContentLanguage)}><option value="th">ภาษาไทย</option><option value="en">English</option></select><input type="number" min={10} max={180} value={duration} onChange={(e)=>setDuration(Number(e.target.value)||30)} aria-label="ความยาวคลิป"/><button className="primary" onClick={()=>void (async()=>{if(affiliatePreparing||affiliateLocalRunning)return;setAffiliatePreparing(true);setError(null);try{const jobs=await window.videoEditor.createAffiliateJobs([selectedProduct]);setAffiliateJobs(jobs);const catalog=mergedAffiliateCatalog(selectedProduct);setAffiliateProducts(catalog);await window.videoEditor.saveAffiliateQueue(catalog,jobs);setAffiliateReadiness(null);}catch(e){setError(e instanceof Error?e.message:String(e));}finally{setAffiliatePreparing(false);}})()} disabled={affiliateLocalRunning||affiliatePreparing}>{affiliatePreparing?"กำลังเตรียม...":"✨ เตรียมคลิปปักตะกร้าอัตโนมัติ"}</button><button className="primary" onClick={()=>void (async()=>{setError(null);try{const jobs=await window.videoEditor.createAffiliateJobs([selectedProduct]);setAffiliateJobs(jobs);const catalog=mergedAffiliateCatalog(selectedProduct);setAffiliateProducts(catalog);await window.videoEditor.saveAffiliateQueue(catalog,jobs);await createLocalAffiliateVideos(jobs);}catch(e){setError(e instanceof Error?e.message:String(e));}})()} disabled={affiliateLocalRunning||affiliatePreparing}>{affiliateLocalRunning?"กำลังสร้างคลิป...":"🎬 สร้างคลิปจากสินค้านี้"}</button></div></div>}
       {affiliateImportErrors.length>0&&<div className="message errorMessage">{affiliateImportErrors.join(" · ")}</div>}{error&&<div className="message errorMessage">{error}</div>}
