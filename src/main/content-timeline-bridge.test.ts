@@ -123,3 +123,5 @@ test("generated timeline prefers the latest asset when legacy duplicates exist",
   assert.equal(timeline.clips[0].videoDuration,5);
   assert.equal(timeline.clips[0].duration,6);
 });
+
+test("affiliate product images get gentle varied motion and timed subtitles",()=>{const project:any={id:"p",title:"x",brief:{},script:"",createdAt:"",updatedAt:"",scenes:[{id:"s1",order:1,narration:"หนึ่ง",visualIntent:"สินค้า",estimatedDuration:3},{id:"s2",order:2,narration:"สอง",visualIntent:"สินค้า",estimatedDuration:3}],assetPlan:{assets:[{id:"i1",projectId:"p",sceneId:"s1",kind:"image",filePath:"a.jpg",provider:"affiliate-product"},{id:"v1",projectId:"p",sceneId:"s1",kind:"voice",filePath:"a.mp3",duration:2},{id:"i2",projectId:"p",sceneId:"s2",kind:"image",filePath:"b.jpg",provider:"affiliate-product"},{id:"v2",projectId:"p",sceneId:"s2",kind:"voice",filePath:"b.mp3",duration:4}],jobs:[]}};const bridge=bridgeGeneratedAssets(project);assert.equal(bridge.subtitles[0].end,2);assert.equal(bridge.subtitles[1].start,2);assert.notEqual(bridge.visualPlan.shots[0].motion,bridge.visualPlan.shots[1].motion);});
