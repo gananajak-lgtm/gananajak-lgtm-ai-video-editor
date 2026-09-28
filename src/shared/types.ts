@@ -209,6 +209,8 @@ export type AiSettingsStatus = {
 export type ContentProviderStatus = {
   replicateConfigured: boolean;
   elevenLabsConfigured: boolean;
+  videoModel?: string;
+  affiliateVideoReady: boolean;
 };
 
 export type RenderProgress = {
@@ -316,6 +318,7 @@ export type DesktopApi = {
   saveOpenAiApiKey: (apiKey: string) => Promise<AiSettingsStatus>;
   getContentProviderStatus: () => Promise<ContentProviderStatus>;
   saveReplicateApiToken: (token: string) => Promise<ContentProviderStatus>;
+  saveReplicateVideoModel: (model: string) => Promise<ContentProviderStatus>;
   saveElevenLabsApiKey: (apiKey: string) => Promise<ContentProviderStatus>;
   generateContentProject: (brief: ContentBrief) => Promise<ContentProject>;
   generateLocalTestProject: (brief: ContentBrief) => Promise<ContentProject>;
