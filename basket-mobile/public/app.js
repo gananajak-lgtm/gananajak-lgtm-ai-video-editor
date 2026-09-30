@@ -87,6 +87,20 @@ el("analyze").addEventListener("click",async()=>{
   }catch(error){status(error.message);}
   finally{button.disabled=false;}
 });
+
+// Chrome Android supports intent:// links from a direct user tap. Meta AI may not
+// register meta.ai as a browsable Android app link on every device/version.
+const metaButton=el("meta");
+const isAndroid=/Android/i.test(navigator.userAgent);
+if(isAndroid){
+  const fallback=encodeURIComponent("https://www.meta.ai/");
+  metaButton.href="intent://www.meta.ai/#Intent;scheme=https;package=com.facebook.stella;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;S.browser_fallback_url="+fallback+";end";
+  metaButton.removeAttribute("target");
+  metaButton.addEventListener("click",()=>status("กำลังลองเปิดแอป Meta AI หากยังไปเว็บไซต์ ให้ตั้งค่า Android > แอป > Meta AI > เปิดตามค่าเริ่มต้น > เปิดลิงก์ที่รองรับ"));
+}else{
+  metaButton.textContent="🎬 เปิด Meta AI";
+}
+
 el("copy-caption").addEventListener("click",()=>state.plan&&copy(captionText(state.plan)));
 el("copy-pinned").addEventListener("click",()=>state.plan&&copy(state.plan.pinnedComment));
 el("download").addEventListener("click",()=>{
