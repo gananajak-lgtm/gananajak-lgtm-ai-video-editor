@@ -12,3 +12,5 @@ A standalone lightweight mobile app within an isolated folder and branch. One Wo
 No automatic marketplace scraping. OpenAI API billing is separate from ChatGPT subscription. Review product claims and speech before posting. The screenshot is transmitted to OpenAI for analysis. Soft in-memory rate limits are not a hard spending cap; configure budgets/rate limits in your account for production use.
 
 For local development: `npx wrangler dev`. Health endpoint `/api/health` reports whether secrets are configured (never reveals them).
+
+Cloudflare Workers Builds production configuration: branch `feature/mobile-basket-studio`, root directory `/basket-mobile`, deploy command `npx wrangler deploy`, and Worker name `gananajak-basket-studio`. This documentation update also triggers a new production-branch build after Cloudflare Branch control is saved.
