@@ -1,0 +1,19 @@
+name: Basket Studio Worker
+on:
+  push:
+    branches: [feature/mobile-basket-studio]
+    paths: ['basket-mobile/**', '.github/workflows/basket-mobile-check.yml']
+  pull_request:
+    paths: ['basket-mobile/**', '.github/workflows/basket-mobile-check.yml']
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax check
+        run: node --check basket-mobile/src/worker.mjs
+      - name: Security and functionality tests
+        run: node --test basket-mobile/test/*.test.mjs
