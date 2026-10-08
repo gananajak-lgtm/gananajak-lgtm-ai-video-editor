@@ -7,9 +7,8 @@ export type VoiceLine = {
   needsReview: boolean;
 };
 
-const tagPattern = /^\\[(บรรยาย|พูด|SFX)(?:\\s*:\\s*([^|\\]]+))?(?:\\s*\\|\\s*อารมณ์\\s*:\\s*([^\\]]+))?\\]\\s*(.*)$/i;
+const tagPattern = /^\[(บรรยาย|พูด|SFX)(?:\s*:\s*([^|\]]+))?(?:\s*\|\s*อารมณ์\s*:\s*([^\]]+))?\]\s*(.*)$/i;
 const quotePattern = /["“](.*?)["”]/g;
-const speakerCue = /(?:กล่าว|พูด|ถาม|ตอบ|กระซิบ|ตะโกน|ร้อง|เอ่ย|บอก)/;
 const narration = "ผู้บรรยาย";
 
 export function parseNovelScript(script: string): VoiceLine[] {
@@ -19,7 +18,7 @@ export function parseNovelScript(script: string): VoiceLine[] {
     const trimmed = text.trim();
     if (trimmed) result.push({ id: `line-${result.length + 1}`, text: trimmed, speaker, emotion, kind, needsReview });
   };
-  for (const paragraph of script.split(/\\r?\\n/)) {
+  for (const paragraph of script.split(/\r?\n/)) {
     const line = paragraph.trim();
     if (!line) { activeTag = null; continue; }
     const tag = line.match(tagPattern);
@@ -43,8 +42,8 @@ export function parseNovelScript(script: string): VoiceLine[] {
       const after = line.slice(start + quote[0].length);
       const preceding = line.slice(0, start);
       const following = after.slice(0, 90);
-      const pre = preceding.match(/([ก-๙A-Za-z][ก-๙A-Za-z0-9]*)\\s*(?:กล่าว|พูด|ถาม|ตอบ|กระซิบ|ตะโกน|ร้อง|เอ่ย|บอก)\\s*$/);
-      const post = following.match(/^\\s*([ก-๙A-Za-z][ก-๙A-Za-z0-9]*)\\s*(?:กล่าว|พูด|ถาม|ตอบ|กระซิบ|ตะโกน|ร้อง|เอ่ย|บอก)/);
+      const pre = preceding.match(/([ก-๙A-Za-z][ก-๙A-Za-z0-9]*)\s*(?:กล่าว|พูด|ถาม|ตอบ|กระซิบ|ตะโกน|ร้อง|เอ่ย|บอก)\s*$/);
+      const post = following.match(/^\s*([ก-๙A-Za-z][ก-๙A-Za-z0-9]*)\s*(?:กล่าว|พูด|ถาม|ตอบ|กระซิบ|ตะโกน|ร้อง|เอ่ย|บอก)/);
       const speaker = pre?.[1] || post?.[1] || "ไม่ทราบผู้พูด";
       push(quote[1], speaker, "ปกติ", "dialogue", speaker === "ไม่ทราบผู้พูด");
       cursor = start + quote[0].length;
