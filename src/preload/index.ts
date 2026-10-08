@@ -8,6 +8,7 @@ import type {
 } from "../shared/types";
 
 const api: DesktopApi = {
+  checkProviderConnection: (provider) => ipcRenderer.invoke("ai:check-provider-connection", provider),
   selectImages: () => ipcRenderer.invoke("media:select-images"),
   selectNarration: () => ipcRenderer.invoke("media:select-narration"),
   readImagePreview: (filePath) =>
