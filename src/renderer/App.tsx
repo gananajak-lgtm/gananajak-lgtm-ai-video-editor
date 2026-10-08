@@ -14,6 +14,15 @@ import EpisodeQcPackPanel from "./EpisodeQcPackPanel";
 import FullEpisodeTestPanel from "./FullEpisodeTestPanel";
 import ContentFactoryPanel from "./ContentFactoryPanel";
 
+const providerStatusLabel: Record<string, string> = {
+  missing_key: "ยังไม่ได้ตั้งค่า API Key",
+  connected: "เชื่อมต่อสำเร็จ",
+  unauthorized: "คีย์ไม่ถูกต้องหรือไม่มีสิทธิ์เข้าถึง",
+  rate_limited: "ถูกจำกัดคำขอชั่วคราว",
+  network_error: "เครือข่ายขัดข้องหรือหมดเวลา",
+  provider_error: "บริการตอบกลับข้อผิดพลาด"
+};
+
 function fileName(filePath: string) {
   return filePath.split(/[\\/]/).pop() ?? filePath;
 }
@@ -316,6 +325,7 @@ export default function App() {
     try {
       const status = await window.videoEditor.saveOpenAiApiKey(apiKeyDraft);
       setAiStatus(status);
+      setProviderResults(previous => ({ ...previous, openai: "not_tested" }));
       setApiKeyDraft("");
       setNotice(
         status.persistedSecurely
@@ -591,9 +601,9 @@ export default function App() {
 
         <div className="keyRow">
           <button disabled={checkingProvider !== null} onClick={() => void checkProvider("openai")}>ทดสอบ OpenAI</button>
-          <span role="status">{providerResults.openai ?? "ยังไม่ได้ทดสอบ"}</span>
+          <span role="status">{providerStatusLabel[providerResults.openai] ?? "ยังไม่ได้ทดสอบ"}</span>
           <button disabled={checkingProvider !== null} onClick={() => void checkProvider("elevenlabs")}>ทดสอบ ElevenLabs</button>
-          <span role="status">{providerResults.elevenlabs ?? "ยังไม่ได้ทดสอบ"}</span>
+          <span role="status">{providerStatusLabel[providerResults.elevenlabs] ?? "ยังไม่ได้ทดสอบ"}</span>
         </div>
 
         {!aiStatus.configured && (
