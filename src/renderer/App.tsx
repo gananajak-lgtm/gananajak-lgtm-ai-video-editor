@@ -488,7 +488,7 @@ export default function App() {
   return (
     <>
       {browserMode && <div className="browserModeBanner"><strong>🌐 Browser Mode</strong><span>เปิดใช้งานจากเว็บได้แล้ว · งาน Render / AI / Publish จะย้ายไปทำผ่าน Backend Worker</span></div>}
-      <main className="shell">
+      <main className="shell editorWorkspace">
       <header className="topbar">
         <div>
           <p className="eyebrow">GANANAJAK LAB</p>
@@ -499,6 +499,13 @@ export default function App() {
           ระยะที่ 1 · ระบบตัดต่อและเล่นวิดีโอในแอป
         </div>
       </header>
+
+      <nav className="editorNav" aria-label="พื้นที่ทำงาน">
+        <a href="#editor-media">สื่อ</a>
+        <a href="#editor-ai">AI วิเคราะห์</a>
+        <a href="#editor-preview">พรีวิว</a>
+        <a href="#editor-timeline">ไทม์ไลน์</a>
+      </nav>
 
       <ProjectToolbar
         title={projectTitle}
@@ -538,7 +545,7 @@ export default function App() {
         }}
       />
 
-      <section className="grid">
+      <section id="editor-media" className="grid">
         <article className="panel">
           <div className="panelHeader">
             <div>
@@ -585,7 +592,7 @@ export default function App() {
         </article>
       </section>
 
-      <section className="aiPanel">
+      <section id="editor-ai" className="aiPanel">
         <div className="aiPanelHeader">
           <div>
             <p className="eyebrow">ระบบวิเคราะห์เสียง AI</p>
@@ -705,6 +712,7 @@ export default function App() {
 
       {timeline && (
         <>
+          <div id="editor-preview" className="editorPreviewAnchor" />
           <QuickPreviewPanel
             plan={{ ...timeline, audioLayers }}
             disabled={
@@ -775,7 +783,7 @@ export default function App() {
       )}
 
       {timeline && (
-        <section className="timelinePanel">
+        <section id="editor-timeline" className="timelinePanel">
           <div className="timelineHeader">
             <div>
               <p className="eyebrow">FIRST CUT</p>
