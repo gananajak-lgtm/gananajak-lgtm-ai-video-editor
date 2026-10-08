@@ -2393,3 +2393,21 @@ label { font-size: 10px; }
   .editorNav { top: 0; }
   .editorNav a { padding: 9px 11px; font-size: 12px; }
 }
+
+
+.editorThreePane { display: grid; grid-template-columns: minmax(240px, 0.95fr) minmax(380px, 1.9fr) minmax(270px, 1fr); gap: 12px; align-items: stretch; margin: 12px 0 18px; }
+.editorMediaPane, .editorInspectorPane, .editorPreviewPane { min-width: 0; min-height: 360px; border: 1px solid #353a45; border-radius: 12px; background: #15191f; overflow: auto; }
+.editorMediaPane { padding: 10px; }
+.editorMediaPane .grid { display: flex; flex-direction: column; gap: 10px; margin: 0; }
+.editorMediaPane .panel { min-width: 0; width: 100%; }
+.editorMediaPane .mediaRow strong { overflow-wrap: anywhere; }
+.editorInspectorPane { padding: 10px; }
+.editorInspectorPane .aiPanel { margin: 0; padding: 12px; }
+.editorPreviewPane { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+.editorPaneHeading { display: flex; justify-content: space-between; gap: 12px; align-items: center; color: #f1f5f9; font-size: 13px; }
+.editorPaneHeading span { color: #94a3b8; font-size: 11px; }
+.editorEmptyPreview { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; background: #080a0f; border-radius: 10px; padding: 20px; color: #e2e8f0; }
+.editorEmptyPreview p { max-width: 320px; font-size: 12px; color: #94a3b8; }
+.editorPlayGlyph { display: grid; place-items: center; width: 62px; height: 62px; border-radius: 50%; background: #242b35; color: #67e8f9; font-size: 25px; }
+@media(max-width: 1150px) { .editorThreePane { grid-template-columns: minmax(220px, 1fr) minmax(350px, 2fr); } .editorInspectorPane { grid-column: 1 / -1; min-height: 0; } }
+@media(max-width: 700px) { .editorThreePane { display: flex; flex-direction: column; } .editorMediaPane, .editorInspectorPane, .editorPreviewPane { min-height: 0; } .editorEmptyPreview { min-height: 240px; } }
