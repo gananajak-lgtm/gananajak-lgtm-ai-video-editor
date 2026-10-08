@@ -288,7 +288,10 @@ export type RenderResult = {
   testReport?: FullEpisodeTestReport;
 };
 
+export type ProviderConnectionResult = { provider: "openai" | "elevenlabs"; configured: boolean; connected: boolean; status: "missing_key" | "connected" | "unauthorized" | "rate_limited" | "network_error" | "provider_error" };
+
 export type DesktopApi = {
+  checkProviderConnection: (provider: "openai" | "elevenlabs") => Promise<ProviderConnectionResult>;
   selectImages: () => Promise<string[]>;
   selectNarration: () => Promise<string | null>;
   readImagePreview: (filePath: string) => Promise<string | null>;
