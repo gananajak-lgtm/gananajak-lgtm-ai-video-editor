@@ -1,0 +1,58 @@
+export type VoiceLine = {
+  id: string;
+  text: string;
+  speaker: string;
+  emotion: string;
+  kind: "narration" | "dialogue" | "sfx";
+  needsReview: boolean;
+};
+
+const tagPattern = /^\\[(บรรยาย|พูด|SFX)(?:\\s*:\\s*([^|\\]]+))?(?:\\s*\\|\\s*อารมณ์\\s*:\\s*([^\\]]+))?\\]\\s*(.*)$/i;
+const quotePattern = /["“](.*?)["”]/g;
+const speakerCue = /(?:กล่าว|พูด|ถาม|ตอบ|กระซิบ|ตะโกน|ร้อง|เอ่ย|บอก)/;
+const narration = "ผู้บรรยาย";
+
+export function parseNovelScript(script: string): VoiceLine[] {
+  const result: VoiceLine[] = [];
+  let activeTag: { speaker: string; emotion: string; kind: VoiceLine["kind"] } | null = null;
+  const push = (text: string, speaker: string, emotion: string, kind: VoiceLine["kind"], needsReview = false) => {
+    const trimmed = text.trim();
+    if (trimmed) result.push({ id: `line-${result.length + 1}`, text: trimmed, speaker, emotion, kind, needsReview });
+  };
+  for (const paragraph of script.split(/\\r?\\n/)) {
+    const line = paragraph.trim();
+    if (!line) { activeTag = null; continue; }
+    const tag = line.match(tagPattern);
+    if (tag) {
+      const kind: VoiceLine["kind"] = tag[1].toLowerCase() === "sfx" ? "sfx" : tag[1] === "พูด" ? "dialogue" : "narration";
+      activeTag = { kind, speaker: kind === "dialogue" ? (tag[2]?.trim() || "ไม่ทราบผู้พูด") : narration, emotion: tag[3]?.trim() || "ปกติ" };
+      if (tag[4]) push(tag[4], activeTag.speaker, activeTag.emotion, kind, kind === "dialogue" && !tag[2]);
+      continue;
+    }
+    if (activeTag) {
+      push(line, activeTag.speaker, activeTag.emotion, activeTag.kind, activeTag.kind === "dialogue" && activeTag.speaker === "ไม่ทราบผู้พูด");
+      continue;
+    }
+    const quotes = [...line.matchAll(quotePattern)];
+    if (!quotes.length) { push(line, narration, "ปกติ", "narration"); continue; }
+    let cursor = 0;
+    for (const quote of quotes) {
+      const start = quote.index ?? cursor;
+      const before = line.slice(cursor, start);
+      if (before.trim()) push(before, narration, "ปกติ", "narration");
+      const after = line.slice(start + quote[0].length);
+      const preceding = line.slice(0, start);
+      const following = after.slice(0, 90);
+      const pre = preceding.match(/([ก-๙A-Za-z][ก-๙A-Za-z0-9]*)\\s*(?:กล่าว|พูด|ถาม|ตอบ|กระซิบ|ตะโกน|ร้อง|เอ่ย|บอก)\\s*$/);
+      const post = following.match(/^\\s*([ก-๙A-Za-z][ก-๙A-Za-z0-9]*)\\s*(?:กล่าว|พูด|ถาม|ตอบ|กระซิบ|ตะโกน|ร้อง|เอ่ย|บอก)/);
+      const speaker = pre?.[1] || post?.[1] || "ไม่ทราบผู้พูด";
+      push(quote[1], speaker, "ปกติ", "dialogue", speaker === "ไม่ทราบผู้พูด");
+      cursor = start + quote[0].length;
+    }
+    if (cursor < line.length) {
+      const tail = line.slice(cursor);
+      if (tail.trim()) push(tail, narration, "ปกติ", "narration");
+    }
+  }
+  return result;
+}
