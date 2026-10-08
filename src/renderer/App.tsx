@@ -14,6 +14,15 @@ import EpisodeQcPackPanel from "./EpisodeQcPackPanel";
 import FullEpisodeTestPanel from "./FullEpisodeTestPanel";
 import ContentFactoryPanel from "./ContentFactoryPanel";
 
+const providerStatusLabel: Record<string, string> = {
+  missing_key: "ยังไม่ได้ตั้งค่า API Key",
+  connected: "เชื่อมต่อสำเร็จ",
+  unauthorized: "คีย์ไม่ถูกต้องหรือไม่มีสิทธิ์เข้าถึง",
+  rate_limited: "ถูกจำกัดคำขอชั่วคราว",
+  network_error: "เครือข่ายขัดข้องหรือหมดเวลา",
+  provider_error: "บริการตอบกลับข้อผิดพลาด"
+};
+
 function fileName(filePath: string) {
   return filePath.split(/[\\/]/).pop() ?? filePath;
 }
@@ -51,6 +60,8 @@ export default function App() {
   });
   const [apiKeyDraft, setApiKeyDraft] = useState("");
   const [savingKey, setSavingKey] = useState(false);
+  const [checkingProvider, setCheckingProvider] = useState<"openai" | "elevenlabs" | null>(null);
+  const [providerResults, setProviderResults] = useState<Record<string, string>>({});
   const [transcribing, setTranscribing] = useState(false);
   const [building, setBuilding] = useState(false);
   const [rendering, setRendering] = useState(false);
@@ -314,6 +325,7 @@ export default function App() {
     try {
       const status = await window.videoEditor.saveOpenAiApiKey(apiKeyDraft);
       setAiStatus(status);
+      setProviderResults(previous => ({ ...previous, openai: "not_tested" }));
       setApiKeyDraft("");
       setNotice(
         status.persistedSecurely
@@ -324,6 +336,18 @@ export default function App() {
       setError(saveError instanceof Error ? saveError.message : String(saveError));
     } finally {
       setSavingKey(false);
+    }
+  };
+
+  const checkProvider = async (provider: "openai" | "elevenlabs") => {
+    setCheckingProvider(provider);
+    try {
+      const result = await window.videoEditor.checkProviderConnection(provider);
+      setProviderResults(previous => ({ ...previous, [provider]: result.status }));
+    } catch {
+      setProviderResults(previous => ({ ...previous, [provider]: "network_error" }));
+    } finally {
+      setCheckingProvider(null);
     }
   };
 
@@ -573,6 +597,13 @@ export default function App() {
           <span className={aiStatus.configured ? "aiBadge readyBadge" : "aiBadge"}>
             {aiStatus.configured ? "เชื่อมต่อ AI แล้ว" : "ต้องตั้งค่า API key"}
           </span>
+        </div>
+
+        <div className="keyRow">
+          <button disabled={checkingProvider !== null} onClick={() => void checkProvider("openai")}>ทดสอบ OpenAI</button>
+          <span role="status">{providerStatusLabel[providerResults.openai] ?? "ยังไม่ได้ทดสอบ"}</span>
+          <button disabled={checkingProvider !== null} onClick={() => void checkProvider("elevenlabs")}>ทดสอบ ElevenLabs</button>
+          <span role="status">{providerStatusLabel[providerResults.elevenlabs] ?? "ยังไม่ได้ทดสอบ"}</span>
         </div>
 
         {!aiStatus.configured && (

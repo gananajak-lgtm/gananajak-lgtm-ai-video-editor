@@ -1,3 +1,4 @@
+import { checkProviderConnection } from "./provider-connection";
 import { createMetaBrokerSession, exchangeMetaBrokerSession, validateMetaBrokerConfig } from "./meta-auth-broker";
 import { explainAffiliateProduct } from "./affiliate-product-search";
 import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell } from "electron";
@@ -296,6 +297,11 @@ ipcMain.handle(
     return relinkSingleMedia(project, missingPath);
   }
 );
+
+ipcMain.handle("ai:check-provider-connection", (_event, provider: "openai" | "elevenlabs") => {
+  if (provider !== "openai" && provider !== "elevenlabs") throw new Error("Unsupported provider");
+  return checkProviderConnection(provider);
+});
 
 ipcMain.handle("ai:settings-status", async () => {
   return getAiSettingsStatus();
