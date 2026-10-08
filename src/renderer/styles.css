@@ -2372,3 +2372,56 @@ label { font-size: 10px; }
 .browserModeBanner{position:sticky;top:8px;z-index:20;display:flex;align-items:center;gap:10px;width:min(1540px,calc(100% - 28px));margin:8px auto;padding:8px 12px;border:1px solid rgba(56,189,248,.28);border-radius:10px;background:rgba(8,47,73,.94);backdrop-filter:blur(12px);font-size:11px;color:#bae6fd}.browserModeBanner strong{color:#f0f9ff;font-size:12px}.browserModeBanner span{color:#7dd3fc}@media(max-width:700px){.browserModeBanner{align-items:flex-start;flex-direction:column;gap:3px;width:calc(100% - 20px)}}
 
 .readinessPanel{display:grid;gap:8px}.readinessRow{display:flex;gap:8px;flex-wrap:wrap}.readinessIssues{margin:0;padding-left:20px;font-size:12px;opacity:.82}.readinessIssues li+li{margin-top:3px}
+
+
+/* Desktop editing workspace: media, preview, inspector and timeline visual language. */
+.editorWorkspace { width: min(1880px, calc(100% - 32px)); max-width: none; }
+.editorWorkspace .topbar { border-bottom: 1px solid #30343d; padding-bottom: 12px; }
+.editorWorkspace .topbar h1 { font-size: clamp(20px, 2vw, 28px); letter-spacing: -.025em; }
+.editorNav { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 4px; padding: 8px; margin: 10px 0 16px; background: #15181e; border: 1px solid #343944; border-radius: 12px; box-shadow: 0 10px 25px #0005; overflow-x: auto; }
+.editorNav a { flex: 0 0 auto; text-decoration: none; color: #cbd5e1; padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 650; }
+.editorNav a:hover, .editorNav a:focus-visible { background: #303640; color: white; outline: none; }
+.editorWorkspace .panel, .editorWorkspace .aiPanel, .editorWorkspace .timelinePanel { border-color: #323740; }
+.editorWorkspace .timelinePanel { background: #12151b; border: 1px solid #363b45; border-radius: 14px; }
+.editorWorkspace .track { background: #1a1e25; border: 1px solid #333944; border-radius: 9px; min-height: 76px; }
+.editorWorkspace .clip { border-radius: 6px; }
+.editorWorkspace .compactIntro { margin-bottom: 12px; }
+.editorWorkspace [id^="editor-"] { scroll-margin-top: 88px; }
+.editorPreviewAnchor { height: 1px; }
+@media (max-width: 780px) {
+  .editorWorkspace { width: calc(100% - 16px); }
+  .editorNav { top: 0; }
+  .editorNav a { padding: 9px 11px; font-size: 12px; }
+}
+
+
+.editorThreePane { display: grid; grid-template-columns: minmax(240px, 0.95fr) minmax(380px, 1.9fr) minmax(270px, 1fr); gap: 12px; align-items: stretch; margin: 12px 0 18px; }
+.editorMediaPane, .editorInspectorPane, .editorPreviewPane { min-width: 0; min-height: 360px; border: 1px solid #353a45; border-radius: 12px; background: #15191f; overflow: auto; }
+.editorMediaPane { padding: 10px; }
+.editorMediaPane .grid { display: flex; flex-direction: column; gap: 10px; margin: 0; }
+.editorMediaPane .panel { min-width: 0; width: 100%; }
+.editorMediaPane .mediaRow strong { overflow-wrap: anywhere; }
+.editorInspectorPane { padding: 10px; }
+.editorInspectorPane .aiPanel { margin: 0; padding: 12px; }
+.editorPreviewPane { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+.editorPaneHeading { display: flex; justify-content: space-between; gap: 12px; align-items: center; color: #f1f5f9; font-size: 13px; }
+.editorPaneHeading span { color: #94a3b8; font-size: 11px; }
+.editorEmptyPreview { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; background: #080a0f; border-radius: 10px; padding: 20px; color: #e2e8f0; }
+.editorEmptyPreview p { max-width: 320px; font-size: 12px; color: #94a3b8; }
+.editorPlayGlyph { display: grid; place-items: center; width: 62px; height: 62px; border-radius: 50%; background: #242b35; color: #67e8f9; font-size: 25px; }
+@media(max-width: 1150px) { .editorThreePane { grid-template-columns: minmax(220px, 1fr) minmax(350px, 2fr); } .editorInspectorPane { grid-column: 1 / -1; min-height: 0; } }
+@media(max-width: 700px) { .editorThreePane { display: flex; flex-direction: column; } .editorMediaPane, .editorInspectorPane, .editorPreviewPane { min-height: 0; } .editorEmptyPreview { min-height: 240px; } }
+
+
+.editorTrackSurface { border: 1px solid #353e4c; border-radius: 12px; background: #11151c; padding: 12px; margin: 14px 0; }
+.editorTrackToolbar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; font-size: 13px; }
+.editorTrackToolbar label { display: flex; align-items: center; gap: 8px; margin-left: auto; color: #cbd5e1; }
+.editorTrackToolbar input { width: 130px; accent-color: #22d3ee; }
+.editorTrackScroller { overflow-x: auto; padding-bottom: 8px; }
+.editorTrackClips { display: flex; gap: 3px; min-width: 100%; height: 88px; }
+.editorTrackClip { min-width: 52px; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; padding: 9px; border-radius: 6px; background: #234660; color: #f1f5f9; border: 2px solid #346080; text-align: left; cursor: grab; }
+.editorTrackClip:active { cursor: grabbing; }
+.editorTrackClip strong { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+.editorTrackClip small { font-size: 10px; opacity: .8; }
+.editorTrackClipSelected { border-color: #67e8f9; background: #1b607e; box-shadow: inset 0 0 0 1px #67e8f9; }
+.editorTrackSurface > .muted { font-size: 11px; margin: 8px 0 0; }

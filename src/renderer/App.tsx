@@ -488,7 +488,7 @@ export default function App() {
   return (
     <>
       {browserMode && <div className="browserModeBanner"><strong>🌐 Browser Mode</strong><span>เปิดใช้งานจากเว็บได้แล้ว · งาน Render / AI / Publish จะย้ายไปทำผ่าน Backend Worker</span></div>}
-      <main className="shell">
+      <main className="shell editorWorkspace">
       <header className="topbar">
         <div>
           <p className="eyebrow">GANANAJAK LAB</p>
@@ -499,6 +499,13 @@ export default function App() {
           ระยะที่ 1 · ระบบตัดต่อและเล่นวิดีโอในแอป
         </div>
       </header>
+
+      <nav className="editorNav" aria-label="พื้นที่ทำงาน">
+        <a href="#editor-media">สื่อ</a>
+        <a href="#editor-ai">AI วิเคราะห์</a>
+        <a href="#editor-preview">พรีวิว</a>
+        <a href="#editor-timeline">ไทม์ไลน์</a>
+      </nav>
 
       <ProjectToolbar
         title={projectTitle}
@@ -538,7 +545,9 @@ export default function App() {
         }}
       />
 
-      <section className="grid">
+      <div className="editorThreePane">
+        <div className="editorMediaPane">
+          <section id="editor-media" className="grid">
         <article className="panel">
           <div className="panelHeader">
             <div>
@@ -583,9 +592,27 @@ export default function App() {
             </span>
           </div>
         </article>
+          </section>
+
+</div>
+      <section id="editor-preview" className="editorPreviewPane" aria-label="หน้าต่างพรีวิว">
+        <div className="editorPaneHeading"><strong>พรีวิววิดีโอ</strong><span>{timeline ? `${timeline.width}×${timeline.height} · ${timeline.fps} fps` : "รอสร้างไทม์ไลน์"}</span></div>
+        {timeline ? (
+          <QuickPreviewPanel
+            plan={{ ...timeline, audioLayers }}
+            disabled={
+              rendering ||
+              building ||
+              transcribing ||
+              missingMedia.length > 0
+            }
+          />
+        ) : (
+          <div className="editorEmptyPreview"><span className="editorPlayGlyph">▶</span><strong>พร้อมเริ่มตัดต่อ</strong><p>นำเข้าภาพและเสียง แล้วให้ AI สร้างไทม์ไลน์เพื่อดูตัวอย่าง</p></div>
+        )}
       </section>
 
-      <section className="aiPanel">
+        <div className="editorInspectorPane">      <section id="editor-ai" className="aiPanel">
         <div className="aiPanelHeader">
           <div>
             <p className="eyebrow">ระบบวิเคราะห์เสียง AI</p>
@@ -641,6 +668,8 @@ export default function App() {
           </div>
         )}
       </section>
+</div>
+      </div>
 
       {(notice || error) && (
         <section className={error ? "message errorMessage" : "message"}>
@@ -705,15 +734,6 @@ export default function App() {
 
       {timeline && (
         <>
-          <QuickPreviewPanel
-            plan={{ ...timeline, audioLayers }}
-            disabled={
-              rendering ||
-              building ||
-              transcribing ||
-              missingMedia.length > 0
-            }
-          />
           <EpisodeQcPackPanel
             plan={{ ...timeline, audioLayers }}
             disabled={
@@ -775,7 +795,7 @@ export default function App() {
       )}
 
       {timeline && (
-        <section className="timelinePanel">
+        <section id="editor-timeline" className="timelinePanel">
           <div className="timelineHeader">
             <div>
               <p className="eyebrow">FIRST CUT</p>
