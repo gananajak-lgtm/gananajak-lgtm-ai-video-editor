@@ -13,6 +13,7 @@ import QuickPreviewPanel from "./QuickPreviewPanel";
 import EpisodeQcPackPanel from "./EpisodeQcPackPanel";
 import FullEpisodeTestPanel from "./FullEpisodeTestPanel";
 import ContentFactoryPanel from "./ContentFactoryPanel";
+import VoiceStudioPanel from "./VoiceStudioPanel";
 
 const providerStatusLabel: Record<string, string> = {
   missing_key: "ยังไม่ได้ตั้งค่า API Key",
@@ -501,6 +502,7 @@ export default function App() {
       </header>
 
       <nav className="editorNav" aria-label="พื้นที่ทำงาน">
+        <a href="#voice-studio">สตูดิโอเสียง</a>
         <a href="#editor-media">สื่อ</a>
         <a href="#editor-ai">AI วิเคราะห์</a>
         <a href="#editor-preview">พรีวิว</a>
@@ -533,6 +535,8 @@ export default function App() {
         </div>
         <div className="heroBadge">🎧</div>
       </details>
+
+      <VoiceStudioPanel />
 
       <ContentFactoryPanel
         aiConfigured={aiStatus.configured}
