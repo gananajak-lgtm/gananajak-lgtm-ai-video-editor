@@ -8,12 +8,13 @@ export type VoiceLine = {
 };
 
 const tagPattern = /^\[(บรรยาย|พูด|SFX)(?:\s*:\s*([^|\]]+))?(?:\s*\|\s*อารมณ์\s*:\s*([^\]]+))?\]\s*(.*)$/i;
-const quotePattern = /["“](.*?)["”]/g;
+const quotePattern = /"([^"]*)"|“([^”]*)”/g;
 const narration = "ผู้บรรยาย";
 
 export function parseNovelScript(script: string): VoiceLine[] {
   const result: VoiceLine[] = [];
   let activeTag: { speaker: string; emotion: string; kind: VoiceLine["kind"] } | null = null;
+  let previousSpeaker: string | null = null;
   const push = (text: string, speaker: string, emotion: string, kind: VoiceLine["kind"], needsReview = false) => {
     const trimmed = text.trim();
     if (trimmed) result.push({ id: `line-${result.length + 1}`, text: trimmed, speaker, emotion, kind, needsReview });
@@ -25,6 +26,7 @@ export function parseNovelScript(script: string): VoiceLine[] {
     if (tag) {
       const kind: VoiceLine["kind"] = tag[1].toLowerCase() === "sfx" ? "sfx" : tag[1] === "พูด" ? "dialogue" : "narration";
       activeTag = { kind, speaker: kind === "dialogue" ? (tag[2]?.trim() || "ไม่ทราบผู้พูด") : narration, emotion: tag[3]?.trim() || "ปกติ" };
+      if (kind === "dialogue" && tag[2]) previousSpeaker = activeTag.speaker;
       if (tag[4]) push(tag[4], activeTag.speaker, activeTag.emotion, kind, kind === "dialogue" && !tag[2]);
       continue;
     }
@@ -44,8 +46,10 @@ export function parseNovelScript(script: string): VoiceLine[] {
       const following = after.slice(0, 90);
       const pre = preceding.match(/([ก-๙A-Za-z][ก-๙A-Za-z0-9]*)\s*(?:กล่าว|พูด|ถาม|ตอบ|กระซิบ|ตะโกน|ร้อง|เอ่ย|บอก)\s*$/);
       const post = following.match(/^\s*([ก-๙A-Za-z][ก-๙A-Za-z0-9]*)\s*(?:กล่าว|พูด|ถาม|ตอบ|กระซิบ|ตะโกน|ร้อง|เอ่ย|บอก)/);
-      const speaker = pre?.[1] || post?.[1] || "ไม่ทราบผู้พูด";
-      push(quote[1], speaker, "ปกติ", "dialogue", speaker === "ไม่ทราบผู้พูด");
+      const explicitSpeaker = pre?.[1] || post?.[1];
+      const speaker = explicitSpeaker || previousSpeaker || "ไม่ทราบผู้พูด";
+      push(quote[1] ?? quote[2] ?? "", speaker, "ปกติ", "dialogue", !explicitSpeaker);
+      if (explicitSpeaker) previousSpeaker = explicitSpeaker;
       cursor = start + quote[0].length;
     }
     if (cursor < line.length) {
