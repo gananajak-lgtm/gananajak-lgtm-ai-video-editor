@@ -60,6 +60,8 @@ export default function TimelineEditor({ plan, onChange }: Props) {
   const [selectedClipIndex, setSelectedClipIndex] = useState(0);
   const [preview, setPreview] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [timelineZoom, setTimelineZoom] = useState(1);
+  const [draggedClipIndex, setDraggedClipIndex] = useState<number | null>(null);
 
   const selectedClip =
     plan.clips[Math.min(selectedClipIndex, Math.max(0, plan.clips.length - 1))];
@@ -132,6 +134,15 @@ export default function TimelineEditor({ plan, onChange }: Props) {
     });
   };
 
+  const moveClip = (from: number, to: number) => {
+    if (from === to || from < 0 || to < 0 || from >= plan.clips.length || to >= plan.clips.length) return;
+    const clips = plan.clips.map(clip => ({ ...clip }));
+    const [moved] = clips.splice(from, 1);
+    clips.splice(to, 0, moved);
+    onChange({ ...plan, clips: rebuildStarts(clips) });
+    setSelectedClipIndex(to);
+  };
+
   const replaceImage = async (index: number) => {
     const picked = await window.videoEditor.selectImages();
     const replacement = picked[0];
@@ -199,6 +210,39 @@ export default function TimelineEditor({ plan, onChange }: Props) {
         <span>{plan.subtitles.length} subtitle cues</span>
         <span>{formatTime(totalClipDuration)} visual runtime</span>
         <span>{formatTime(plan.duration)} narration runtime</span>
+      </div>
+
+      <div className="editorTrackSurface">
+        <div className="editorTrackToolbar">
+          <strong>ไทม์ไลน์ภาพ</strong>
+          <label>ซูม <input type="range" min="0.5" max="3" step="0.25" value={timelineZoom} onChange={(event) => setTimelineZoom(Number(event.target.value))} /></label>
+          <span>{timelineZoom.toFixed(2)}×</span>
+        </div>
+        <div className="editorTrackScroller">
+          <div className="editorTrackClips" style={{ width: `${Math.max(100, timelineZoom * 100)}%` }}>
+            {plan.clips.map((clip, index) => (
+              <button
+                type="button"
+                key={clip.id}
+                draggable
+                onDragStart={(event) => { setDraggedClipIndex(index); event.dataTransfer.effectAllowed = "move"; }}
+                onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "move"; }}
+                onDrop={(event) => { event.preventDefault(); if (draggedClipIndex !== null) moveClip(draggedClipIndex, index); setDraggedClipIndex(null); }}
+                onDragEnd={() => setDraggedClipIndex(null)}
+                onClick={() => setSelectedClipIndex(index)}
+                aria-pressed={selectedClipIndex === index}
+                className={selectedClipIndex === index ? "editorTrackClip editorTrackClipSelected" : "editorTrackClip"}
+                style={{ flexGrow: Math.max(0.6, clip.duration), flexBasis: 0 }}
+                title={`${fileName(clip.imagePath)} · ${formatTime(clip.start)} · ${clip.duration.toFixed(1)}s`}
+              >
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <strong>{fileName(clip.imagePath)}</strong>
+                <small>{clip.duration.toFixed(1)}s</small>
+              </button>
+            ))}
+          </div>
+        </div>
+        <p className="muted">คลิกเลือกช็อต · ลากช็อตเพื่อเปลี่ยนลำดับ · ปรับจุดตัดในแผงด้านล่าง</p>
       </div>
 
       <div className="manualEditorGrid">
