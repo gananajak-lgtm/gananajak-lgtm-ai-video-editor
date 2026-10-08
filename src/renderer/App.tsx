@@ -545,7 +545,9 @@ export default function App() {
         }}
       />
 
-      <section id="editor-media" className="grid">
+      <div className="editorThreePane">
+        <div className="editorMediaPane">
+          <section id="editor-media" className="grid">
         <article className="panel">
           <div className="panelHeader">
             <div>
@@ -590,9 +592,27 @@ export default function App() {
             </span>
           </div>
         </article>
+          </section>
+
+</div>
+      <section id="editor-preview" className="editorPreviewPane" aria-label="หน้าต่างพรีวิว">
+        <div className="editorPaneHeading"><strong>พรีวิววิดีโอ</strong><span>{timeline ? `${timeline.width}×${timeline.height} · ${timeline.fps} fps` : "รอสร้างไทม์ไลน์"}</span></div>
+        {timeline ? (
+          <QuickPreviewPanel
+            plan={{ ...timeline, audioLayers }}
+            disabled={
+              rendering ||
+              building ||
+              transcribing ||
+              missingMedia.length > 0
+            }
+          />
+        ) : (
+          <div className="editorEmptyPreview"><span className="editorPlayGlyph">▶</span><strong>พร้อมเริ่มตัดต่อ</strong><p>นำเข้าภาพและเสียง แล้วให้ AI สร้างไทม์ไลน์เพื่อดูตัวอย่าง</p></div>
+        )}
       </section>
 
-      <section id="editor-ai" className="aiPanel">
+        <div className="editorInspectorPane">      <section id="editor-ai" className="aiPanel">
         <div className="aiPanelHeader">
           <div>
             <p className="eyebrow">ระบบวิเคราะห์เสียง AI</p>
@@ -648,6 +668,8 @@ export default function App() {
           </div>
         )}
       </section>
+</div>
+      </div>
 
       {(notice || error) && (
         <section className={error ? "message errorMessage" : "message"}>
@@ -712,16 +734,6 @@ export default function App() {
 
       {timeline && (
         <>
-          <div id="editor-preview" className="editorPreviewAnchor" />
-          <QuickPreviewPanel
-            plan={{ ...timeline, audioLayers }}
-            disabled={
-              rendering ||
-              building ||
-              transcribing ||
-              missingMedia.length > 0
-            }
-          />
           <EpisodeQcPackPanel
             plan={{ ...timeline, audioLayers }}
             disabled={
