@@ -51,6 +51,8 @@ export default function App() {
   });
   const [apiKeyDraft, setApiKeyDraft] = useState("");
   const [savingKey, setSavingKey] = useState(false);
+  const [checkingProvider, setCheckingProvider] = useState<"openai" | "elevenlabs" | null>(null);
+  const [providerResults, setProviderResults] = useState<Record<string, string>>({});
   const [transcribing, setTranscribing] = useState(false);
   const [building, setBuilding] = useState(false);
   const [rendering, setRendering] = useState(false);
@@ -327,6 +329,18 @@ export default function App() {
     }
   };
 
+  const checkProvider = async (provider: "openai" | "elevenlabs") => {
+    setCheckingProvider(provider);
+    try {
+      const result = await window.videoEditor.checkProviderConnection(provider);
+      setProviderResults(previous => ({ ...previous, [provider]: result.status }));
+    } catch {
+      setProviderResults(previous => ({ ...previous, [provider]: "network_error" }));
+    } finally {
+      setCheckingProvider(null);
+    }
+  };
+
   const transcribeNarration = async () => {
     if (!narration) return;
 
@@ -573,6 +587,13 @@ export default function App() {
           <span className={aiStatus.configured ? "aiBadge readyBadge" : "aiBadge"}>
             {aiStatus.configured ? "เชื่อมต่อ AI แล้ว" : "ต้องตั้งค่า API key"}
           </span>
+        </div>
+
+        <div className="keyRow">
+          <button disabled={checkingProvider !== null} onClick={() => void checkProvider("openai")}>ทดสอบ OpenAI</button>
+          <span role="status">{providerResults.openai ?? "ยังไม่ได้ทดสอบ"}</span>
+          <button disabled={checkingProvider !== null} onClick={() => void checkProvider("elevenlabs")}>ทดสอบ ElevenLabs</button>
+          <span role="status">{providerResults.elevenlabs ?? "ยังไม่ได้ทดสอบ"}</span>
         </div>
 
         {!aiStatus.configured && (
