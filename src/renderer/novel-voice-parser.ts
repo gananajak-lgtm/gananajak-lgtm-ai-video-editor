@@ -17,7 +17,23 @@ export function parseNovelScript(script: string): VoiceLine[] {
   let previousSpeaker: string | null = null;
   const push = (text: string, speaker: string, emotion: string, kind: VoiceLine["kind"], needsReview = false) => {
     const trimmed = text.trim();
-    if (trimmed) result.push({ id: `line-${result.length + 1}`, text: trimmed, speaker, emotion, kind, needsReview });
+    if (!trimmed) return;
+    // Keep narration manageable for TTS without rewriting or dropping source text.
+    const segments: string[] = [];
+    if (kind !== "narration" || trimmed.length <= 240) segments.push(trimmed);
+    else {
+      let remaining = trimmed;
+      while (remaining.length > 240) {
+        const prefix = remaining.slice(0, 240);
+        const candidates = [...prefix.matchAll(/[.!?。！？…]+\s*|\s+/g)];
+        const preferred = candidates.map(match => (match.index || 0) + match[0].length).filter(pos => pos >= 100 && pos <= 240);
+        const cut = preferred.length ? preferred[preferred.length - 1] : 240;
+        segments.push(remaining.slice(0, cut).trim());
+        remaining = remaining.slice(cut).trim();
+      }
+      if (remaining) segments.push(remaining);
+    }
+    for (const segment of segments) if (segment) result.push({ id: `line-${result.length + 1}`, text: segment, speaker, emotion, kind, needsReview });
   };
   for (const paragraph of script.split(/\r?\n/)) {
     const line = paragraph.trim();
