@@ -33,3 +33,11 @@ Voice Studio can be prepared without configuring OpenAI or ElevenLabs. The rende
 `src/renderer/voice-production-plan.ts` — deterministic offline job planning and readiness summary.
 
 No paid synthesis is initiated by these modules.
+
+## Multiple authorized ElevenLabs workspaces
+
+The app may maintain multiple **authorized workspace profiles** and multiple scoped API keys. Profiles are not additional free-credit pools. ElevenLabs API keys count against their workspace quota. Users choose a specific workspace before submitting each job; no automatic key or account rotation, failover on quota exhaustion, or combining free trial allowances.
+
+Profile metadata includes an opaque key reference, display name, workspace label, enabled flag, explicit budget and last known usage, and workspace-specific character voice IDs. The renderer never receives the secret key. A missing or stale usage figure blocks paid scheduling until refreshed, and estimates are not authoritative provider balances. The production queue must include a selected profile ID and resolved voice ID when the future API bridge is built.
+
+`src/renderer/elevenlabs-workspace-profiles.ts` provides the pure selection and budget checks. Secure multi-key storage, account verification, usage refresh, UI configuration, and provider calls are **not implemented yet**. API keys should be restricted to needed endpoints and configured with provider-side credit limits.
