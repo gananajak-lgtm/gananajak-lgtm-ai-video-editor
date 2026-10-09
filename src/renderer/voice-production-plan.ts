@@ -9,6 +9,7 @@ export type VoiceJob = {
   text: string;
   emotion: string;
   voiceId: string | null;
+  workspaceId: string | null;
   state: VoiceJobState;
   reason?: string;
   fingerprint: string;
@@ -20,21 +21,23 @@ export type VoiceProductionPlan = {
   title: string;
   createdAt: string;
   provider: "elevenlabs";
+  workspaceId: string | null;
   requiresExplicitApproval: true;
   jobs: VoiceJob[];
   sfxCues: Array<{ lineId: string; text: string; order: number }>;
 };
 
-export function voiceFingerprint(line: VoiceLine, voiceId: string): string {
+export function voiceFingerprint(line: VoiceLine, voiceId: string, workspaceId = ""): string {
   // Deterministic local comparison key; no secrets or API keys included.
-  return JSON.stringify([line.text.trim(), line.emotion.trim(), voiceId.trim()]);
+  return JSON.stringify([line.text.trim(), line.emotion.trim(), voiceId.trim(), workspaceId.trim()]);
 }
 
 export function buildVoiceProductionPlan(
   title: string,
   lines: VoiceLine[],
   voiceIds: Record<string, string>,
-  completed: Record<string, { fingerprint: string; outputPath: string }> = {}
+  completed: Record<string, { fingerprint: string; outputPath: string }> = {},
+  workspaceId: string | null = null
 ): VoiceProductionPlan {
   const jobs: VoiceJob[] = [];
   const sfxCues: VoiceProductionPlan["sfxCues"] = [];
@@ -44,9 +47,9 @@ export function buildVoiceProductionPlan(
       return;
     }
     const voiceId = voiceIds[line.speaker]?.trim() || null;
-    const fingerprint = voiceFingerprint(line, voiceId || "");
+    const fingerprint = voiceFingerprint(line, voiceId || "", workspaceId || "");
     const cached = completed[line.id];
-    const reason = !line.text.trim() ? "บทพูดว่าง" : line.needsReview ? "ยังไม่ยืนยันผู้พูด" : !voiceId ? "ยังไม่ได้กำหนด Voice ID" : undefined;
+    const reason = !line.text.trim() ? "บทพูดว่าง" : line.needsReview ? "ยังไม่ยืนยันผู้พูด" : !voiceId ? "ยังไม่ได้กำหนด Voice ID" : !workspaceId ? "ยังไม่ได้เลือก Workspace" : undefined;
     jobs.push({
       id: `voice-${line.id}`,
       lineId: line.id,
@@ -55,13 +58,14 @@ export function buildVoiceProductionPlan(
       text: line.text,
       emotion: line.emotion,
       voiceId,
+      workspaceId,
       state: reason ? "blocked" : cached?.fingerprint === fingerprint && cached.outputPath ? "completed" : "ready",
       ...(reason ? { reason } : {}),
       fingerprint,
       ...(cached?.fingerprint === fingerprint && cached.outputPath ? { outputPath: cached.outputPath } : {})
     });
   });
-  return { schemaVersion: 1, title, createdAt: new Date().toISOString(), provider: "elevenlabs", requiresExplicitApproval: true, jobs, sfxCues };
+  return { schemaVersion: 1, title, createdAt: new Date().toISOString(), provider: "elevenlabs", workspaceId, requiresExplicitApproval: true, jobs, sfxCues };
 }
 
 export function voicePlanSummary(plan: VoiceProductionPlan) {
