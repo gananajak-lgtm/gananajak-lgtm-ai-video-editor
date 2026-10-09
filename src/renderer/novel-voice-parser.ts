@@ -15,6 +15,7 @@ export function parseNovelScript(script: string): VoiceLine[] {
   const result: VoiceLine[] = [];
   let activeTag: { speaker: string; emotion: string; kind: VoiceLine["kind"] } | null = null;
   let previousSpeaker: string | null = null;
+  const strictLabels = script.split(/\r?\n/).some(line => /^\s*\[(?:ผู้บรรยาย|SFX|พูด\s*:|บรรยาย\s*\]|[^\]\r\n|:]{1,100}\])/.test(line));
   const push = (text: string, speaker: string, emotion: string, kind: VoiceLine["kind"], needsReview = false) => {
     const trimmed = text.trim();
     if (!trimmed) return;
@@ -64,12 +65,12 @@ export function parseNovelScript(script: string): VoiceLine[] {
       continue;
     }
     const quotes = [...line.matchAll(quotePattern)];
-    if (!quotes.length) { push(line, narration, "ปกติ", "narration"); continue; }
+    if (!quotes.length) { push(line, narration, "ปกติ", "narration", strictLabels); continue; }
     let cursor = 0;
     for (const quote of quotes) {
       const start = quote.index ?? cursor;
       const before = line.slice(cursor, start);
-      if (before.trim()) push(before, narration, "ปกติ", "narration");
+      if (before.trim()) push(before, narration, "ปกติ", "narration", strictLabels);
       const after = line.slice(start + quote[0].length);
       const preceding = line.slice(0, start);
       const following = after.slice(0, 90);
@@ -83,7 +84,7 @@ export function parseNovelScript(script: string): VoiceLine[] {
     }
     if (cursor < line.length) {
       const tail = line.slice(cursor);
-      if (tail.trim()) push(tail, narration, "ปกติ", "narration");
+      if (tail.trim()) push(tail, narration, "ปกติ", "narration", strictLabels);
     }
   }
   return result;
