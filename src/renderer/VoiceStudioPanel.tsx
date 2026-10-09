@@ -15,7 +15,7 @@ export default function VoiceStudioPanel() {
     try { return JSON.parse(localStorage.getItem("voice-studio-voice-map-v1") || "{}") as Record<string, string>; }
     catch { return {}; }
   });
-  useEffect(() => { localStorage.setItem("voice-studio-voice-map-v1", JSON.stringify(voiceIds)); }, [voiceIds]);
+  useEffect(() => { try { localStorage.setItem(`voice-studio-voice-map-v2:${selectedWorkspaceId}`, JSON.stringify(voiceIds)); } catch { /* Storage may be unavailable. */ } }, [voiceIds, selectedWorkspaceId]);
   const [confirmed, setConfirmed] = useState(false);
   const [findSpeaker, setFindSpeaker] = useState("");
   const [replaceSpeaker, setReplaceSpeaker] = useState("");
@@ -35,8 +35,16 @@ export default function VoiceStudioPanel() {
   });
   useEffect(() => { try { localStorage.setItem("voice-studio-selected-workspace-v1", selectedWorkspaceId); } catch { /* Storage may be unavailable. */ } }, [selectedWorkspaceId]);
   const [workspaceLabel, setWorkspaceLabel] = useState("Workspace หลัก");
+  const readWorkspaceVoices = (id: string): Record<string, string> => {
+    try {
+      const raw: unknown = JSON.parse(localStorage.getItem(`voice-studio-voice-map-v2:${id}`) || "{}");
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+      return Object.fromEntries(Object.entries(raw).filter(([key, value]) => key.length <= 150 && typeof value === "string" && value.length <= 250)) as Record<string, string>;
+    } catch { return {}; }
+  };
   const [creditBudget, setCreditBudget] = useState("10000");
   const [usedCredits, setUsedCredits] = useState("");
+  useEffect(() => { setVoiceIds(readWorkspaceVoices(selectedWorkspaceId)); setConfirmed(false); }, [selectedWorkspaceId]);
   const speakers = useMemo(() => [...new Set(lines.filter(line => line.kind === "dialogue").map(line => line.speaker))], [lines]);
   const reviewCount = lines.filter(line => line.needsReview).length;
   const unresolvedVoiceCount = lines.filter(line => line.kind !== "sfx" && !line.needsReview && !(voiceIds[line.speaker] || "").trim()).length;
