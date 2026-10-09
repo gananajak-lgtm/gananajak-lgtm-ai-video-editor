@@ -20,7 +20,7 @@ const { parseNovelScript } = loadModule("src/renderer/novel-voice-parser.ts");
 const { buildVoiceProductionPlan, voicePlanSummary } = loadModule("src/renderer/voice-production-plan.ts");
 const { canScheduleWorkspaceJob, selectWorkspaceVoice } = loadModule("src/renderer/elevenlabs-workspace-profiles.ts");
 
-const parsed = parseNovelScript('[SFX: เสียงฝนตก]\\nป่าเงียบสงัด\\n[พูด: พรานสิง | อารมณ์: กระซิบ] หยุดก่อน');
+const parsed = parseNovelScript('[SFX: เสียงฝนตก]\nป่าเงียบสงัด\n[พูด: พรานสิง | อารมณ์: กระซิบ] หยุดก่อน');
 assert.equal(parsed.length, 3);
 assert.equal(parsed[0].kind, "sfx");
 assert.equal(parsed[0].text, "เสียงฝนตก");
