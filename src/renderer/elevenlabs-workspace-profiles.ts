@@ -32,6 +32,7 @@ export function canScheduleWorkspaceJob(
   if (!profile || !profile.enabled) return { allowed: false, reason: "Workspace is not selected or disabled" };
   if (!Number.isFinite(requestedCredits) || requestedCredits < 0) return { allowed: false, reason: "Invalid estimated credit usage" };
   if (profile.monthlyCreditBudget === null || profile.usedCredits === null) return { allowed: false, reason: "Credit budget or usage is unknown" };
+  if (!Number.isFinite(profile.monthlyCreditBudget) || profile.monthlyCreditBudget < 0 || !Number.isFinite(profile.usedCredits) || profile.usedCredits < 0) return { allowed: false, reason: "Invalid workspace budget or usage" };
   if (profile.usedCredits + requestedCredits > profile.monthlyCreditBudget) return { allowed: false, reason: "Workspace budget exceeded" };
   return { allowed: true };
 }
