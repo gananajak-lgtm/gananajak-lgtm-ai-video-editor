@@ -33,6 +33,15 @@ assert.ok(segmented.length > 1);
 assert.ok(segmented.every(line => line.kind === "narration" && line.text.length <= 240));
 assert.equal(segmented.map(line => line.text).join(" "), longNarration);
 
+const labeled = parseNovelScript("[ผู้บรรยาย]\\nป่ามืด\\n\\n[พรานสิง]\\nอิน เอ็งได้ยินไหม\\n\\n[พรานอิน | อารมณ์: หวาดระแวง]\\nได้ยินพี่\\n\\n[SFX] เสียงกิ่งไม้หัก");
+assert.equal(labeled.length, 4);
+assert.equal(labeled[0].kind, "narration");
+assert.equal(labeled[1].speaker, "พรานสิง");
+assert.equal(labeled[2].speaker, "พรานอิน");
+assert.equal(labeled[2].emotion, "หวาดระแวง");
+assert.equal(labeled[2].needsReview, false);
+assert.equal(labeled[3].kind, "sfx");
+
 const unknown = parseNovelScript('“ใครอยู่ตรงนั้น”');
 assert.equal(unknown[0].needsReview, true);
 const planA = buildVoiceProductionPlan("ตอนที่ 1", parsed, { "ผู้บรรยาย": "narrator", "พรานสิง": "hunter" }, {}, "workspace-A");
