@@ -42,4 +42,7 @@ assert.equal(selectWorkspaceVoice([profile], "workspace-A", "พรานสิ�
 assert.equal(canScheduleWorkspaceJob(profile, 11).allowed, false);
 assert.equal(canScheduleWorkspaceJob(profile, 10).allowed, true);
 assert.equal(canScheduleWorkspaceJob({ ...profile, usedCredits: null }, 0).allowed, false);
+assert.equal(canScheduleWorkspaceJob({ ...profile, usedCredits: -1 }, 0).allowed, false);
+assert.equal(canScheduleWorkspaceJob({ ...profile, monthlyCreditBudget: Number.NaN }, 0).allowed, false);
+assert.equal(canScheduleWorkspaceJob({ ...profile, monthlyCreditBudget: -1 }, 0).allowed, false);
 console.log("Voice Studio smoke checks passed");
