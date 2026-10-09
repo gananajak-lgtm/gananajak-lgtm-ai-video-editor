@@ -76,7 +76,7 @@ export default function VoiceStudioPanel() {
       if (plan.schemaVersion !== 1 || !Array.isArray(plan.lines) || plan.lines.length > 10000) throw new Error("เวอร์ชันหรือรายการบทไม่ถูกต้อง");
       const valid = plan.lines.every((line: unknown) => { const x = line as VoiceLine; return x && typeof x.id === "string" && x.id.length > 0 && x.id.length <= 150 && typeof x.text === "string" && x.text.length <= 10000 && typeof x.speaker === "string" && x.speaker.length <= 150 && typeof x.emotion === "string" && x.emotion.length <= 150 && ["narration", "dialogue", "sfx"].includes(x.kind) && typeof x.needsReview === "boolean"; });
       if (!valid || new Set((plan.lines as VoiceLine[]).map(line => line.id)).size !== plan.lines.length) throw new Error("พบข้อมูลบทพูดหรือ ID ซ้ำไม่ถูกต้อง");
-      if (plan.workspaceId !== undefined && (typeof plan.workspaceId !== "string" || plan.workspaceId.length > 150)) throw new Error("Workspace ID ไม่ถูกต้อง");
+      if (plan.workspaceId !== undefined && (typeof plan.workspaceId !== "string" || !plan.workspaceId.trim() || plan.workspaceId.length > 150)) throw new Error("Workspace ID ไม่ถูกต้อง");
       const map: Record<string, string> = {};
       if (plan.voiceIds && typeof plan.voiceIds === "object" && !Array.isArray(plan.voiceIds)) for (const [key, value] of Object.entries(plan.voiceIds)) if (key.length <= 150 && typeof value === "string" && value.length <= 250) map[key] = value;
       setLines(plan.lines as VoiceLine[]); setAnalyzedSource(null); setScript("");
@@ -84,10 +84,12 @@ export default function VoiceStudioPanel() {
       if (typeof plan.workspaceId === "string" && plan.workspaceId !== selectedWorkspaceId) {
         setPlanMessage("ไฟล์นี้มาจาก Workspace อื่น: ยังไม่นำเข้า Voice ID กรุณาเลือก Workspace ให้ตรงกันและนำเข้าใหม่");
         setVoiceIds(readWorkspaceVoices(selectedWorkspaceId));
-      } else { setVoiceIds(map); }
+      } else if (typeof plan.workspaceId === "string") { setVoiceIds(map); }
+      else { setVoiceIds(readWorkspaceVoices(selectedWorkspaceId)); }
       if (typeof plan.title === "string") setDraftName(plan.title.slice(0, 120));
       setConfirmed(false); setFilter("all");
       if (typeof plan.workspaceId === "string" && plan.workspaceId !== selectedWorkspaceId) setPlanMessage("ไฟล์มาจาก Workspace อื่น ไม่ได้นำ Voice ID ข้าม Workspace กรุณาเลือก Workspace ต้นทางแล้วนำเข้าใหม่");
+      else if (plan.workspaceId === undefined) setPlanMessage("นำเข้าไฟล์รุ่นเก่าที่ไม่มี Workspace ID: ไม่คัดลอก Voice ID จากไฟล์ กรุณาตรวจสอบและกำหนดเสียงใหม่");
       else setPlanMessage("นำเข้าแผนเสียงแล้ว กรุณาตรวจสอบและยืนยันใหม่");
     } catch (error) { setPlanMessage(error instanceof Error ? error.message : "นำเข้าไฟล์ไม่สำเร็จ"); }
   };
