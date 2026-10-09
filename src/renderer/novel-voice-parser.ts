@@ -27,7 +27,11 @@ export function parseNovelScript(script: string): VoiceLine[] {
       const kind: VoiceLine["kind"] = tag[1].toLowerCase() === "sfx" ? "sfx" : tag[1] === "พูด" ? "dialogue" : "narration";
       activeTag = { kind, speaker: kind === "dialogue" ? (tag[2]?.trim() || "ไม่ทราบผู้พูด") : narration, emotion: tag[3]?.trim() || "ปกติ" };
       if (kind === "dialogue" && tag[2]) previousSpeaker = activeTag.speaker;
-      if (tag[4]) push(tag[4], activeTag.speaker, activeTag.emotion, kind, kind === "dialogue" && !tag[2]);
+      if (kind === "sfx") {
+        const cue = [tag[2], tag[4]].filter(Boolean).join(" ").trim();
+        if (cue) push(cue, narration, activeTag.emotion, "sfx");
+        activeTag = null;
+      } else if (tag[4]) push(tag[4], activeTag.speaker, activeTag.emotion, kind, kind === "dialogue" && !tag[2]);
       continue;
     }
     if (activeTag) {
