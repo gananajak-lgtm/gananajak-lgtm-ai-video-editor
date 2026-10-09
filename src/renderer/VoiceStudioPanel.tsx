@@ -15,7 +15,6 @@ export default function VoiceStudioPanel() {
     try { return JSON.parse(localStorage.getItem(`voice-studio-voice-map-v2:${localStorage.getItem("voice-studio-selected-workspace-v1") || "workspace-1"}`) || "{}") as Record<string, string>; }
     catch { return {}; }
   });
-  useEffect(() => { try { localStorage.setItem(`voice-studio-voice-map-v2:${selectedWorkspaceId}`, JSON.stringify(voiceIds)); } catch { /* Storage may be unavailable. */ } }, [voiceIds, selectedWorkspaceId]);
   const [confirmed, setConfirmed] = useState(false);
   const [findSpeaker, setFindSpeaker] = useState("");
   const [replaceSpeaker, setReplaceSpeaker] = useState("");
@@ -34,6 +33,7 @@ export default function VoiceStudioPanel() {
     try { return localStorage.getItem("voice-studio-selected-workspace-v1") || "workspace-1"; } catch { return "workspace-1"; }
   });
   useEffect(() => { try { localStorage.setItem("voice-studio-selected-workspace-v1", selectedWorkspaceId); } catch { /* Storage may be unavailable. */ } }, [selectedWorkspaceId]);
+  useEffect(() => { try { localStorage.setItem(`voice-studio-voice-map-v2:${selectedWorkspaceId}`, JSON.stringify(voiceIds)); } catch { /* Storage may be unavailable. */ } }, [voiceIds, selectedWorkspaceId]);
   const [workspaceLabel, setWorkspaceLabel] = useState("Workspace หลัก");
   const readWorkspaceVoices = (id: string): Record<string, string> => {
     try {
