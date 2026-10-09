@@ -27,6 +27,12 @@ assert.equal(parsed[0].text, "เสียงฝนตก");
 assert.equal(parsed[1].kind, "narration");
 assert.equal(parsed[2].speaker, "พรานสิง");
 
+const longNarration = "บรรยายยาว ".repeat(90).trim();
+const segmented = parseNovelScript(longNarration);
+assert.ok(segmented.length > 1);
+assert.ok(segmented.every(line => line.kind === "narration" && line.text.length <= 240));
+assert.equal(segmented.map(line => line.text).join(" "), longNarration);
+
 const unknown = parseNovelScript('“ใครอยู่ตรงนั้น”');
 assert.equal(unknown[0].needsReview, true);
 const planA = buildVoiceProductionPlan("ตอนที่ 1", parsed, { "ผู้บรรยาย": "narrator", "พรานสิง": "hunter" }, {}, "workspace-A");
