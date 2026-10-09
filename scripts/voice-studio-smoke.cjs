@@ -36,6 +36,10 @@ assert.equal(voicePlanSummary(planA).ready, 2);
 assert.equal(planA.workspaceId, "workspace-A");
 assert.equal(planA.jobs[0].workspaceId, "workspace-A");
 assert.notEqual(planA.jobs[0].fingerprint, planB.jobs[0].fingerprint);
+const planOtherModel = buildVoiceProductionPlan("ตอนที่ 1", parsed, { "ผู้บรรยาย": "narrator", "พรานสิง": "hunter" }, {}, "workspace-A", "eleven_flash_v2_5");
+assert.equal(planA.modelId, "eleven_multilingual_v2");
+assert.equal(planOtherModel.jobs[0].modelId, "eleven_flash_v2_5");
+assert.notEqual(planA.jobs[0].fingerprint, planOtherModel.jobs[0].fingerprint);
 
 const profile = { id: "workspace-A", label: "A", workspaceLabel: "A", enabled: true, keyReference: null, monthlyCreditBudget: 100, usedCredits: 90, voiceIds: { "พรานสิง": "hunter" } };
 assert.equal(selectWorkspaceVoice([profile], "workspace-A", "พรานสิง").voiceId, "hunter");
