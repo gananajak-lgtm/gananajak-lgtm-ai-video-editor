@@ -15,6 +15,7 @@ export default function VoiceStudioPanel() {
   const [findSpeaker, setFindSpeaker] = useState("");
   const [replaceSpeaker, setReplaceSpeaker] = useState("");
   const [planMessage, setPlanMessage] = useState("");
+  const [draftName, setDraftName] = useState("ตอนที่ 1");
   const speakers = useMemo(() => [...new Set(lines.filter(line => line.kind === "dialogue").map(line => line.speaker))], [lines]);
   const reviewCount = lines.filter(line => line.needsReview).length;
   const unresolvedVoiceCount = lines.filter(line => line.kind !== "sfx" && !line.needsReview && !(voiceIds[line.speaker] || "").trim()).length;
@@ -28,8 +29,25 @@ export default function VoiceStudioPanel() {
     setConfirmed(false);
     setPlanMessage(`เปลี่ยนชื่อผู้พูด ${oldName} เป็น ${newName} แล้ว กรุณาตรวจทานอีกครั้ง`);
   };
+  const importPlan = async (file: File | undefined) => {
+    if (!file) return;
+    try {
+      if (file.size > 5_000_000) throw new Error("ไฟล์ใหญ่เกิน 5 MB");
+      const data: unknown = JSON.parse(await file.text());
+      if (!data || typeof data !== "object") throw new Error("รูปแบบไฟล์ไม่ถูกต้อง");
+      const plan = data as { schemaVersion?: unknown; lines?: unknown; voiceIds?: unknown; title?: unknown };
+      if (plan.schemaVersion !== 1 || !Array.isArray(plan.lines) || plan.lines.length > 10000) throw new Error("เวอร์ชันหรือรายการบทไม่ถูกต้อง");
+      const valid = plan.lines.every((line: unknown) => { const x = line as VoiceLine; return x && typeof x.id === "string" && typeof x.text === "string" && typeof x.speaker === "string" && typeof x.emotion === "string" && ["narration", "dialogue", "sfx"].includes(x.kind) && typeof x.needsReview === "boolean"; });
+      if (!valid) throw new Error("พบข้อมูลบทพูดไม่ถูกต้อง");
+      const map: Record<string, string> = {};
+      if (plan.voiceIds && typeof plan.voiceIds === "object" && !Array.isArray(plan.voiceIds)) for (const [key, value] of Object.entries(plan.voiceIds)) if (typeof value === "string") map[key] = value;
+      setLines(plan.lines as VoiceLine[]); setVoiceIds(map);
+      if (typeof plan.title === "string") setDraftName(plan.title.slice(0, 120));
+      setConfirmed(false); setFilter("all"); setPlanMessage("นำเข้าแผนเสียงแล้ว กรุณาตรวจสอบและยืนยันใหม่");
+    } catch (error) { setPlanMessage(error instanceof Error ? error.message : "นำเข้าไฟล์ไม่สำเร็จ"); }
+  };
   const exportPlan = () => {
-    const plan = { schemaVersion: 1, createdAt: new Date().toISOString(), lines, voiceIds };
+    const plan = { schemaVersion: 1, title: draftName, createdAt: new Date().toISOString(), lines, voiceIds };
     const url = URL.createObjectURL(new Blob([JSON.stringify(plan, null, 2)], { type: "application/json" }));
     const anchor = document.createElement("a");
     anchor.href = url; anchor.download = "voice-studio-plan.json"; anchor.click();
@@ -39,6 +57,7 @@ export default function VoiceStudioPanel() {
   const allSpeakers = useMemo(() => [...new Set(lines.filter(line => line.kind !== "sfx").map(line => line.speaker))], [lines]);
   return <section className="voiceStudioPanel" id="voice-studio">
     <header><div><p className="eyebrow">AI VOICE STUDIO · ขั้นเตรียมบท</p><h2>แยกบทนิยายและผู้พูด</h2><p className="muted">วางนิยายทั้งตอน ระบบจะแยกคำบรรยายและบทสนทนา พร้อมทำเครื่องหมายจุดที่ยังไม่ทราบผู้พูด ก่อนเชื่อมต่อระบบสร้างเสียง</p></div></header>
+    <div className="voiceStudioActions"><label>ชื่อตอน <input value={draftName} onChange={event => { setDraftName(event.target.value); setConfirmed(false); }} /></label><label>เปิดแผนเสียงเดิม <input type="file" accept=".json,application/json" onChange={event => { void importPlan(event.target.files?.[0]); event.target.value = ""; }} /></label></div>
     <div className="voiceStudioGrid">
       <div><label htmlFor="voice-novel-input">ต้นฉบับนิยาย</label><textarea id="voice-novel-input" rows={12} value={script} onChange={event => setScript(event.target.value)} placeholder={'สิงห์หยุดเดิน\n"หยุดก่อน" สิงห์กระซิบ\n[พูด: พรานอิน | อารมณ์: หวาดระแวง] ข้าได้ยินเสียง'} /><button className="primary" disabled={!script.trim()} onClick={() => { setLines(parseNovelScript(script)); setFilter("all"); setConfirmed(false); }}>วิเคราะห์และแยกบท</button><p className="muted">กฎกำกับ: [บรรยาย | อารมณ์: ลึกลับ], [พูด: พรานสิง | อารมณ์: กระซิบ], [SFX: เสียงฝน] · คำกำกับไม่ถูกนำไปเป็นบทพูด</p></div>
       <div><strong>ผลการแยกบท</strong><p className="muted">{lines.length} ช่วง · {speakers.length} ผู้พูด · {reviewCount} จุดรอตรวจสอบ</p><div className="voiceStudioActions"><button onClick={() => setFilter("all")}>ทั้งหมด</button><button onClick={() => setFilter("review")}>รอตรวจสอบ ({reviewCount})</button></div><div className="voiceStudioLines">{lines.filter(line => filter === "all" || line.needsReview).map(line => <div key={line.id} className="voiceStudioLine"><span>{line.kind === "sfx" ? "เอฟเฟกต์" : line.kind === "narration" ? "บรรยาย" : "บทพูด"} {line.needsReview ? "⚠ ตรวจสอบผู้พูด" : ""}</span><textarea rows={2} value={line.text} onChange={event => patch(line.id, { text: event.target.value })}/>{line.kind === "dialogue" && <label>ผู้พูด <input value={line.speaker} onChange={event => patch(line.id, { speaker: event.target.value, needsReview: !event.target.value.trim() || event.target.value === "ไม่ทราบผู้พูด" })}/></label>}<label>อารมณ์ <input value={line.emotion} onChange={event => patch(line.id, { emotion: event.target.value })}/></label></div>)}</div></div>
