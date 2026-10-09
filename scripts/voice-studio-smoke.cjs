@@ -42,6 +42,13 @@ assert.equal(labeled[2].emotion, "หวาดระแวง");
 assert.equal(labeled[2].needsReview, false);
 assert.equal(labeled[3].kind, "sfx");
 
+const missingLabel = parseNovelScript("[ผู้บรรยาย]\nป่ามืด\n\nข้อความไม่มีป้ายกำกับ");
+assert.equal(missingLabel.length, 2);
+assert.equal(missingLabel[0].needsReview, false);
+assert.equal(missingLabel[1].needsReview, true);
+const legacyNarration = parseNovelScript("ข้อความไม่มีป้ายกำกับ");
+assert.equal(legacyNarration[0].needsReview, false);
+
 const unknown = parseNovelScript('“ใครอยู่ตรงนั้น”');
 assert.equal(unknown[0].needsReview, true);
 const planA = buildVoiceProductionPlan("ตอนที่ 1", parsed, { "ผู้บรรยาย": "narrator", "พรานสิง": "hunter" }, {}, "workspace-A");
