@@ -74,10 +74,11 @@ export default function VoiceStudioPanel() {
       if (!data || typeof data !== "object") throw new Error("รูปแบบไฟล์ไม่ถูกต้อง");
       const plan = data as { schemaVersion?: unknown; lines?: unknown; voiceIds?: unknown; title?: unknown; workspaceId?: unknown };
       if (plan.schemaVersion !== 1 || !Array.isArray(plan.lines) || plan.lines.length > 10000) throw new Error("เวอร์ชันหรือรายการบทไม่ถูกต้อง");
-      const valid = plan.lines.every((line: unknown) => { const x = line as VoiceLine; return x && typeof x.id === "string" && typeof x.text === "string" && typeof x.speaker === "string" && typeof x.emotion === "string" && ["narration", "dialogue", "sfx"].includes(x.kind) && typeof x.needsReview === "boolean"; });
-      if (!valid) throw new Error("พบข้อมูลบทพูดไม่ถูกต้อง");
+      const valid = plan.lines.every((line: unknown) => { const x = line as VoiceLine; return x && typeof x.id === "string" && x.id.length > 0 && x.id.length <= 150 && typeof x.text === "string" && x.text.length <= 10000 && typeof x.speaker === "string" && x.speaker.length <= 150 && typeof x.emotion === "string" && x.emotion.length <= 150 && ["narration", "dialogue", "sfx"].includes(x.kind) && typeof x.needsReview === "boolean"; });
+      if (!valid || new Set((plan.lines as VoiceLine[]).map(line => line.id)).size !== plan.lines.length) throw new Error("พบข้อมูลบทพูดหรือ ID ซ้ำไม่ถูกต้อง");
+      if (plan.workspaceId !== undefined && (typeof plan.workspaceId !== "string" || plan.workspaceId.length > 150)) throw new Error("Workspace ID ไม่ถูกต้อง");
       const map: Record<string, string> = {};
-      if (plan.voiceIds && typeof plan.voiceIds === "object" && !Array.isArray(plan.voiceIds)) for (const [key, value] of Object.entries(plan.voiceIds)) if (typeof value === "string") map[key] = value;
+      if (plan.voiceIds && typeof plan.voiceIds === "object" && !Array.isArray(plan.voiceIds)) for (const [key, value] of Object.entries(plan.voiceIds)) if (key.length <= 150 && typeof value === "string" && value.length <= 250) map[key] = value;
       setLines(plan.lines as VoiceLine[]); setAnalyzedSource(null); setScript("");
       setImportedPlanWorkspaceId(typeof plan.workspaceId === "string" ? plan.workspaceId : null);
       if (typeof plan.workspaceId === "string" && plan.workspaceId !== selectedWorkspaceId) {
@@ -85,7 +86,9 @@ export default function VoiceStudioPanel() {
         setVoiceIds(readWorkspaceVoices(selectedWorkspaceId));
       } else { setVoiceIds(map); }
       if (typeof plan.title === "string") setDraftName(plan.title.slice(0, 120));
-      setConfirmed(false); setFilter("all"); setPlanMessage("นำเข้าแผนเสียงแล้ว กรุณาตรวจสอบและยืนยันใหม่");
+      setConfirmed(false); setFilter("all");
+      if (typeof plan.workspaceId === "string" && plan.workspaceId !== selectedWorkspaceId) setPlanMessage("ไฟล์มาจาก Workspace อื่น ไม่ได้นำ Voice ID ข้าม Workspace กรุณาเลือก Workspace ต้นทางแล้วนำเข้าใหม่");
+      else setPlanMessage("นำเข้าแผนเสียงแล้ว กรุณาตรวจสอบและยืนยันใหม่");
     } catch (error) { setPlanMessage(error instanceof Error ? error.message : "นำเข้าไฟล์ไม่สำเร็จ"); }
   };
   const previewLine = (line: VoiceLine) => {
