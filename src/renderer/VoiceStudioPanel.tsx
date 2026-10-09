@@ -12,8 +12,13 @@ export default function VoiceStudioPanel() {
   const [lines, setLines] = useState<VoiceLine[]>([]);
   const [filter, setFilter] = useState<"all" | "review">("all");
   const [voiceIds, setVoiceIds] = useState<Record<string, string>>(() => {
-    try { return JSON.parse(localStorage.getItem(`voice-studio-voice-map-v2:${localStorage.getItem("voice-studio-selected-workspace-v1") || "workspace-1"}`) || "{}") as Record<string, string>; }
-    catch { return {}; }
+    try {
+      const id = localStorage.getItem("voice-studio-selected-workspace-v1") || "workspace-1";
+      const data: unknown = JSON.parse(localStorage.getItem(`voice-studio-voice-map-v2:${id}`) || "{}");
+      return data && typeof data === "object" && !Array.isArray(data)
+        ? Object.fromEntries(Object.entries(data).filter(([key, value]) => key.length <= 150 && typeof value === "string" && value.length <= 250)) as Record<string, string>
+        : {};
+    } catch { return {}; }
   });
   const [confirmed, setConfirmed] = useState(false);
   const [findSpeaker, setFindSpeaker] = useState("");
@@ -30,7 +35,10 @@ export default function VoiceStudioPanel() {
   });
   useEffect(() => { try { localStorage.setItem("voice-studio-workspaces-v1", JSON.stringify(workspaceProfiles)); } catch { /* Storage may be unavailable. */ } }, [workspaceProfiles]);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState(() => {
-    try { return localStorage.getItem("voice-studio-selected-workspace-v1") || "workspace-1"; } catch { return "workspace-1"; }
+    try {
+      const saved = localStorage.getItem("voice-studio-selected-workspace-v1");
+      return saved && workspaceProfiles.some(profile => profile.id === saved) ? saved : workspaceProfiles[0].id;
+    } catch { return workspaceProfiles[0].id; }
   });
   useEffect(() => { try { localStorage.setItem("voice-studio-selected-workspace-v1", selectedWorkspaceId); } catch { /* Storage may be unavailable. */ } }, [selectedWorkspaceId]);
   useEffect(() => { try { localStorage.setItem(`voice-studio-voice-map-v2:${selectedWorkspaceId}`, JSON.stringify(voiceIds)); } catch { /* Storage may be unavailable. */ } }, [voiceIds, selectedWorkspaceId]);
