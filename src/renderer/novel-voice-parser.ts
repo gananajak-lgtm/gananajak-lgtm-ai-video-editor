@@ -38,6 +38,15 @@ export function parseNovelScript(script: string): VoiceLine[] {
   for (const paragraph of script.split(/\r?\n/)) {
     const line = paragraph.trim();
     if (!line) { activeTag = null; continue; }
+    const named = line.match(/^\[([^\]\r\n|:]{1,100})(?:\s*\|\s*อารมณ์\s*:\s*([^\]]+))?\]\s*(.*)$/);
+    if (named && !/^(บรรยาย|พูด|SFX)$/i.test(named[1].trim())) {
+      const name = named[1].trim();
+      const kind: VoiceLine["kind"] = name === "ผู้บรรยาย" ? "narration" : "dialogue";
+      activeTag = { speaker: kind === "narration" ? narration : name, emotion: named[2]?.trim() || "ปกติ", kind };
+      if (kind === "dialogue") previousSpeaker = name;
+      if (named[3]) push(named[3], activeTag.speaker, activeTag.emotion, kind);
+      continue;
+    }
     const tag = line.match(tagPattern);
     if (tag) {
       const kind: VoiceLine["kind"] = tag[1].toLowerCase() === "sfx" ? "sfx" : tag[1] === "พูด" ? "dialogue" : "narration";
