@@ -107,7 +107,7 @@ export default function VoiceStudioPanel() {
   }, []);
   const workspaceProfile: ElevenLabsWorkspaceProfile = { id: selectedWorkspaceId, label: workspaceLabel, workspaceLabel, enabled: true, keyReference: null, monthlyCreditBudget: creditBudget.trim() && Number.isFinite(Number(creditBudget)) && Number(creditBudget) >= 0 ? Number(creditBudget) : null, usedCredits: usedCredits.trim() && Number.isFinite(Number(usedCredits)) && Number(usedCredits) >= 0 ? Number(usedCredits) : null, voiceIds };
   const workspaceBudgetCheck = canScheduleWorkspaceJob(workspaceProfile, 0);
-  const productionPlan = useMemo(() => buildVoiceProductionPlan(draftName, lines, voiceIds), [draftName, lines, voiceIds]);
+  const productionPlan = useMemo(() => buildVoiceProductionPlan(draftName, lines, voiceIds, {}, selectedWorkspaceId), [draftName, lines, voiceIds, selectedWorkspaceId]);
   const productionSummary = useMemo(() => voicePlanSummary(productionPlan), [productionPlan]);
   const exportProductionPlan = () => {
     if (!confirmed || sourceIsStale || productionSummary.blocked) return;
