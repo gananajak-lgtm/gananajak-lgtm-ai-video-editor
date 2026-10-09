@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { parseNovelScript } from "./novel-voice-parser";
 import type { VoiceLine } from "./novel-voice-parser";
 import { buildVoiceProductionPlan, voicePlanSummary } from "./voice-production-plan";
+import { canScheduleWorkspaceJob } from "./elevenlabs-workspace-profiles";
+import type { ElevenLabsWorkspaceProfile } from "./elevenlabs-workspace-profiles";
 
 export default function VoiceStudioPanel() {
   const [script, setScript] = useState("");
@@ -18,6 +20,9 @@ export default function VoiceStudioPanel() {
   const [planMessage, setPlanMessage] = useState("");
   const [draftName, setDraftName] = useState("ตอนที่ 1");
   const [previewLineId, setPreviewLineId] = useState<string | null>(null);
+  const [workspaceLabel, setWorkspaceLabel] = useState("Workspace หลัก");
+  const [creditBudget, setCreditBudget] = useState("10000");
+  const [usedCredits, setUsedCredits] = useState("");
   const speakers = useMemo(() => [...new Set(lines.filter(line => line.kind === "dialogue").map(line => line.speaker))], [lines]);
   const reviewCount = lines.filter(line => line.needsReview).length;
   const unresolvedVoiceCount = lines.filter(line => line.kind !== "sfx" && !line.needsReview && !(voiceIds[line.speaker] || "").trim()).length;
@@ -66,6 +71,8 @@ export default function VoiceStudioPanel() {
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     setPlanMessage("ส่งออกแผนเสียงแล้ว โปรดเก็บไฟล์ JSON ไว้สำหรับขั้นตอนสร้างเสียง");
   };
+  const workspaceProfile: ElevenLabsWorkspaceProfile = { id: "selected-workspace", label: workspaceLabel, workspaceLabel, enabled: true, keyReference: null, monthlyCreditBudget: creditBudget.trim() && Number.isFinite(Number(creditBudget)) && Number(creditBudget) >= 0 ? Number(creditBudget) : null, usedCredits: usedCredits.trim() && Number.isFinite(Number(usedCredits)) && Number(usedCredits) >= 0 ? Number(usedCredits) : null, voiceIds };
+  const workspaceBudgetCheck = canScheduleWorkspaceJob(workspaceProfile, 0);
   const productionPlan = useMemo(() => buildVoiceProductionPlan(draftName, lines, voiceIds), [draftName, lines, voiceIds]);
   const productionSummary = useMemo(() => voicePlanSummary(productionPlan), [productionPlan]);
   const exportProductionPlan = () => {
@@ -85,6 +92,7 @@ export default function VoiceStudioPanel() {
     </div>
     {lines.length > 0 && <div className="voiceRegistry"><h3>จัดการชื่อผู้พูดทั้งตอน</h3><p className="muted">รวมชื่อที่ AI แยกต่างกัน เช่น สิงห์ และ พรานสิง โดยเปลี่ยนทุกบทพร้อมกัน</p><label>ชื่อเดิม<input value={findSpeaker} onChange={event => setFindSpeaker(event.target.value)} list="voice-speaker-names" placeholder="เช่น สิงห์" /></label><datalist id="voice-speaker-names">{speakers.map(name => <option key={name} value={name} />)}</datalist><label>ชื่อใหม่<input value={replaceSpeaker} onChange={event => setReplaceSpeaker(event.target.value)} placeholder="เช่น พรานสิง" /></label><button disabled={!findSpeaker.trim() || !replaceSpeaker.trim() || findSpeaker.trim() === replaceSpeaker.trim()} onClick={renameSpeaker}>เปลี่ยนชื่อทุกบท</button><h3>คลังเสียงประจำตัวละคร (Voice ID)</h3><p className="muted">กำหนด ElevenLabs Voice ID สำหรับแต่ละตัวละครและผู้บรรยาย ระบบยังไม่ส่งคำขอสร้างเสียง</p>{allSpeakers.map(speaker => <label key={speaker}>{speaker}<input aria-label={`Voice ID ของ ${speaker}`} value={voiceIds[speaker] ?? ""} onChange={event => { setConfirmed(false); setVoiceIds(previous => ({ ...previous, [speaker]: event.target.value })); }} placeholder="ElevenLabs Voice ID" /></label>)}<p className="muted">จุดที่ต้องตรวจสอบ: ผู้พูดไม่ชัดเจน {reviewCount} ช่วง · ยังไม่กำหนด Voice ID {unresolvedVoiceCount} ช่วง</p></div>}
     {lines.length > 0 && <div className="voiceStudioActions"><button disabled={reviewCount > 0 || unresolvedVoiceCount > 0} onClick={() => setConfirmed(true)}>ยืนยันบทและเสียงทั้งหมด</button><button disabled={!confirmed || reviewCount > 0 || unresolvedVoiceCount > 0} onClick={exportPlan}>ส่งออกแผนเสียง JSON</button><span>{confirmed ? "✓ ตรวจบทแล้ว พร้อมส่งออก" : "ต้องตรวจผู้พูดและ Voice ID ก่อนยืนยัน"}</span></div>}
+    {lines.length > 0 && <div className="voiceRegistry"><h3>Workspace และงบเครดิต (เตรียมระบบ)</h3><label>ชื่อ Workspace<input value={workspaceLabel} onChange={event => setWorkspaceLabel(event.target.value)} /></label><label>เพดานเครดิตที่ตั้งไว้<input inputMode="numeric" value={creditBudget} onChange={event => setCreditBudget(event.target.value)} /></label><label>เครดิตที่ใช้ไป (กรอกเอง)<input inputMode="numeric" value={usedCredits} onChange={event => setUsedCredits(event.target.value)} placeholder="ยังไม่ทราบ" /></label><p className="muted">{workspaceBudgetCheck.allowed ? "ข้อมูลเพดานและยอดใช้งานพร้อมสำหรับตรวจสอบเบื้องต้น" : workspaceBudgetCheck.reason} · ยังไม่เชื่อม API ตรวจยอดจริง และยังไม่ใช้ตัวเลขนี้อนุมัติการสร้างเสียง</p></div>}
     {lines.length > 0 && <div className="voiceRegistry"><h3>คิวเตรียมสร้างเสียง (ออฟไลน์)</h3><p className="muted">พร้อมสร้าง {productionSummary.ready} บรรทัด · ต้องแก้ไข {productionSummary.blocked} บรรทัด · SFX {productionSummary.sfx} จุด · ประมาณ {productionSummary.estimatedCharacters.toLocaleString()} ตัวอักษรที่รอส่ง ElevenLabs</p><button disabled={!confirmed || productionSummary.blocked > 0} onClick={exportProductionPlan}>ส่งออกคิวสร้างเสียง JSON (ไม่เรียก API)</button><p className="muted">ระบบยังไม่เริ่มสร้างเสียงและไม่หักเครดิต คิวนี้เป็นเพียงข้อมูลสำหรับเชื่อมระบบภายหลัง</p></div>}
     {planMessage && <p role="status" className="muted">{planMessage}</p>}
     <p className="muted">การฟังตัวอย่างใช้เสียงสังเคราะห์ของระบบปฏิบัติการ ไม่ใช่เสียง ElevenLabs และอาจไม่รองรับภาษาไทยบนบางเครื่อง</p>
