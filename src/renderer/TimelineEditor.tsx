@@ -157,6 +157,36 @@ export default function TimelineEditor({ plan, onChange }: Props) {
     setSelectedClipIndex(to);
   };
 
+  const splitAtPlayhead = () => {
+    const index = plan.clips.findIndex((clip) =>
+      playheadSeconds > clip.start + MIN_CLIP_SECONDS &&
+      playheadSeconds < clip.start + clip.duration - MIN_CLIP_SECONDS
+    );
+    if (index < 0) return;
+    const original = plan.clips[index];
+    const leftDuration = playheadSeconds - original.start;
+    const rightDuration = original.duration - leftDuration;
+    const right: TimelineClip = {
+      ...original,
+      id: `${original.id}-split-${Date.now()}`,
+      start: playheadSeconds,
+      duration: rightDuration
+    };
+    const clips = [
+      ...plan.clips.slice(0, index),
+      { ...original, duration: leftDuration },
+      right,
+      ...plan.clips.slice(index + 1)
+    ];
+    onChange({ ...plan, clips: rebuildStarts(clips) });
+    setSelectedClipIndex(index + 1);
+  };
+
+  const canSplitAtPlayhead = plan.clips.some((clip) =>
+    playheadSeconds > clip.start + MIN_CLIP_SECONDS &&
+    playheadSeconds < clip.start + clip.duration - MIN_CLIP_SECONDS
+  );
+
   const replaceImage = async (index: number) => {
     const picked = await window.videoEditor.selectImages();
     const replacement = picked[0];
@@ -236,6 +266,7 @@ export default function TimelineEditor({ plan, onChange }: Props) {
           <label htmlFor="timeline-playhead">หัวอ่านเวลา</label>
           <input id="timeline-playhead" type="range" min="0" max={Math.max(plan.duration, 0.01)} step="0.1" value={Math.min(playheadSeconds, plan.duration)} onChange={(event) => seekTo(Number(event.target.value))} />
           <output htmlFor="timeline-playhead">{formatTime(playheadSeconds)} / {formatTime(plan.duration)}</output>
+          <button type="button" disabled={!canSplitAtPlayhead} onClick={splitAtPlayhead} title="แบ่งช็อตที่ตำแหน่งหัวอ่านเวลาโดยรักษาระยะเวลารวม">✂ แยกช็อต</button>
         </div>
         <div className="editorTrackScroller">
           <div className="editorTrackClips" style={{ width: `${Math.max(100, timelineZoom * 100)}%` }}>
