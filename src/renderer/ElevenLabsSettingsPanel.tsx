@@ -70,8 +70,8 @@ export default function ElevenLabsSettingsPanel() {
       setMessage("ไม่สามารถทดสอบการเชื่อมต่อได้");
     } finally { setBusy(false); }
   };
-  return <section className="voiceStudioPanel" id="api-settings" aria-label="ตั้งค่า ElevenLabs">
-    <h2>ตั้งค่าระบบเสียง ElevenLabs</h2>
+  return <section className="voiceStudioPanel premiumVoicePanel" id="api-settings" aria-label="ตั้งค่า ElevenLabs">
+    <div className="premiumHeading"><div><p className="eyebrow">AI VOICE STUDIO · WORKSPACE CONTROL</p><h2>✦ ตั้งค่าระบบเสียง ElevenLabs</h2></div><span className="premiumHeadingIcon">♫</span></div>
     <p className="muted">บันทึกคีย์ไว้ในแอปโดยไม่แสดงคีย์เดิม และทดสอบการเชื่อมต่อโดยไม่สร้างเสียงหรือใช้เครดิตสร้างเสียง</p>
     <p>{configured ? "มี API Key ที่บันทึกไว้" : "ยังไม่ได้ตั้งค่า API Key"}</p>
     <div className="voiceStudioActions">
@@ -83,6 +83,7 @@ export default function ElevenLabsSettingsPanel() {
       <h3>จัดการหลาย Workspace</h3>
       <p className="muted">เลือกบัญชีที่จะใช้กับการดึงเสียงและสร้างเสียงพากย์ คีย์แต่ละบัญชีเข้ารหัสไว้ในเครื่อง และไม่แสดงคีย์เดิม</p>
       <p><strong>บัญชีที่บันทึกไว้ทั้งหมด: {workspaces.length} บัญชี</strong></p>
+      <div className="premiumWorkspaceGrid">{workspaces.map((item, index) => <button key={item.id} type="button" disabled={busy} className={`premiumWorkspaceCard ${activeId === item.id ? "isActive" : ""}`} onClick={() => void switchWorkspace(item.id)}><span className="premiumWorkspaceIndex">{String(index + 1).padStart(2, "0")}</span><span className="premiumWorkspaceName">{item.name}</span><span className="premiumWorkspaceState"><span className="premiumStatusDot" />{activeId === item.id ? "กำลังใช้งาน" : "เลือกใช้งาน"}</span>{activeId === item.id && credits && <span className="premiumWorkspaceCredit">คงเหลือ {credits.remaining?.toLocaleString() ?? "ไม่ทราบ"}</span>}</button>)}</div>
       <div className="voiceStudioActions">
         <button type="button" disabled={busy} onClick={() => setShowAddForm(previous => !previous)}>{showAddForm ? "ยกเลิกการเพิ่มบัญชี" : "＋ เพิ่มบัญชี ElevenLabs อีกบัญชี"}</button>
         <label>Workspace ที่ใช้งาน <select value={activeId} disabled={busy} onChange={event => void switchWorkspace(event.target.value)}>
@@ -90,12 +91,12 @@ export default function ElevenLabsSettingsPanel() {
         </select></label>
         <button type="button" disabled={busy || !activeId} onClick={() => void refreshCredits()}>รีเฟรชเครดิตจริง</button>
       </div>
-      {credits && <div><p>ใช้ไปแล้ว: {credits.used?.toLocaleString() ?? "ไม่ทราบ"} · โควตา: {credits.limit?.toLocaleString() ?? "ไม่ทราบ"} · คงเหลือ: <strong>{credits.remaining?.toLocaleString() ?? "ไม่ทราบ"}</strong></p>
+      {credits && <div className="premiumCreditDetail"><p>ใช้ไปแล้ว: {credits.used?.toLocaleString() ?? "ไม่ทราบ"} · โควตา: {credits.limit?.toLocaleString() ?? "ไม่ทราบ"} · คงเหลือ: <strong>{credits.remaining?.toLocaleString() ?? "ไม่ทราบ"}</strong></p>
         {credits.limit !== null && credits.used !== null && credits.limit > 0 && <progress max={credits.limit} value={Math.min(credits.limit, credits.used)} />}
         {credits.resetAt !== null && <p className="muted">รอบถัดไป: {new Date(credits.resetAt * 1000).toLocaleString("th-TH")}</p>}
       </div>}
       {creditMessage && <p role="status">{creditMessage}</p>}
-      <div className="voiceStudioActions" aria-label="รายการบัญชี ElevenLabs">
+      <div className="voiceStudioActions" aria-label="รายการบัญชี ElevenLabs" style={{ display: "none" }}>
         {workspaces.map(item => <button type="button" key={item.id} disabled={busy || activeId === item.id} onClick={() => void switchWorkspace(item.id)}>{item.name}{activeId === item.id ? " ✓ กำลังใช้งาน" : " — เลือกใช้"}</button>)}
       </div>
       {showAddForm && <div className="voiceRegistry">
