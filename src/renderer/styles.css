@@ -2548,3 +2548,17 @@ label { font-size: 10px; }
 .studioMain .premiumWorkspaceCard{min-height:80px;padding:9px}
 .studioMain .premiumVoicePanel{padding:12px 14px}
 @media(max-width:900px){.studioThemeControls{max-width:360px}.studioMain .compactCharacterGrid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}}
+
+/* Always-visible CapCut-inspired timeline overview */
+.studioTimelineDock{padding:12px 14px;margin:10px 0 14px;border:1px solid #314064;border-radius:13px;background:#0b1426;color:#e4ecff;overflow:hidden}
+.studioTimelineTitle{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;font-size:13px}.studioTimelineTitle span{font-size:11px;color:#9db3d4}
+.studioTimelineRuler{display:flex;justify-content:space-between;padding:5px 8px 7px 126px;color:#8299bd;font-size:10px;border-bottom:1px solid #273957}
+.studioTimelineTrack{display:grid;grid-template-columns:115px minmax(0,1fr);align-items:stretch;gap:10px;min-height:48px;padding:5px 0;border-bottom:1px solid #1e2e49}
+.studioTimelineTrack>strong{font-size:11px;display:flex;align-items:center;padding:5px;color:#b7c9e7}
+.studioTimelineLane{display:flex;gap:3px;align-items:stretch;min-width:0;overflow-x:auto;border-radius:7px;background:#111e35;padding:5px}
+.studioTimelineLane em{align-self:center;font-style:normal;color:#748baa;font-size:11px;padding:4px}
+.studioTimelineClip{display:flex;align-items:center;justify-content:center;min-width:65px;max-width:400px;flex-basis:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:8px;background:#244f92;border:1px solid #4c7ec1;border-radius:5px;font-size:10px}
+.studioTimelineAudio{display:flex;align-items:center;flex:1;padding:8px 12px;background:#155a4d;border:1px solid #278e79;border-radius:5px;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.studioTimelineSubtitle{display:grid;place-items:center;min-width:25px;flex:1;padding:6px;background:#76518c;border:1px solid #9872b2;border-radius:4px;font-size:10px}
+.studioTimelineHint{margin:8px 0 0;font-size:10px;color:#8da6ca}
+@media(max-width:700px){.studioTimelineRuler{padding-left:90px}.studioTimelineTrack{grid-template-columns:80px minmax(0,1fr)}}
