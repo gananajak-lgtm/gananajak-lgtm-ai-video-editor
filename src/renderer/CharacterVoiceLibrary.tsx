@@ -33,8 +33,8 @@ export default function CharacterVoiceLibrary() {
     setEntries(previous => ({ ...previous, [character]: id }));
     setName(""); setVoiceId(""); setShowAdd(false); setMessage("บันทึกเสียงประจำตัวละครแล้ว กด ＋ เพิ่มตัวละครใหม่ เพื่อเพิ่มคนถัดไป");
   };
-  return <section className="voiceStudioPanel" id="character-voice-library" aria-label="คลังเสียงตัวละคร">
-    <h2>🎙️ คลังเสียงตัวละครถาวร</h2>
+  return <section className="voiceStudioPanel premiumVoicePanel" id="character-voice-library" aria-label="คลังเสียงตัวละคร">
+    <div className="premiumHeading"><div><p className="eyebrow">CHARACTER VOICE LIBRARY</p><h2>🎙️ คลังเสียงตัวละครถาวร</h2></div></div>
     <p className="muted">กำหนดเสียงครั้งเดียวเพื่อใช้กับบททุกตอนในเครื่องนี้ ไม่ต้องแยกบทก่อน สามารถแก้ไขหรือเปลี่ยนเสียงภายหลังได้</p>
     <div className="voiceStudioActions">
       <button type="button" onClick={() => { setShowAdd(previous => !previous); setMessage(""); }}>{showAdd ? "ยกเลิก" : "＋ เพิ่มตัวละครใหม่"}</button>
@@ -48,6 +48,6 @@ export default function CharacterVoiceLibrary() {
       <button type="button" onClick={add} disabled={!name.trim() || !voiceId.trim()}>＋ บันทึกและเพิ่มตัวละคร</button>
     </div>}
     {message && <p role="status">{message}</p>}
-    {Object.keys(entries).length === 0 ? <p className="muted">ยังไม่มีเสียงตัวละครที่บันทึกไว้</p> : <div className="voiceRegistry"><h3>เสียงที่บันทึกแล้ว ({Object.keys(entries).length})</h3>{Object.entries(entries).sort(([a], [b]) => a.localeCompare(b, "th")).map(([character, id]) => <div className="voiceStudioActions" key={character}><strong>{character}</strong><input aria-label={`Voice ID ของ ${character}`} value={id} onChange={event => setEntries(previous => ({ ...previous, [character]: event.target.value }))}/><button type="button" onClick={() => { setEntries(previous => { const next = { ...previous }; delete next[character]; return next; }); }}>ลบ</button></div>)}</div>}
+    {Object.keys(entries).length === 0 ? <p className="muted">ยังไม่มีเสียงตัวละครที่บันทึกไว้</p> : <div className="voiceRegistry"><h3>เสียงที่บันทึกแล้ว ({Object.keys(entries).length})</h3><div className="premiumCharacterGrid">{Object.entries(entries).sort(([a], [b]) => a.localeCompare(b, "th")).map(([character, id]) => <article className="premiumCharacterCard" key={character}><div className="premiumCharacterAvatar" aria-hidden="true">{character.slice(0, 1)}</div><div className="premiumCharacterName">{character}</div><span className="premiumCharacterTag">เสียงประจำตัวละคร</span><label>Voice ID <input aria-label={`Voice ID ของ ${character}`} value={id} onChange={event => setEntries(previous => ({ ...previous, [character]: event.target.value }))}/></label><button type="button" className="premiumRemoveButton" onClick={() => { setEntries(previous => { const next = { ...previous }; delete next[character]; return next; }); }}>ลบเสียงนี้</button></article>)}</div></div>}
   </section>;
 }
