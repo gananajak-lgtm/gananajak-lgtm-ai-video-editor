@@ -1,3 +1,5 @@
+export type StudioEpisode = { id: string; title: string; folder: string; createdAt: string };
+export type StudioProject = { id: string; title: string; folder: string; createdAt: string; episodes: StudioEpisode[] };
 import type { ContentBatch, ContentBrief, ContentProject } from "./content-factory";
 
 export type ProjectMedia = {
@@ -298,6 +300,9 @@ export type DesktopApi = {
   readImagePreview: (filePath: string) => Promise<string | null>;
   selectAudioLayers: () => Promise<AudioAsset[]>;
   openProject: () => Promise<ProjectLoadResult | null>;
+  listStudioProjects: () => Promise<StudioProject[]>;
+  createStudioProject: (title: string) => Promise<StudioProject>;
+  createStudioEpisode: (projectId: string, title: string) => Promise<StudioEpisode>;
   saveProject: (
     project: ProjectDocument,
     filePath?: string | null
