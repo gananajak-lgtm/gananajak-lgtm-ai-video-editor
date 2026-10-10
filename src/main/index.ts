@@ -1,4 +1,4 @@
-import { listStudioProjects, createStudioProject, createStudioEpisode } from "./studio-projects";
+import { listStudioProjects, createStudioProject, createStudioEpisode, loadStudioEpisodeScript, saveStudioEpisodeScript } from "./studio-projects";
 import { checkProviderConnection } from "./provider-connection";
 import { createMetaBrokerSession, exchangeMetaBrokerSession, validateMetaBrokerConfig } from "./meta-auth-broker";
 import { explainAffiliateProduct } from "./affiliate-product-search";
@@ -247,6 +247,8 @@ ipcMain.handle("media:select-audio-layers", async () => {
 ipcMain.handle("studio:list-projects", () => listStudioProjects());
 ipcMain.handle("studio:create-project", (_event, title: string) => createStudioProject(title));
 ipcMain.handle("studio:create-episode", (_event, projectId: string, title: string) => createStudioEpisode(projectId, title));
+ipcMain.handle("studio:load-episode-script", (_event, projectId: string, episodeId: string) => loadStudioEpisodeScript(projectId, episodeId));
+ipcMain.handle("studio:save-episode-script", (_event, projectId: string, episodeId: string, script: string) => saveStudioEpisodeScript(projectId, episodeId, script));
 
 ipcMain.handle("project:open", async () => {
   return openProject();
