@@ -488,20 +488,23 @@ export default function App() {
   const browserMode=document.documentElement.dataset.runtime==="browser";
 
   const [activeProductionTab, setActiveProductionTab] = useState<"accounts" | "voices" | "script" | "editor">("accounts");
+  const [theme, setTheme] = useState(() => localStorage.getItem("studio-theme-v1") || "indigo");
+  const [fontStyle, setFontStyle] = useState(() => localStorage.getItem("studio-font-v1") || "modern");
+  useEffect(() => { localStorage.setItem("studio-theme-v1", theme); localStorage.setItem("studio-font-v1", fontStyle); }, [theme, fontStyle]);
 
   return (
     <>
       {browserMode && <div className="browserModeBanner"><strong>🌐 Browser Mode</strong><span>เปิดใช้งานจากเว็บได้แล้ว · งาน Render / AI / Publish จะย้ายไปทำผ่าน Backend Worker</span></div>}
-      <div className="studioLayout">
+      <div className={`studioLayout studioTheme-${theme} studioFont-${fontStyle}`}>
       <aside className="studioSidebar" aria-label="เมนูหลัก">
         <div className="studioBrand"><span className="studioBrandIcon">♫</span><div><strong>AI VOICE STUDIO</strong><small>สร้างเสียงพากย์ด้วย ElevenLabs</small></div></div>
         <div className="studioSideLinks">
           <button type="button" className={activeProductionTab === "accounts" ? "selected" : ""} onClick={() => setActiveProductionTab("accounts")}>⚙ ตั้งค่าระบบเสียง</button>
-          <button type="button" className={activeProductionTab === "voices" ? "selected" : ""} onClick={() => setActiveProductionTab("voices")}>♙ คลังเสียงตัวละคร</button>
+          <button type="button" className={activeProductionTab === "voices" ? "selected" : ""} onClick={() => setActiveProductionTab("accounts")}>♙ คลังเสียงตัวละคร</button>
           <button type="button" className={activeProductionTab === "script" ? "selected" : ""} onClick={() => setActiveProductionTab("script")}>♬ สร้างเสียงพากย์ · บท</button>
           <button type="button" className={activeProductionTab === "editor" ? "selected" : ""} onClick={() => setActiveProductionTab("editor")}>▣ ตัดต่อ · ส่งออก</button>
         </div>
-        <div className="studioSideFooter">● บันทึกโปรเจกต์ในเครื่อง<br/><small>ไม่สร้างเสียงโดยไม่ยืนยัน</small></div>
+        <div className="studioThemeControls"><strong>🎨 ธีมแอป</strong><div className="studioThemeSwatches">{(["indigo","ocean","emerald","rose","amber","slate"] as const).map(color => <button key={color} type="button" className={`studioSwatch ${theme === color ? "chosen" : ""}`} data-color={color} aria-label={`เลือกธีม ${color}`} title={color} onClick={() => setTheme(color)} />)}</div><label>รูปแบบตัวอักษร<select value={fontStyle} onChange={event => setFontStyle(event.target.value)}><option value="modern">Modern</option><option value="rounded">Rounded</option><option value="classic">Elegant</option></select></label></div><div className="studioSideFooter">● บันทึกโปรเจกต์ในเครื่อง<br/><small>ไม่สร้างเสียงโดยไม่ยืนยัน</small></div>
       </aside>
       <main className="shell editorWorkspace studioMain">
       <header className="topbar">
@@ -526,8 +529,8 @@ export default function App() {
         onSave={saveProjectFile}
       />
 
-      <div className="compactTabContent" hidden={activeProductionTab !== "accounts"}><ElevenLabsSettingsPanel /></div>
-      <div className="compactTabContent" hidden={activeProductionTab !== "voices"}><CharacterVoiceLibrary /></div>
+      <div className="compactTabContent" hidden={activeProductionTab !== "accounts" && activeProductionTab !== "voices"}><ElevenLabsSettingsPanel /><CharacterVoiceLibrary /></div>
+
 
       <section className="compactTabContent" hidden={activeProductionTab !== "script"} aria-label="ขั้นตอนที่ 1 ใส่บท แยกบท และเตรียมเสียง">
         <VoiceStudioPanel />
