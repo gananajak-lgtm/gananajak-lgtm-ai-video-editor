@@ -2425,3 +2425,147 @@ label { font-size: 10px; }
 .editorTrackClip small { font-size: 10px; opacity: .8; }
 .editorTrackClipSelected { border-color: #67e8f9; background: #1b607e; box-shadow: inset 0 0 0 1px #67e8f9; }
 .editorTrackSurface > .muted { font-size: 11px; margin: 8px 0 0; }
+
+
+.voiceStudioPanel { margin: 14px 0; padding: 18px; background: #151a22; border: 1px solid #374151; border-radius: 14px; }
+.voiceStudioGrid { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(320px, 1.3fr); gap: 16px; }
+.voiceStudioGrid > div { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.voiceStudioGrid textarea, .voiceStudioGrid input { width: 100%; }
+.voiceStudioActions { display: flex; gap: 8px; }
+.voiceStudioLines { display: grid; gap: 8px; max-height: 550px; overflow: auto; }
+.voiceStudioLine { display: grid; gap: 6px; background: #202735; border: 1px solid #3d4755; padding: 10px; border-radius: 9px; }
+.voiceStudioLine span { color: #9dd9eb; font-size: 12px; }
+.voiceStudioLine label { font-size: 12px; color: #cbd5e1; }
+@media(max-width: 850px) { .voiceStudioGrid { grid-template-columns: 1fr; } }
+
+
+/* Premium ElevenLabs control center: visual-only, no simulated account data. */
+.premiumVoicePanel { background: linear-gradient(135deg, #0b1428 0%, #0a1121 65%, #111532 100%); border: 1px solid rgba(85, 113, 193, .3); border-radius: 22px; box-shadow: 0 16px 45px rgba(0,0,0,.22); padding: 24px; margin-block: 16px; }
+.premiumHeading { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:14px; }
+.premiumHeading h2 { font-size:clamp(20px,2vw,28px); letter-spacing:-.5px; margin:4px 0; color:#f5f7ff; }
+.premiumHeadingIcon { background:linear-gradient(135deg,#8a40ff,#216bff); border-radius:16px; padding:12px 18px; font-size:26px; box-shadow:0 5px 25px #5144ff55; }
+.premiumVoicePanel .voiceRegistry { background:rgba(12,23,44,.55); border:1px solid #253a60; border-radius:18px; padding:20px; margin-top:16px; }
+.premiumVoicePanel button { transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease; }
+.premiumVoicePanel button:not(:disabled):hover { transform:translateY(-2px); }
+.premiumVoicePanel input, .premiumVoicePanel select { border:1px solid #31476d; border-radius:10px; background:#0c172c; color:#f4f7ff; min-height:38px; }
+.premiumWorkspaceGrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(175px,1fr)); gap:12px; margin:16px 0 22px; }
+.premiumWorkspaceCard { display:flex; flex-direction:column; text-align:left; gap:12px; min-height:155px; padding:18px; border-radius:17px; border:1px solid #294366; background:linear-gradient(145deg,#102542,#0b1428); color:#f5f7ff; }
+.premiumWorkspaceCard.isActive { border-color:#7756ff; background:linear-gradient(135deg,#182c6a,#151437); box-shadow:0 0 0 1px #7756ff44,0 10px 30px #4e3fff22; }
+.premiumWorkspaceIndex { display:inline-flex; width:43px; height:43px; align-items:center; justify-content:center; border-radius:11px; font-size:18px; font-weight:800; background:linear-gradient(135deg,#2856ff,#173f88); }
+.premiumWorkspaceName { font-size:15px; font-weight:700; overflow-wrap:anywhere; }
+.premiumWorkspaceState { font-size:12px; color:#c2d2e9; }
+.premiumStatusDot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#22d9a5; margin-right:7px; }
+.premiumWorkspaceCredit { color:#65f0d1; font-weight:700; font-size:14px; }
+.premiumCreditDetail { background:#0d2240; padding:16px; border:1px solid #295180; border-radius:14px; margin:12px 0; }
+.premiumCreditDetail progress { width:100%; height:12px; accent-color:#5a70ff; }
+.premiumCharacterGrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; margin-top:16px; }
+.premiumCharacterCard { display:flex; flex-direction:column; align-items:flex-start; gap:11px; padding:18px; border-radius:16px; background:linear-gradient(160deg,#102843,#15162e); border:1px solid #304568; min-width:0; }
+.premiumCharacterAvatar { display:grid; place-items:center; width:70px; height:70px; border-radius:16px; background:linear-gradient(135deg,#7d3bca,#2451af); font-size:34px; font-weight:800; color:#fff; }
+.premiumCharacterName { font-weight:800; font-size:18px; color:#fff; }
+.premiumCharacterTag { background:#223b6b; color:#9fd2ff; font-size:11px; padding:5px 9px; border-radius:20px; }
+.premiumCharacterCard label { width:100%; font-size:12px; color:#b4c4e0; }
+.premiumCharacterCard input { display:block; width:100%; margin-top:6px; }
+.premiumRemoveButton { margin-top:auto; }
+@media(max-width:650px) { .premiumVoicePanel { padding:14px; } .premiumWorkspaceGrid { grid-template-columns:repeat(auto-fit,minmax(145px,1fr)); } }
+
+
+/* Compact, single-viewport production dashboard. */
+.compactProductionNav { display:flex; flex-wrap:wrap; gap:7px; padding:8px; position:sticky; top:0; z-index:20; background:#0a1325; border:1px solid #263656; border-radius:12px; }
+.compactProductionNav button { flex:1 1 150px; min-height:35px; border-radius:9px; padding:7px 10px; background:#14223b; color:#c9d7ef; border:1px solid #2b3b5c; font-size:12px; font-weight:700; cursor:pointer; }
+.compactProductionNav button.active { background:linear-gradient(125deg,#4933b9,#1b57c4); border-color:#8376ff; color:#fff; }
+.compactTabContent[hidden] { display:none !important; }
+.compactTabContent { min-height:0; }
+.compactTabContent > .premiumVoicePanel { margin-block:8px; }
+.editorWorkspace .premiumVoicePanel { padding:14px 17px; border-radius:14px; }
+.editorWorkspace .premiumHeading { margin-bottom:5px; }
+.editorWorkspace .premiumHeading h2 { font-size:19px; margin:2px 0; }
+.editorWorkspace .premiumHeadingIcon { font-size:16px; padding:6px 10px; border-radius:9px; }
+.editorWorkspace .premiumVoicePanel .voiceRegistry { padding:12px; margin-top:8px; border-radius:12px; }
+.editorWorkspace .premiumVoicePanel p { margin-block:6px; }
+.editorWorkspace .premiumWorkspaceGrid { grid-template-columns:repeat(auto-fill,minmax(132px,1fr)); gap:7px; margin:8px 0 10px; }
+.editorWorkspace .premiumWorkspaceCard { min-height:88px; gap:5px; padding:10px; border-radius:11px; }
+.editorWorkspace .premiumWorkspaceIndex { width:27px; height:27px; font-size:12px; border-radius:7px; }
+.editorWorkspace .premiumWorkspaceName { font-size:12px; line-height:1.3; }
+.editorWorkspace .premiumWorkspaceState { font-size:10px; }
+.editorWorkspace .premiumCharacterGrid { grid-template-columns:repeat(auto-fill,minmax(165px,1fr)); gap:8px; margin-top:8px; }
+.editorWorkspace .premiumCharacterCard { padding:11px; gap:6px; border-radius:11px; }
+.editorWorkspace .premiumCharacterAvatar { width:36px; height:36px; border-radius:9px; font-size:18px; }
+.editorWorkspace .premiumCharacterName { font-size:14px; }
+.editorWorkspace .premiumCharacterTag { font-size:10px; padding:3px 7px; }
+.editorWorkspace .premiumCharacterCard input { min-height:30px; }
+.editorWorkspace .premiumVoicePanel button { min-height:30px; font-size:12px; }
+@media(min-width:900px) { .editorWorkspace .premiumWorkspaceGrid { grid-template-columns:repeat(9,minmax(0,1fr)); } .editorWorkspace .premiumWorkspaceCard { min-width:0; } }
+
+/* Premium AI Voice Studio shell — reference-inspired, preserves production panels */
+.studioLayout{display:grid;grid-template-columns:225px minmax(0,1fr);min-height:100vh;background:radial-gradient(ellipse at 75% 0%,rgba(20,69,143,.15),transparent 45%),#070e1b}
+.studioSidebar{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:28px;padding:20px 12px;background:linear-gradient(180deg,#080f20,#0d1833 80%,#080e1c);border-right:1px solid #19294b}
+.studioBrand{display:flex;gap:10px;align-items:center;padding:8px 3px;color:#f5f7ff}.studioBrandIcon{display:grid;place-items:center;flex-shrink:0;width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#32358e,#162c71);font-size:25px}.studioBrand strong{font-size:13px}.studioBrand small{display:block;font-size:10px;color:#9aaed4;margin-top:4px}
+.studioSideLinks{display:grid;gap:8px}.studioSideLinks button{width:100%;text-align:left;background:transparent;border:1px solid transparent;color:#b9c9e8;font-size:13px;font-weight:600;padding:12px 13px;border-radius:10px}.studioSideLinks button.selected,.studioSideLinks button:hover{background:linear-gradient(105deg,#5030ad,#1451c9);border-color:#4c5bca;color:white}
+.studioSideFooter{margin-top:auto;padding:15px 10px;background:#13203d;border:1px solid #22365c;border-radius:12px;font-size:11px;color:#b8cbed;line-height:1.8}.studioSideFooter small{color:#849bc1}
+.studioMain.shell{width:auto;max-width:none;margin:0;padding:18px 24px 36px;min-width:0}.studioMain .topbar{margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #1e3352}.studioMain .topbar h1{font-size:clamp(22px,2.2vw,31px);letter-spacing:-.5px}
+.studioMain .compactProductionNav{position:relative;top:auto;background:#0c1629;border-color:#1d3154}.studioMain .compactProductionNav button{font-size:12px}
+.studioMain .premiumVoicePanel{background:linear-gradient(150deg,#091526,#0c1b33 70%,#101833);border:1px solid #203658;box-shadow:0 8px 30px #0003;padding:16px 18px}
+.studioMain .premiumWorkspaceGrid.studioAccountGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px}.studioMain .premiumWorkspaceCard{min-height:108px;position:relative;background:linear-gradient(145deg,#102642,#0b172b);border:1px solid #244065;text-align:left}.studioMain .premiumWorkspaceCard.isActive{background:linear-gradient(145deg,#152f65,#191e55);border-color:#5b58ff;box-shadow:inset 0 0 0 1px #4646e3}.studioMain .studioAccountBalance{display:block;font-size:11px;color:#b3c6e4;line-height:1.35}.studioMain .premiumWorkspaceCredit{font-size:12px;color:#2ee0ba}
+.studioMain .studioCreditDetail{padding:12px 16px;border:1px solid #234268;border-radius:12px;background:#0c2137}.studioMain .studioCreditDetail progress{width:100%;height:9px;accent-color:#22b7eb}
+.studioMain .premiumCharacterGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:10px}.studioMain .premiumCharacterCard{background:linear-gradient(155deg,#122a46,#12172e);border:1px solid #294365;padding:14px;border-radius:14px}.studioMain .premiumCharacterAvatar{background:linear-gradient(130deg,#6e35ce,#1c56b8)}
+@media(min-width:1450px){.studioMain .premiumWorkspaceGrid.studioAccountGrid{grid-template-columns:repeat(5,minmax(0,1fr))}}
+@media(max-width:900px){.studioLayout{grid-template-columns:1fr}.studioSidebar{position:relative;height:auto;padding:10px 12px;gap:8px}.studioBrand{padding:3px}.studioSideLinks{display:flex;overflow-x:auto;gap:5px}.studioSideLinks button{width:auto;white-space:nowrap;font-size:11px;padding:9px}.studioSideFooter{display:none}.studioMain.shell{padding:12px}.studioMain .premiumWorkspaceGrid.studioAccountGrid{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}}
+
+/* User-selectable studio palettes and typography */
+.studioLayout{--studio-accent:#6152ef;--studio-accent2:#1c65e3;--studio-panel:#0b1a31;--studio-card:#132542;--studio-ink:#eaf1ff}
+.studioTheme-ocean{--studio-accent:#007fbe;--studio-accent2:#1ac4da;--studio-panel:#071e2b;--studio-card:#0e3545}
+.studioTheme-emerald{--studio-accent:#087d68;--studio-accent2:#17b890;--studio-panel:#0b241e;--studio-card:#133c32}
+.studioTheme-rose{--studio-accent:#a43180;--studio-accent2:#e45d9b;--studio-panel:#271427;--studio-card:#38203b}
+.studioTheme-amber{--studio-accent:#a5661b;--studio-accent2:#e4aa35;--studio-panel:#251e15;--studio-card:#393021}
+.studioTheme-slate{--studio-accent:#475569;--studio-accent2:#8293ae;--studio-panel:#161d2b;--studio-card:#242f42}
+.studioLayout.studioFont-rounded{font-family:"Trebuchet MS","Segoe UI",Tahoma,sans-serif;letter-spacing:.12px}
+.studioLayout.studioFont-classic{font-family:Georgia,"Noto Serif Thai",Tahoma,serif;letter-spacing:.1px}
+.studioLayout.studioFont-modern{font-family:Inter,"Segoe UI",Tahoma,sans-serif}
+.studioLayout .studioSidebar{background:linear-gradient(180deg,#080f20,var(--studio-panel))}
+.studioLayout .studioSideLinks button.selected,.studioLayout .studioSideLinks button:hover{background:linear-gradient(110deg,var(--studio-accent),var(--studio-accent2))}
+.studioLayout .studioMain .premiumVoicePanel,.studioLayout .studioMain .voiceRegistry{background:var(--studio-panel);border-color:color-mix(in srgb,var(--studio-accent) 26%,#253955)}
+.studioLayout .studioMain .premiumWorkspaceCard,.studioLayout .studioMain .premiumCharacterCard{background:var(--studio-card)}
+.studioLayout .studioMain .premiumWorkspaceCard.isActive,.studioLayout .studioMain .premiumCharacterCard.isSelected{border-color:var(--studio-accent);box-shadow:inset 0 0 0 1px var(--studio-accent)}
+.studioThemeControls{padding:12px 8px;border:1px solid #293957;border-radius:12px;background:#0b1729;display:grid;gap:9px;color:#e5edff;font-size:12px}
+.studioThemeSwatches{display:flex;gap:7px;flex-wrap:wrap}
+.studioThemeSwatches .studioSwatch{width:25px;height:25px;min-height:25px;padding:0;border-radius:50%;border:2px solid #526078;background:linear-gradient(135deg,var(--swatch1),var(--swatch2))}
+.studioSwatch[data-color=indigo]{--swatch1:#6040d6;--swatch2:#1d6bec}.studioSwatch[data-color=ocean]{--swatch1:#0b73b3;--swatch2:#22ced5}.studioSwatch[data-color=emerald]{--swatch1:#087e65;--swatch2:#18c995}.studioSwatch[data-color=rose]{--swatch1:#a63887;--swatch2:#ec73ac}.studioSwatch[data-color=amber]{--swatch1:#a76418;--swatch2:#edbc40}.studioSwatch[data-color=slate]{--swatch1:#39475b;--swatch2:#94a3b8}
+.studioThemeSwatches .studioSwatch.chosen{outline:2px solid white;outline-offset:2px}
+.studioThemeControls label{display:grid;gap:5px}.studioThemeControls select{width:100%;background:#152542;color:#e8efff;border:1px solid #324969;border-radius:7px;padding:7px}
+.studioMain .compactCharacterGrid{grid-template-columns:repeat(auto-fill,minmax(135px,1fr));gap:8px}
+.studioMain .compactCharacterCard{padding:0;border-radius:11px;min-height:0;overflow:hidden}
+.studioMain .compactCharacterFace{display:flex;align-items:center;gap:8px;width:100%;min-height:54px;padding:9px 10px;text-align:left;background:transparent;border:0;border-radius:0}
+.studioMain .compactCharacterFace:hover{background:#ffffff0a}
+.studioMain .compactCharacterFace .premiumCharacterAvatar{width:30px;height:30px;font-size:13px;flex-shrink:0}
+.studioMain .compactCharacterFace .premiumCharacterName{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.studioMain .compactCharacterChevron{margin-left:auto;color:#8ea5cb}
+.studioMain .compactCharacterDetails{padding:9px;border-top:1px solid #35415b;font-size:11px}
+.studioMain .compactCharacterDetails label{display:grid;gap:5px}
+.studioMain .compactCharacterDetails input{width:100%;min-width:0}
+.studioMain .compactCharacterDetails .voiceStudioActions{gap:5px;flex-wrap:wrap}
+.studioMain .compactCharacterDetails button{font-size:11px;padding:6px 9px}
+.studioMain .premiumWorkspaceGrid.studioAccountGrid{grid-template-columns:repeat(auto-fill,minmax(125px,1fr));gap:7px}
+.studioMain .premiumWorkspaceCard{min-height:80px;padding:9px}
+.studioMain .premiumVoicePanel{padding:12px 14px}
+@media(max-width:900px){.studioThemeControls{max-width:360px}.studioMain .compactCharacterGrid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}}
+
+/* Always-visible CapCut-inspired timeline overview */
+.studioTimelineDock{padding:12px 14px;margin:10px 0 14px;border:1px solid #314064;border-radius:13px;background:#0b1426;color:#e4ecff;overflow:hidden}
+.studioTimelineTitle{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;font-size:13px}.studioTimelineTitle span{font-size:11px;color:#9db3d4}
+.studioTimelineRuler{display:flex;justify-content:space-between;padding:5px 8px 7px 126px;color:#8299bd;font-size:10px;border-bottom:1px solid #273957}
+.studioTimelineTrack{display:grid;grid-template-columns:115px minmax(0,1fr);align-items:stretch;gap:10px;min-height:48px;padding:5px 0;border-bottom:1px solid #1e2e49}
+.studioTimelineTrack>strong{font-size:11px;display:flex;align-items:center;padding:5px;color:#b7c9e7}
+.studioTimelineLane{display:flex;gap:3px;align-items:stretch;min-width:0;overflow-x:auto;border-radius:7px;background:#111e35;padding:5px}
+.studioTimelineLane em{align-self:center;font-style:normal;color:#748baa;font-size:11px;padding:4px}
+.studioTimelineClip{display:flex;align-items:center;justify-content:center;min-width:65px;max-width:400px;flex-basis:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:8px;background:#244f92;border:1px solid #4c7ec1;border-radius:5px;font-size:10px}
+.studioTimelineAudio{display:flex;align-items:center;flex:1;padding:8px 12px;background:#155a4d;border:1px solid #278e79;border-radius:5px;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.studioTimelineSubtitle{display:grid;place-items:center;min-width:25px;flex:1;padding:6px;background:#76518c;border:1px solid #9872b2;border-radius:4px;font-size:10px}
+.studioTimelineHint{margin:8px 0 0;font-size:10px;color:#8da6ca}
+@media(max-width:700px){.studioTimelineRuler{padding-left:90px}.studioTimelineTrack{grid-template-columns:80px minmax(0,1fr)}}
+
+.aiSfxToggleBar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 16px;margin:8px 0 12px;border:1px solid #3b4970;border-radius:12px;background:#151f35;color:#f0f4ff}
+.aiSfxToggleBar strong{font-size:14px}.aiSfxToggleBar p{margin:4px 0 0;color:#a9b9d8;font-size:12px}
+.aiSfxToggleControl{display:flex;align-items:center;gap:9px;white-space:nowrap;font-weight:600;cursor:pointer}.aiSfxToggleControl input{width:20px;height:20px;accent-color:#8877f5;cursor:pointer}
+
+.editorPlayheadControl{display:flex;align-items:center;gap:12px;padding:8px 12px;background:#101a2d;border-radius:8px;margin:7px 0;color:#d8e4fa}
+.editorPlayheadControl label{font-size:12px;white-space:nowrap}.editorPlayheadControl input{flex:1;min-width:50px;accent-color:#8b7cf6}.editorPlayheadControl output{font-size:12px;min-width:102px;text-align:right;font-variant-numeric:tabular-nums}

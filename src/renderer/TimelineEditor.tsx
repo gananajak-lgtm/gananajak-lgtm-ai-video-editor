@@ -62,6 +62,7 @@ export default function TimelineEditor({ plan, onChange }: Props) {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [timelineZoom, setTimelineZoom] = useState(1);
   const [draggedClipIndex, setDraggedClipIndex] = useState<number | null>(null);
+  const [playheadSeconds, setPlayheadSeconds] = useState(0);
 
   const selectedClip =
     plan.clips[Math.min(selectedClipIndex, Math.max(0, plan.clips.length - 1))];
@@ -97,6 +98,18 @@ export default function TimelineEditor({ plan, onChange }: Props) {
     };
   }, [selectedClip?.imagePath]);
 
+  useEffect(() => {
+    setPlayheadSeconds((current) => Math.min(current, plan.duration));
+  }, [plan.duration]);
+
+  const seekTo = (seconds: number) => {
+    const target = Math.max(0, Math.min(plan.duration, seconds));
+    setPlayheadSeconds(target);
+    const index = plan.clips.findIndex((clip) => target >= clip.start && target < clip.start + clip.duration);
+    if (index >= 0) setSelectedClipIndex(index);
+    else if (plan.clips.length > 0) setSelectedClipIndex(plan.clips.length - 1);
+  };
+
   const totalClipDuration = useMemo(
     () => plan.clips.reduce((sum, clip) => sum + clip.duration, 0),
     [plan.clips]
@@ -106,7 +119,8 @@ export default function TimelineEditor({ plan, onChange }: Props) {
     const clips = plan.clips.map((clip, clipIndex) =>
       clipIndex === index ? { ...clip, ...patch } : clip
     );
-    onChange({ ...plan, clips });
+    // Keep clip start timestamps contiguous after duration edits.
+    onChange({ ...plan, clips: rebuildStarts(clips) });
   };
 
   const shiftBoundary = (index: number, requestedDelta: number) => {
@@ -142,6 +156,36 @@ export default function TimelineEditor({ plan, onChange }: Props) {
     onChange({ ...plan, clips: rebuildStarts(clips) });
     setSelectedClipIndex(to);
   };
+
+  const splitAtPlayhead = () => {
+    const index = plan.clips.findIndex((clip) =>
+      playheadSeconds > clip.start + MIN_CLIP_SECONDS &&
+      playheadSeconds < clip.start + clip.duration - MIN_CLIP_SECONDS
+    );
+    if (index < 0) return;
+    const original = plan.clips[index];
+    const leftDuration = playheadSeconds - original.start;
+    const rightDuration = original.duration - leftDuration;
+    const right: TimelineClip = {
+      ...original,
+      id: `${original.id}-split-${Date.now()}`,
+      start: playheadSeconds,
+      duration: rightDuration
+    };
+    const clips = [
+      ...plan.clips.slice(0, index),
+      { ...original, duration: leftDuration },
+      right,
+      ...plan.clips.slice(index + 1)
+    ];
+    onChange({ ...plan, clips: rebuildStarts(clips) });
+    setSelectedClipIndex(index + 1);
+  };
+
+  const canSplitAtPlayhead = plan.clips.some((clip) =>
+    playheadSeconds > clip.start + MIN_CLIP_SECONDS &&
+    playheadSeconds < clip.start + clip.duration - MIN_CLIP_SECONDS
+  );
 
   const replaceImage = async (index: number) => {
     const picked = await window.videoEditor.selectImages();
@@ -218,6 +262,12 @@ export default function TimelineEditor({ plan, onChange }: Props) {
           <label>ซูม <input type="range" min="0.5" max="3" step="0.25" value={timelineZoom} onChange={(event) => setTimelineZoom(Number(event.target.value))} /></label>
           <span>{timelineZoom.toFixed(2)}×</span>
         </div>
+        <div className="editorPlayheadControl">
+          <label htmlFor="timeline-playhead">หัวอ่านเวลา</label>
+          <input id="timeline-playhead" type="range" min="0" max={Math.max(plan.duration, 0.01)} step="0.1" value={Math.min(playheadSeconds, plan.duration)} onChange={(event) => seekTo(Number(event.target.value))} />
+          <output htmlFor="timeline-playhead">{formatTime(playheadSeconds)} / {formatTime(plan.duration)}</output>
+          <button type="button" disabled={!canSplitAtPlayhead} onClick={splitAtPlayhead} title="แบ่งช็อตที่ตำแหน่งหัวอ่านเวลาโดยรักษาระยะเวลารวม">✂ แยกช็อต</button>
+        </div>
         <div className="editorTrackScroller">
           <div className="editorTrackClips" style={{ width: `${Math.max(100, timelineZoom * 100)}%` }}>
             {plan.clips.map((clip, index) => (
@@ -229,7 +279,7 @@ export default function TimelineEditor({ plan, onChange }: Props) {
                 onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "move"; }}
                 onDrop={(event) => { event.preventDefault(); if (draggedClipIndex !== null) moveClip(draggedClipIndex, index); setDraggedClipIndex(null); }}
                 onDragEnd={() => setDraggedClipIndex(null)}
-                onClick={() => setSelectedClipIndex(index)}
+                onClick={() => { setSelectedClipIndex(index); setPlayheadSeconds(clip.start); }}
                 aria-pressed={selectedClipIndex === index}
                 className={selectedClipIndex === index ? "editorTrackClip editorTrackClipSelected" : "editorTrackClip"}
                 style={{ flexGrow: Math.max(0.6, clip.duration), flexBasis: 0 }}

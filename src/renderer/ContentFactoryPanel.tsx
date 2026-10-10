@@ -654,7 +654,7 @@ export default function ContentFactoryPanel({
 
   return (
     <section className="aiPanel">
-      <div className="modeSwitcher"><button className="primary" aria-pressed="true">🎬 สร้างคลิป Shorts</button><button onClick={()=>setContentMode("basket")}>🛒 สร้างคลิปปักตะกร้า</button></div>
+      <div className="modeSwitcher"><button className="primary" aria-pressed="true">🎬 สร้างคลิป Shorts</button></div>
       <div className="aiPanelHeader">
         <div>
           <p className="eyebrow">โรงงานสร้างคอนเทนต์ AI</p>

@@ -12,7 +12,9 @@ import EpisodeReadinessPanel from "./EpisodeReadinessPanel";
 import QuickPreviewPanel from "./QuickPreviewPanel";
 import EpisodeQcPackPanel from "./EpisodeQcPackPanel";
 import FullEpisodeTestPanel from "./FullEpisodeTestPanel";
-import ContentFactoryPanel from "./ContentFactoryPanel";
+import VoiceStudioPanel from "./VoiceStudioPanel";
+import ElevenLabsSettingsPanel from "./ElevenLabsSettingsPanel";
+import CharacterVoiceLibrary from "./CharacterVoiceLibrary";
 
 const providerStatusLabel: Record<string, string> = {
   missing_key: "ยังไม่ได้ตั้งค่า API Key",
@@ -53,6 +55,7 @@ export default function App() {
   const [transcript, setTranscript] = useState<TranscriptResult | null>(null);
   const [editingPlan, setEditingPlan] = useState<EditingBrainPlan | null>(null);
   const [audioLayers, setAudioLayers] = useState<AudioLayer[]>([]);
+  const [aiSfxEnabled, setAiSfxEnabled] = useState(false);
   const [contentProject, setContentProject] = useState<ContentProject | null>(null);
   const [aiStatus, setAiStatus] = useState<AiSettingsStatus>({
     configured: false,
@@ -89,6 +92,7 @@ export default function App() {
         : null
     );
     setAudioLayers(project.audioLayers);
+    setAiSfxEnabled(project.aiSfxEnabled ?? false);
     setContentProject(project.contentProject ?? null);
     setRenderHistory(project.renderHistory ?? []);
     setMissingMedia(loaded.missingMedia);
@@ -153,6 +157,7 @@ export default function App() {
       editingPlan,
       timeline,
       audioLayers,
+      aiSfxEnabled,
       contentProject,
       renderHistory
     }),
@@ -166,6 +171,7 @@ export default function App() {
       editingPlan,
       timeline,
       audioLayers,
+      aiSfxEnabled,
       contentProject,
       renderHistory
     ]
@@ -222,6 +228,7 @@ export default function App() {
         : null
     );
     setAudioLayers(project.audioLayers);
+    setAiSfxEnabled(project.aiSfxEnabled ?? false);
     setRenderHistory(project.renderHistory ?? renderHistory);
     setMissingMedia(result.missingMedia);
     setNotice(
@@ -485,14 +492,29 @@ export default function App() {
 
   const browserMode=document.documentElement.dataset.runtime==="browser";
 
+  const [activeProductionTab, setActiveProductionTab] = useState<"accounts" | "voices" | "script" | "editor">("accounts");
+  const [theme, setTheme] = useState(() => localStorage.getItem("studio-theme-v1") || "indigo");
+  const [fontStyle, setFontStyle] = useState(() => localStorage.getItem("studio-font-v1") || "modern");
+  useEffect(() => { localStorage.setItem("studio-theme-v1", theme); localStorage.setItem("studio-font-v1", fontStyle); }, [theme, fontStyle]);
+
   return (
     <>
       {browserMode && <div className="browserModeBanner"><strong>🌐 Browser Mode</strong><span>เปิดใช้งานจากเว็บได้แล้ว · งาน Render / AI / Publish จะย้ายไปทำผ่าน Backend Worker</span></div>}
-      <main className="shell editorWorkspace">
+      <div className={`studioLayout studioTheme-${theme} studioFont-${fontStyle}`}>
+      <aside className="studioSidebar" aria-label="เมนูหลัก">
+        <div className="studioBrand"><span className="studioBrandIcon">♫</span><div><strong>AI VOICE STUDIO</strong><small>สร้างเสียงพากย์ด้วย ElevenLabs</small></div></div>
+        <div className="studioSideLinks">
+          <button type="button" className={activeProductionTab === "accounts" || activeProductionTab === "voices" ? "selected" : ""} onClick={() => setActiveProductionTab("accounts")}>⚙ ตั้งค่าเสียง · คลังตัวละคร</button>
+          <button type="button" className={activeProductionTab === "script" ? "selected" : ""} onClick={() => setActiveProductionTab("script")}>♬ สร้างเสียงพากย์ · บท</button>
+          <button type="button" className={activeProductionTab === "editor" ? "selected" : ""} onClick={() => setActiveProductionTab("editor")}>▣ ตัดต่อ · ส่งออก</button>
+        </div>
+        <div className="studioThemeControls"><strong>🎨 ธีมแอป</strong><div className="studioThemeSwatches">{(["indigo","ocean","emerald","rose","amber","slate"] as const).map(color => <button key={color} type="button" className={`studioSwatch ${theme === color ? "chosen" : ""}`} data-color={color} aria-label={`เลือกธีม ${color}`} title={color} onClick={() => setTheme(color)} />)}</div><label>รูปแบบตัวอักษร<select value={fontStyle} onChange={event => setFontStyle(event.target.value)}><option value="modern">Modern</option><option value="rounded">Rounded</option><option value="classic">Elegant</option></select></label></div><div className="studioSideFooter">● บันทึกโปรเจกต์ในเครื่อง<br/><small>ไม่สร้างเสียงโดยไม่ยืนยัน</small></div>
+      </aside>
+      <main className="shell editorWorkspace studioMain">
       <header className="topbar">
         <div>
-          <p className="eyebrow">GANANAJAK LAB</p>
-          <h1>AI Video Editor</h1>
+          <p className="eyebrow">AI VOICE STUDIO · PRODUCTION WORKSPACE</p>
+          <h1>{activeProductionTab === "accounts" ? "ตั้งค่าเสียงและคลังตัวละคร" : activeProductionTab === "voices" ? "คลังเสียงตัวละคร" : activeProductionTab === "script" ? "สร้างเสียงพากย์จากบท" : "AI Video Editor"}</h1>
         </div>
         <div className="status">
           <span className="statusDot" />
@@ -500,12 +522,7 @@ export default function App() {
         </div>
       </header>
 
-      <nav className="editorNav" aria-label="พื้นที่ทำงาน">
-        <a href="#editor-media">สื่อ</a>
-        <a href="#editor-ai">AI วิเคราะห์</a>
-        <a href="#editor-preview">พรีวิว</a>
-        <a href="#editor-timeline">ไทม์ไลน์</a>
-      </nav>
+
 
       <ProjectToolbar
         title={projectTitle}
@@ -516,6 +533,18 @@ export default function App() {
         onSave={saveProjectFile}
       />
 
+      <div className="compactTabContent" hidden={activeProductionTab !== "accounts" && activeProductionTab !== "voices"}><ElevenLabsSettingsPanel /><CharacterVoiceLibrary /></div>
+
+
+      <section className="compactTabContent" hidden={activeProductionTab !== "script"} aria-label="ขั้นตอนที่ 1 ใส่บท แยกบท และเตรียมเสียง">
+        <VoiceStudioPanel />
+      </section>
+
+      <section className="compactTabContent" hidden={activeProductionTab !== "editor"} aria-label="ขั้นตอนที่ 2 ถึง 7 ผลิตและส่งออกวิดีโอ">
+      <div className="aiSfxToggleBar">
+        <div><strong>🎧 AI เสียงเอฟเฟกต์ (SFX)</strong><p>{aiSfxEnabled ? "เปิดไว้สำหรับการวิเคราะห์ SFX เมื่อระบบพร้อมใช้งาน · ไม่มีการใช้เครดิตอัตโนมัติ" : "ปิดอยู่ · ไม่ต้องวิเคราะห์หรือค้นหา SFX ด้วย AI · เสียงที่เพิ่มเองยังใช้งานได้"}</p></div>
+        <label className="aiSfxToggleControl"><input type="checkbox" checked={aiSfxEnabled} onChange={(event) => setAiSfxEnabled(event.target.checked)} /><span>{aiSfxEnabled ? "เปิด" : "ปิด"}</span></label>
+      </div>
       <MediaRelinkPanel
         missingMedia={missingMedia}
         relinking={relinking}
@@ -534,18 +563,15 @@ export default function App() {
         <div className="heroBadge">🎧</div>
       </details>
 
-      <ContentFactoryPanel
-        aiConfigured={aiStatus.configured}
-        project={contentProject}
-        onGenerated={(project) => {
-          setContentProject(project);
-          setProjectTitle(project.title);
-          setNotice(`AI Content Factory created ${project.scenes.length} planned scenes.`);
-          setError(null);
-        }}
-      />
-
-      <div className="editorThreePane">
+      <section className="studioTimelineDock" aria-label="ไทม์ไลน์ตัดต่อ">
+  <div className="studioTimelineTitle"><strong>🎬 ไทม์ไลน์ตัดต่อ</strong><span>{timeline ? `${timeline.clips.length} คลิป · ${formatTime(timeline.duration)}` : "ยังไม่มีคลิปในไทม์ไลน์"}</span></div>
+  <div className="studioTimelineRuler"><span>00:00</span><span>{timeline ? formatTime(timeline.duration / 4) : "00:15"}</span><span>{timeline ? formatTime(timeline.duration / 2) : "00:30"}</span><span>{timeline ? formatTime(timeline.duration * .75) : "00:45"}</span><span>{timeline ? formatTime(timeline.duration) : "01:00"}</span></div>
+  <div className="studioTimelineTrack"><strong>▧ ภาพ</strong><div className="studioTimelineLane">{timeline?.clips.length ? timeline.clips.map((clip, index) => <span key={clip.id} className="studioTimelineClip" style={{ flexGrow: Math.max(.6, clip.duration) }} title={`${fileName(clip.imagePath)} · ${clip.duration.toFixed(1)} วินาที`}>{index + 1}. {fileName(clip.imagePath)}</span>) : <em>เพิ่มภาพและสร้างไทม์ไลน์เพื่อเริ่มตัดต่อ</em>}</div></div>
+  <div className="studioTimelineTrack"><strong>♫ เสียงพากย์</strong><div className="studioTimelineLane">{narration ? <span className="studioTimelineAudio">{fileName(narration)}</span> : <em>ยังไม่ได้เลือกไฟล์เสียงพากย์</em>}</div></div>
+  <div className="studioTimelineTrack"><strong>▤ คำบรรยาย</strong><div className="studioTimelineLane">{timeline?.subtitles.length ? timeline.subtitles.map((cue, index) => <span key={cue.id} className="studioTimelineSubtitle" title={cue.text}>{index + 1}</span>) : <em>ยังไม่มีคำบรรยาย</em>}</div></div>
+  <p className="studioTimelineHint">นี่คือภาพรวมไทม์ไลน์ · เมื่อสร้างไทม์ไลน์แล้ว ใช้แผงแก้ไขช็อตด้านล่างเพื่อลากสลับคลิปและปรับจุดตัด</p>
+</section>
+<div className="editorThreePane">
         <div className="editorMediaPane">
           <section id="editor-media" className="grid">
         <article className="panel">
@@ -833,7 +859,9 @@ export default function App() {
           <TimelineEditor plan={timeline} onChange={setTimeline} />
         </section>
       )}
+      </section>
     </main>
+    </div>
     </>
   );
 }

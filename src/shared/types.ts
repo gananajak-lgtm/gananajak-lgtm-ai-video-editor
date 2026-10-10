@@ -24,6 +24,7 @@ export type ProjectDocument = {
   editingPlan: EditingBrainPlan | null;
   timeline: TimelinePlan | null;
   audioLayers: AudioLayer[];
+  aiSfxEnabled?: boolean;
   contentProject?: ContentProject | null;
   renderHistory?: FullEpisodeTestReport[];
 };
@@ -323,6 +324,11 @@ export type DesktopApi = {
   saveReplicateApiToken: (token: string) => Promise<ContentProviderStatus>;
   saveReplicateVideoModel: (model: string) => Promise<ContentProviderStatus>;
   saveElevenLabsApiKey: (apiKey: string) => Promise<ContentProviderStatus>;
+  listElevenLabsWorkspaces: () => Promise<{ activeId: string; workspaces: Array<{ id: string; name: string; configured: boolean }> }>;
+  addElevenLabsWorkspace: (name: string, key: string) => Promise<{ activeId: string; workspaces: Array<{ id: string; name: string; configured: boolean }> }>;
+  selectElevenLabsWorkspace: (id: string) => Promise<{ activeId: string; workspaces: Array<{ id: string; name: string; configured: boolean }> }>;
+  getElevenLabsSubscription: () => Promise<{ used: number | null; limit: number | null; remaining: number | null; resetAt: number | null }>;
+  listElevenLabsVoices: () => Promise<Array<{ id: string; name: string; previewUrl: string | null }>>;
   generateContentProject: (brief: ContentBrief) => Promise<ContentProject>;
   generateLocalTestProject: (brief: ContentBrief) => Promise<ContentProject>;
   generateLocalTestAssets: (project: ContentProject) => Promise<ContentProject>;

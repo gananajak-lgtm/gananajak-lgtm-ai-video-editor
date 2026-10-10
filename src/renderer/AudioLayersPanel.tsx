@@ -43,18 +43,18 @@ export default function AudioLayersPanel({ layers, onChange }: Props) {
     <section className="audioLayersPanel">
       <div className="audioLayersHeader">
         <div>
-          <p className="eyebrow">MULTITRACK AUDIO</p>
-          <h3>Narration + SFX + ambience + music</h3>
+          <p className="eyebrow">ระบบเสียงหลายแทร็ก</p>
+          <h3>เสียงบรรยาย + เอฟเฟกต์ + เสียงบรรยากาศ + ดนตรี</h3>
           <p className="muted">
-            Extra audio can overlap the narration at any timestamp and will be mixed during export.
+            สามารถวางเสียงหลายแทร็กซ้อนกับเสียงบรรยาย และผสมเสียงทั้งหมดเมื่อส่งออกวิดีโอ
           </p>
         </div>
-        <button onClick={addAudio}>Add audio layer</button>
+        <button onClick={addAudio}>เพิ่มแทร็กเสียง</button>
       </div>
 
       {layers.length === 0 ? (
         <div className="emptyAudioLayers">
-          No extra layers yet. Narration remains the main voice track.
+          ยังไม่มีแทร็กเสียงเพิ่มเติม โดยเสียงบรรยายเป็นแทร็กหลัก
         </div>
       ) : (
         <div className="audioLayerList">
@@ -62,11 +62,11 @@ export default function AudioLayersPanel({ layers, onChange }: Props) {
             <div className="audioLayerRow" key={layer.id}>
               <div className="audioLayerName">
                 <strong>{fileName(layer.filePath)}</strong>
-                <small>{layer.duration.toFixed(1)}s source</small>
+                <small>{layer.duration.toFixed(1)}s ต้นฉบับ</small>
               </div>
 
               <label>
-                Type
+                ประเภท
                 <select
                   value={layer.kind}
                   onChange={(event) =>
@@ -76,13 +76,13 @@ export default function AudioLayersPanel({ layers, onChange }: Props) {
                   }
                 >
                   <option value="sfx">SFX</option>
-                  <option value="ambience">Ambience</option>
-                  <option value="music">Music</option>
+                  <option value="ambience">เสียงบรรยากาศ</option>
+                  <option value="music">ดนตรี</option>
                 </select>
               </label>
 
               <label>
-                Start (s)
+                เริ่มต้น (วินาที)
                 <input
                   type="number"
                   min="0"
@@ -97,7 +97,7 @@ export default function AudioLayersPanel({ layers, onChange }: Props) {
               </label>
 
               <label>
-                Volume
+                ระดับเสียง
                 <input
                   type="number"
                   min="0"
@@ -120,11 +120,11 @@ export default function AudioLayersPanel({ layers, onChange }: Props) {
                     patchLayer(layer.id, { loop: event.target.checked })
                   }
                 />
-                Loop
+                เล่นวน
               </label>
 
               <button className="removeButton" onClick={() => removeLayer(layer.id)}>
-                Remove
+                ลบ
               </button>
             </div>
           ))}

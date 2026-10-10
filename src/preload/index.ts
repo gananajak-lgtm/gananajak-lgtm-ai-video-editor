@@ -36,6 +36,11 @@ const api: DesktopApi = {
   saveReplicateApiToken: (token) => ipcRenderer.invoke("content:save-replicate-token", token),
   saveReplicateVideoModel: (model) => ipcRenderer.invoke("content:save-replicate-video-model", model),
   saveElevenLabsApiKey: (apiKey) => ipcRenderer.invoke("content:save-elevenlabs-key", apiKey),
+  listElevenLabsWorkspaces: () => ipcRenderer.invoke("voice:workspaces"),
+  addElevenLabsWorkspace: (name, key) => ipcRenderer.invoke("voice:add-workspace", name, key),
+  selectElevenLabsWorkspace: (id) => ipcRenderer.invoke("voice:select-workspace", id),
+  getElevenLabsSubscription: () => ipcRenderer.invoke("voice:subscription"),
+  listElevenLabsVoices: () => ipcRenderer.invoke("voice:list-elevenlabs-voices"),
   generateContentProject: (brief) =>
     ipcRenderer.invoke("content:generate-project", brief),
   generateLocalTestProject: (brief) =>
