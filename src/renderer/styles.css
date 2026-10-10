@@ -2437,3 +2437,33 @@ label { font-size: 10px; }
 .voiceStudioLine span { color: #9dd9eb; font-size: 12px; }
 .voiceStudioLine label { font-size: 12px; color: #cbd5e1; }
 @media(max-width: 850px) { .voiceStudioGrid { grid-template-columns: 1fr; } }
+
+
+/* Premium ElevenLabs control center: visual-only, no simulated account data. */
+.premiumVoicePanel { background: linear-gradient(135deg, #0b1428 0%, #0a1121 65%, #111532 100%); border: 1px solid rgba(85, 113, 193, .3); border-radius: 22px; box-shadow: 0 16px 45px rgba(0,0,0,.22); padding: 24px; margin-block: 16px; }
+.premiumHeading { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:14px; }
+.premiumHeading h2 { font-size:clamp(20px,2vw,28px); letter-spacing:-.5px; margin:4px 0; color:#f5f7ff; }
+.premiumHeadingIcon { background:linear-gradient(135deg,#8a40ff,#216bff); border-radius:16px; padding:12px 18px; font-size:26px; box-shadow:0 5px 25px #5144ff55; }
+.premiumVoicePanel .voiceRegistry { background:rgba(12,23,44,.55); border:1px solid #253a60; border-radius:18px; padding:20px; margin-top:16px; }
+.premiumVoicePanel button { transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease; }
+.premiumVoicePanel button:not(:disabled):hover { transform:translateY(-2px); }
+.premiumVoicePanel input, .premiumVoicePanel select { border:1px solid #31476d; border-radius:10px; background:#0c172c; color:#f4f7ff; min-height:38px; }
+.premiumWorkspaceGrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(175px,1fr)); gap:12px; margin:16px 0 22px; }
+.premiumWorkspaceCard { display:flex; flex-direction:column; text-align:left; gap:12px; min-height:155px; padding:18px; border-radius:17px; border:1px solid #294366; background:linear-gradient(145deg,#102542,#0b1428); color:#f5f7ff; }
+.premiumWorkspaceCard.isActive { border-color:#7756ff; background:linear-gradient(135deg,#182c6a,#151437); box-shadow:0 0 0 1px #7756ff44,0 10px 30px #4e3fff22; }
+.premiumWorkspaceIndex { display:inline-flex; width:43px; height:43px; align-items:center; justify-content:center; border-radius:11px; font-size:18px; font-weight:800; background:linear-gradient(135deg,#2856ff,#173f88); }
+.premiumWorkspaceName { font-size:15px; font-weight:700; overflow-wrap:anywhere; }
+.premiumWorkspaceState { font-size:12px; color:#c2d2e9; }
+.premiumStatusDot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#22d9a5; margin-right:7px; }
+.premiumWorkspaceCredit { color:#65f0d1; font-weight:700; font-size:14px; }
+.premiumCreditDetail { background:#0d2240; padding:16px; border:1px solid #295180; border-radius:14px; margin:12px 0; }
+.premiumCreditDetail progress { width:100%; height:12px; accent-color:#5a70ff; }
+.premiumCharacterGrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; margin-top:16px; }
+.premiumCharacterCard { display:flex; flex-direction:column; align-items:flex-start; gap:11px; padding:18px; border-radius:16px; background:linear-gradient(160deg,#102843,#15162e); border:1px solid #304568; min-width:0; }
+.premiumCharacterAvatar { display:grid; place-items:center; width:70px; height:70px; border-radius:16px; background:linear-gradient(135deg,#7d3bca,#2451af); font-size:34px; font-weight:800; color:#fff; }
+.premiumCharacterName { font-weight:800; font-size:18px; color:#fff; }
+.premiumCharacterTag { background:#223b6b; color:#9fd2ff; font-size:11px; padding:5px 9px; border-radius:20px; }
+.premiumCharacterCard label { width:100%; font-size:12px; color:#b4c4e0; }
+.premiumCharacterCard input { display:block; width:100%; margin-top:6px; }
+.premiumRemoveButton { margin-top:auto; }
+@media(max-width:650px) { .premiumVoicePanel { padding:14px; } .premiumWorkspaceGrid { grid-template-columns:repeat(auto-fit,minmax(145px,1fr)); } }
