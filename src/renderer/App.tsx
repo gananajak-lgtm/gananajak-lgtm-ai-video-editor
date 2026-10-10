@@ -14,6 +14,7 @@ import EpisodeQcPackPanel from "./EpisodeQcPackPanel";
 import FullEpisodeTestPanel from "./FullEpisodeTestPanel";
 import VoiceStudioPanel from "./VoiceStudioPanel";
 import ElevenLabsSettingsPanel from "./ElevenLabsSettingsPanel";
+import CharacterVoiceLibrary from "./CharacterVoiceLibrary";
 
 const providerStatusLabel: Record<string, string> = {
   missing_key: "ยังไม่ได้ตั้งค่า API Key",
@@ -502,6 +503,7 @@ export default function App() {
       </header>
 
       <nav className="editorNav" aria-label="สายการผลิตวิดีโอ">
+        <a href="#character-voice-library">🎙️ คลังเสียงตัวละคร</a>
         <a href="#voice-studio">01 ใส่บท · แยกบท · เตรียมเสียง</a>
         <a href="#editor-media">02 ใส่ภาพและเสียง</a>
         <a href="#editor-preview">03 พรีวิวและตัดต่อ</a>
@@ -519,6 +521,7 @@ export default function App() {
       />
 
       <ElevenLabsSettingsPanel />
+      <CharacterVoiceLibrary />
 
       <section aria-label="ขั้นตอนที่ 1 ใส่บท แยกบท และเตรียมเสียง">
         <VoiceStudioPanel />
