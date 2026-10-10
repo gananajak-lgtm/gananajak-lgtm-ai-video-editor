@@ -1,6 +1,7 @@
 import { app, safeStorage } from "electron";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 import type { AiSettingsStatus } from "../shared/types";
 
 type PersistedSettings = {
@@ -153,7 +154,7 @@ export async function saveElevenLabsWorkspace(name: string, apiKey: string) {
   const normalizedName = name.trim(), normalizedKey = apiKey.trim();
   if (!normalizedName || normalizedName.length > 80 || !normalizedKey || normalizedKey.length > 500) throw new Error("ชื่อ Workspace หรือ API Key ไม่ถูกต้อง");
   const settings = await readSettings();
-  const id = `elevenlabs-${crypto.randomUUID()}`;
+  const id = `elevenlabs-${randomUUID()}`;
   settings.elevenLabsWorkspaces = [...(settings.elevenLabsWorkspaces ?? []), { id, name: normalizedName, encryptedKey: safeStorage.encryptString(normalizedKey).toString("base64") }];
   settings.activeElevenLabsWorkspaceId = id;
   await writeSettings(settings);
