@@ -151,10 +151,10 @@ export default function QuickPreviewPanel({
             value={duration}
             onChange={(event) => setDuration(Number(event.target.value))}
           >
-            <option value={10}>10 seconds</option>
-            <option value={20}>20 seconds</option>
-            <option value={30}>30 seconds</option>
-            <option value={60}>60 seconds</option>
+            <option value={10}>10 วินาที</option>
+            <option value={20}>20 วินาที</option>
+            <option value={30}>30 วินาที</option>
+            <option value={60}>60 วินาที</option>
           </select>
         </label>
 
