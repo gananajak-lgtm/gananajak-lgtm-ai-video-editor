@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const STORAGE_KEY = "voice-studio-global-character-voices-v1";
 export function readCharacterVoiceLibrary(): Record<string, string> {
@@ -12,16 +12,31 @@ export default function CharacterVoiceLibrary() {
   const [entries, setEntries] = useState<Record<string, string>>(readCharacterVoiceLibrary);
   const [name, setName] = useState("");
   const [voiceId, setVoiceId] = useState("");
-  const [voices, setVoices] = useState<Array<{ id: string; name: string }>>([]);
+  const [voices, setVoices] = useState<Array<{ id: string; name: string; previewUrl: string | null }>>([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
+  const previewAudio = useRef<HTMLAudioElement | null>(null);
+  const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
+  const stopPreview = () => { previewAudio.current?.pause(); previewAudio.current = null; setPlayingVoiceId(null); };
+  useEffect(() => () => { previewAudio.current?.pause(); }, []);
+  const playPreview = (id: string) => {
+    if (playingVoiceId === id) { stopPreview(); return; }
+    stopPreview();
+    const previewUrl = voices.find(item => item.id === id)?.previewUrl;
+    if (!previewUrl) { setMessage("เสียงนี้ไม่มีตัวอย่างจาก ElevenLabs"); return; }
+    const audio = new Audio(previewUrl);
+    previewAudio.current = audio; setPlayingVoiceId(id); setMessage("");
+    audio.onended = () => { if (previewAudio.current === audio) stopPreview(); };
+    audio.onerror = () => { if (previewAudio.current === audio) { stopPreview(); setMessage("เปิดเสียงตัวอย่างไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ต"); } };
+    void audio.play().catch(() => { if (previewAudio.current === audio) { stopPreview(); setMessage("ไม่สามารถเล่นเสียงตัวอย่างนี้ได้"); } });
+  };
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); window.dispatchEvent(new Event("character-voices-updated")); }
     catch { setMessage("บันทึกคลังเสียงในเครื่องไม่สำเร็จ"); }
   }, [entries]);
   const loadVoices = async () => {
-    setLoading(true); setMessage("");
+    stopPreview(); setLoading(true); setMessage("");
     try { setVoices(await window.videoEditor.listElevenLabsVoices()); }
     catch { setMessage("ดึงรายชื่อเสียงไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อ ElevenLabs และสิทธิ์ Voices: Read"); }
     finally { setLoading(false); }
@@ -45,6 +60,7 @@ export default function CharacterVoiceLibrary() {
       <label>Voice ID <input value={voiceId} onChange={event => setVoiceId(event.target.value)} placeholder="วาง Voice ID จาก ElevenLabs" /></label>
       <button type="button" disabled={loading} onClick={() => void loadVoices()}>{loading ? "กำลังโหลด..." : "ดึงเสียงจาก ElevenLabs"}</button>
       {voices.length > 0 && <label>เลือกเสียง <select value={voices.some(item => item.id === voiceId) ? voiceId : ""} onChange={event => setVoiceId(event.target.value)}><option value="">เลือกเสียง</option>{voices.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
+      {voiceId && voices.some(item => item.id === voiceId) && <button type="button" disabled={!voices.find(item => item.id === voiceId)?.previewUrl} onClick={() => playPreview(voiceId)}>{playingVoiceId === voiceId ? "■ หยุดฟัง" : voices.find(item => item.id === voiceId)?.previewUrl ? "▶ ฟังเสียงตัวอย่าง" : "ไม่มีเสียงตัวอย่าง"}</button>}
       <button type="button" onClick={add} disabled={!name.trim() || !voiceId.trim()}>＋ บันทึกและเพิ่มตัวละคร</button>
     </div>}
     {message && <p role="status">{message}</p>}
