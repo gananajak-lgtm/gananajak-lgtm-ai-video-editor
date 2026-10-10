@@ -4,6 +4,7 @@ export default function ElevenLabsSettingsPanel() {
   const [key, setKey] = useState("");
   const [newName, setNewName] = useState("");
   const [newKey, setNewKey] = useState("");
+  const [showAddForm, setShowAddForm] = useState(false);
   const [workspaces, setWorkspaces] = useState<Array<{ id: string; name: string; configured: boolean }>>([]);
   const [activeId, setActiveId] = useState("");
   const [credits, setCredits] = useState<{ used: number | null; limit: number | null; remaining: number | null; resetAt: number | null } | null>(null);
@@ -21,7 +22,7 @@ export default function ElevenLabsSettingsPanel() {
     setBusy(true); setMessage("");
     try {
       await window.videoEditor.addElevenLabsWorkspace(newName, newKey);
-      setNewName(""); setNewKey(""); setCredits(null);
+      setNewName(""); setNewKey(""); setCredits(null); setShowAddForm(false);
       await refreshWorkspaces(); setMessage("เพิ่ม Workspace และเลือกใช้งานแล้ว");
     } catch (error) { setMessage(error instanceof Error ? error.message : "เพิ่ม Workspace ไม่สำเร็จ"); }
     finally { setBusy(false); }
@@ -81,7 +82,9 @@ export default function ElevenLabsSettingsPanel() {
     <div className="voiceRegistry">
       <h3>จัดการหลาย Workspace</h3>
       <p className="muted">เลือกบัญชีที่จะใช้กับการดึงเสียงและสร้างเสียงพากย์ คีย์แต่ละบัญชีเข้ารหัสไว้ในเครื่อง และไม่แสดงคีย์เดิม</p>
+      <p><strong>บัญชีที่บันทึกไว้ทั้งหมด: {workspaces.length} บัญชี</strong></p>
       <div className="voiceStudioActions">
+        <button type="button" disabled={busy} onClick={() => setShowAddForm(previous => !previous)}>{showAddForm ? "ยกเลิกการเพิ่มบัญชี" : "＋ เพิ่มบัญชี ElevenLabs อีกบัญชี"}</button>
         <label>Workspace ที่ใช้งาน <select value={activeId} disabled={busy} onChange={event => void switchWorkspace(event.target.value)}>
           {workspaces.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
         </select></label>
@@ -92,12 +95,17 @@ export default function ElevenLabsSettingsPanel() {
         {credits.resetAt !== null && <p className="muted">รอบถัดไป: {new Date(credits.resetAt * 1000).toLocaleString("th-TH")}</p>}
       </div>}
       {creditMessage && <p role="status">{creditMessage}</p>}
-      <h3>เพิ่ม Workspace ใหม่</h3>
+      <div className="voiceStudioActions" aria-label="รายการบัญชี ElevenLabs">
+        {workspaces.map(item => <button type="button" key={item.id} disabled={busy || activeId === item.id} onClick={() => void switchWorkspace(item.id)}>{item.name}{activeId === item.id ? " ✓ กำลังใช้งาน" : " — เลือกใช้"}</button>)}
+      </div>
+      {showAddForm && <div className="voiceRegistry">
+      <h3>เพิ่มบัญชี ElevenLabs ใหม่</h3>
       <div className="voiceStudioActions">
         <label>ชื่อ Workspace <input value={newName} onChange={event => setNewName(event.target.value)} placeholder="เช่น บัญชีนิยาย" /></label>
         <label>API Key ของ Workspace <input type="password" autoComplete="off" value={newKey} onChange={event => setNewKey(event.target.value)} placeholder="วาง API Key ของบัญชีนี้" /></label>
-        <button type="button" disabled={busy || !newName.trim() || !newKey.trim()} onClick={() => void addWorkspace()}>เพิ่มและเลือกใช้งาน</button>
+        <button type="button" disabled={busy || !newName.trim() || !newKey.trim()} onClick={() => void addWorkspace()}>＋ บันทึกบัญชีนี้และเพิ่มในรายการ</button>
       </div>
+      </div>}
     </div>
     {message && <p role="status">{message}</p>}
   </section>;
