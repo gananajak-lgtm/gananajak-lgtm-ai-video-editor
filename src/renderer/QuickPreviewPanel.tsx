@@ -10,12 +10,12 @@ type Props = {
 };
 
 function formatTime(seconds: number) {
-  const safe = Math.max(0, วินาที);
+  const safe = Math.max(0, seconds);
   const minutes = Math.floor(safe / 60);
   const remainder = safe - minutes * 60;
-  return `${String(minutes).padเริ่มต้น(2, "0")}:${remainder
+  return `${String(minutes).padStart(2, "0")}:${remainder
     .toFixed(1)
-    .padเริ่มต้น(4, "0")}`;
+    .padStart(4, "0")}`;
 }
 
 export default function QuickPreviewPanel({
@@ -23,7 +23,7 @@ export default function QuickPreviewPanel({
   disabled = false
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [start, setเริ่มต้น] = useState(0);
+  const [start, setStart] = useState(0);
   const [duration, setDuration] = useState(20);
   const [previewing, setPreviewing] = useState(false);
   const [progress, setProgress] = useState<RenderProgress | null>(null);
@@ -31,17 +31,17 @@ export default function QuickPreviewPanel({
   const [playbackUrl, setเล่นbackUrl] = useState<string | null>(null);
   const [playerTime, setเล่นerTime] = useState(0);
   const [playerDuration, setเล่นerDuration] = useState(0);
-  const [playing, setเล่นing] = useState(false);
+  const [playing, setPlaying] = useState(false);
 
-  const maxเริ่มต้น = Math.max(0, plan.duration - 1);
+  const maxStart = Math.max(0, plan.duration - 1);
   const effectiveDuration = useMemo(
     () => Math.min(duration, Math.max(1, plan.duration - start)),
     [duration, plan.duration, start]
   );
 
   useEffect(() => {
-    setเริ่มต้น((current) => Math.min(current, maxเริ่มต้น));
-  }, [maxเริ่มต้น]);
+    setStart((current) => Math.min(current, maxStart));
+  }, [maxStart]);
 
   useEffect(() => {
     return window.videoEditor.onRenderProgress((next) => {
@@ -68,7 +68,7 @@ export default function QuickPreviewPanel({
       setเล่นbackUrl(result.playbackUrl ?? null);
       setเล่นerTime(0);
       setเล่นerDuration(effectiveDuration);
-      setเล่นing(false);
+      setPlaying(false);
       setMessage(
         result.playbackUrl
           ? "พรีวิวพร้อมเล่นในแอปแล้ว"
@@ -89,7 +89,7 @@ export default function QuickPreviewPanel({
     const video = videoRef.current;
     const next = Math.max(
       0,
-      Math.min(playerDuration || effectiveDuration, วินาที)
+      Math.min(playerDuration || effectiveDuration, seconds)
     );
 
     if (video) video.currentTime = next;
@@ -137,10 +137,10 @@ export default function QuickPreviewPanel({
           <input
             type="range"
             min="0"
-            max={Math.max(1, maxเริ่มต้น)}
+            max={Math.max(1, maxStart)}
             step="0.5"
-            value={Math.min(start, Math.max(1, maxเริ่มต้น))}
-            onChange={(event) => setเริ่มต้น(Number(event.target.value))}
+            value={Math.min(start, Math.max(1, maxStart))}
+            onChange={(event) => setStart(Number(event.target.value))}
           />
           <strong>{formatTime(start)}</strong>
         </label>
@@ -151,10 +151,10 @@ export default function QuickPreviewPanel({
             value={duration}
             onChange={(event) => setDuration(Number(event.target.value))}
           >
-            <option value={10}>10 วินาที</option>
-            <option value={20}>20 วินาที</option>
-            <option value={30}>30 วินาที</option>
-            <option value={60}>60 วินาที</option>
+            <option value={10}>10 seconds</option>
+            <option value={20}>20 seconds</option>
+            <option value={30}>30 seconds</option>
+            <option value={60}>60 seconds</option>
           </select>
         </label>
 
@@ -196,9 +196,9 @@ export default function QuickPreviewPanel({
             onTimeUpdate={(event) =>
               setเล่นerTime(event.currentTarget.currentTime)
             }
-            onเล่น={() => setเล่นing(true)}
-            onหยุดชั่วคราว={() => setเล่นing(false)}
-            onEnded={() => setเล่นing(false)}
+            onPlay={() => setPlaying(true)}
+            onPause={() => setPlaying(false)}
+            onEnded={() => setPlaying(false)}
           />
 
           <div className="playerScrubRow">
