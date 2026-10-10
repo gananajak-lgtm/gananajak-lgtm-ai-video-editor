@@ -23,7 +23,7 @@ export default function ElevenLabsSettingsPanel() {
     try {
       await window.videoEditor.addElevenLabsWorkspace(newName, newKey);
       setNewName(""); setNewKey(""); setCredits(null); setShowAddForm(false);
-      await refreshWorkspaces(); setMessage("เพิ่ม Workspace และเลือกใช้งานแล้ว");
+      await refreshWorkspaces(); window.dispatchEvent(new Event("elevenlabs-workspace-changed")); setMessage("เพิ่ม Workspace และเลือกใช้งานแล้ว");
     } catch (error) { setMessage(error instanceof Error ? error.message : "เพิ่ม Workspace ไม่สำเร็จ"); }
     finally { setBusy(false); }
   };
@@ -31,7 +31,7 @@ export default function ElevenLabsSettingsPanel() {
     setBusy(true); setMessage(""); setCredits(null); setCreditMessage("");
     try {
       await window.videoEditor.selectElevenLabsWorkspace(id);
-      await refreshWorkspaces(); setMessage("สลับ Workspace แล้ว");
+      await refreshWorkspaces(); window.dispatchEvent(new Event("elevenlabs-workspace-changed")); setMessage("สลับ Workspace แล้ว");
     } catch { setMessage("สลับ Workspace ไม่สำเร็จ"); }
     finally { setBusy(false); }
   };
