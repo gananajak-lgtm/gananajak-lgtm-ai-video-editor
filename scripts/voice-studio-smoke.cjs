@@ -43,12 +43,12 @@ assert.equal(labeled[2].needsReview, false);
 assert.equal(labeled[3].kind, "sfx");
 
 // Blank lines are formatting from DOCX paste, not a speaker reset.
-const spacedNarration = parseNovelScript("[ผู้บรรยาย]\\nป่ามืด\\n\\nข้อความบรรยายต่อเนื่อง");
+const spacedNarration = parseNovelScript("[ผู้บรรยาย]\nป่ามืด\n\nข้อความบรรยายต่อเนื่อง");
 assert.equal(spacedNarration.length, 2);
 assert.equal(spacedNarration[0].needsReview, false);
 assert.equal(spacedNarration[1].speaker, "ผู้บรรยาย");
 assert.equal(spacedNarration[1].needsReview, false);
-const docxDialogue = parseNovelScript("[ผู้บรรยาย]\\nกลางคืนของหมู่บ้าน\\n\\n[ลำดวน]\\n\\nพี่สิงห์\\n\\n[พรานสิง]\\n\\nอือ");
+const docxDialogue = parseNovelScript("[ผู้บรรยาย]\nกลางคืนของหมู่บ้าน\n\n[ลำดวน]\n\nพี่สิงห์\n\n[พรานสิง]\n\nอือ");
 assert.equal(docxDialogue.length, 3);
 assert.deepEqual(docxDialogue.map(line => line.speaker).join(","), "ผู้บรรยาย,ลำดวน,พรานสิง");
 assert.equal(docxDialogue[1].text, "พี่สิงห์");
