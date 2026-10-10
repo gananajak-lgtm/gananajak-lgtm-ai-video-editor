@@ -303,8 +303,6 @@ export type DesktopApi = {
   listStudioProjects: () => Promise<StudioProject[]>;
   createStudioProject: (title: string) => Promise<StudioProject>;
   createStudioEpisode: (projectId: string, title: string) => Promise<StudioEpisode>;
-  loadStudioEpisodeScript: (projectId: string, episodeId: string) => Promise<string>;
-  saveStudioEpisodeScript: (projectId: string, episodeId: string, script: string) => Promise<void>;
   saveProject: (
     project: ProjectDocument,
     filePath?: string | null
