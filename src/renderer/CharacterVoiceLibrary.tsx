@@ -16,6 +16,9 @@ export default function CharacterVoiceLibrary() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
+  const [selectedCharacter, setSelectedCharacter] = useState<string | null>(null);
+  const [editId, setEditId] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const previewAudio = useRef<HTMLAudioElement | null>(null);
   const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
   const stopPreview = () => { previewAudio.current?.pause(); previewAudio.current = null; setPlayingVoiceId(null); };
@@ -64,6 +67,16 @@ export default function CharacterVoiceLibrary() {
       <button type="button" onClick={add} disabled={!name.trim() || !voiceId.trim()}>＋ บันทึกและเพิ่มตัวละคร</button>
     </div>}
     {message && <p role="status">{message}</p>}
-    {Object.keys(entries).length === 0 ? <p className="muted">ยังไม่มีเสียงตัวละครที่บันทึกไว้</p> : <div className="voiceRegistry"><h3>เสียงที่บันทึกแล้ว ({Object.keys(entries).length})</h3><div className="premiumCharacterGrid">{Object.entries(entries).sort(([a], [b]) => a.localeCompare(b, "th")).map(([character, id]) => <article className="premiumCharacterCard" key={character}><div className="premiumCharacterAvatar" aria-hidden="true">{character.slice(0, 1)}</div><div className="premiumCharacterName">{character}</div><span className="premiumCharacterTag">เสียงประจำตัวละคร</span><label>Voice ID <input aria-label={`Voice ID ของ ${character}`} value={id} onChange={event => setEntries(previous => ({ ...previous, [character]: event.target.value }))}/></label><button type="button" className="premiumRemoveButton" onClick={() => { setEntries(previous => { const next = { ...previous }; delete next[character]; return next; }); }}>ลบเสียงนี้</button></article>)}</div></div>}
+    {Object.keys(entries).length === 0 ? <p className="muted">ยังไม่มีเสียงตัวละครที่บันทึกไว้</p> : <div className="voiceRegistry"><h3>เสียงที่บันทึกแล้ว ({Object.keys(entries).length})</h3><div className="premiumCharacterGrid compactCharacterGrid">{Object.entries(entries).sort(([a], [b]) => a.localeCompare(b, "th")).map(([character, id]) => <article className={`premiumCharacterCard compactCharacterCard ${selectedCharacter === character ? "isSelected" : ""}`} key={character}>
+      <button type="button" className="compactCharacterFace" aria-expanded={selectedCharacter === character} onClick={() => { setSelectedCharacter(previous => previous === character ? null : character); setEditId(id); setConfirmDelete(null); }}>
+        <span className="premiumCharacterAvatar" aria-hidden="true">{character.slice(0, 1)}</span><strong className="premiumCharacterName">{character}</strong><span className="compactCharacterChevron">{selectedCharacter === character ? "⌃" : "⌄"}</span>
+      </button>
+      {selectedCharacter === character && <div className="compactCharacterDetails">
+        <p className="muted">Voice ID ถูกซ่อนไว้เพื่อป้องกันการแก้ไขโดยไม่ตั้งใจ</p>
+        <div className="voiceStudioActions"><button type="button" onClick={() => { setEditId(id); setConfirmDelete(null); setSelectedCharacter(character + "::edit"); }}>แก้ไข Voice ID</button><button type="button" className="premiumRemoveButton" onClick={() => setConfirmDelete(character)}>ลบเสียงนี้</button></div>
+        {confirmDelete === character && <div className="voiceStudioActions"><strong>ยืนยันลบเสียง {character}?</strong><button type="button" onClick={() => { setEntries(previous => { const next = { ...previous }; delete next[character]; return next; }); setSelectedCharacter(null); setConfirmDelete(null); }}>ยืนยันลบ</button><button type="button" onClick={() => setConfirmDelete(null)}>ยกเลิก</button></div>}
+      </div>}
+      {selectedCharacter === character + "::edit" && <div className="compactCharacterDetails"><label>แก้ไข Voice ID <input value={editId} onChange={event => setEditId(event.target.value)} /></label><div className="voiceStudioActions"><button type="button" disabled={!editId.trim()} onClick={() => { setEntries(previous => ({...previous,[character]:editId.trim()})); setSelectedCharacter(character); }}>บันทึกการแก้ไข</button><button type="button" onClick={() => setSelectedCharacter(character)}>ยกเลิก</button></div></div>}
+    </article>)}</div></div>}
   </section>;
 }
