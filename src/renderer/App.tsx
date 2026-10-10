@@ -515,12 +515,7 @@ export default function App() {
         </div>
       </header>
 
-      <nav className="editorNav compactProductionNav" aria-label="เลือกพื้นที่ทำงาน">
-        <button type="button" className={activeProductionTab === "accounts" ? "active" : ""} onClick={() => setActiveProductionTab("accounts")}>💳 บัญชีและเครดิต</button>
-        <button type="button" className={activeProductionTab === "voices" ? "active" : ""} onClick={() => setActiveProductionTab("voices")}>🎙️ คลังเสียงตัวละคร</button>
-        <button type="button" className={activeProductionTab === "script" ? "active" : ""} onClick={() => setActiveProductionTab("script")}>📝 ใส่บท · แยกบท</button>
-        <button type="button" className={activeProductionTab === "editor" ? "active" : ""} onClick={() => setActiveProductionTab("editor")}>🎬 ตัดต่อ · ตรวจสอบ · ส่งออก</button>
-      </nav>
+
 
       <ProjectToolbar
         title={projectTitle}
