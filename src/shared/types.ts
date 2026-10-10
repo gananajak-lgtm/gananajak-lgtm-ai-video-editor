@@ -323,6 +323,7 @@ export type DesktopApi = {
   saveReplicateApiToken: (token: string) => Promise<ContentProviderStatus>;
   saveReplicateVideoModel: (model: string) => Promise<ContentProviderStatus>;
   saveElevenLabsApiKey: (apiKey: string) => Promise<ContentProviderStatus>;
+  listElevenLabsVoices: () => Promise<Array<{ id: string; name: string }>>;
   generateContentProject: (brief: ContentBrief) => Promise<ContentProject>;
   generateLocalTestProject: (brief: ContentBrief) => Promise<ContentProject>;
   generateLocalTestAssets: (project: ContentProject) => Promise<ContentProject>;
