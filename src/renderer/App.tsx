@@ -487,6 +487,8 @@ export default function App() {
 
   const browserMode=document.documentElement.dataset.runtime==="browser";
 
+  const [activeProductionTab, setActiveProductionTab] = useState<"accounts" | "voices" | "script" | "editor">("accounts");
+
   return (
     <>
       {browserMode && <div className="browserModeBanner"><strong>🌐 Browser Mode</strong><span>เปิดใช้งานจากเว็บได้แล้ว · งาน Render / AI / Publish จะย้ายไปทำผ่าน Backend Worker</span></div>}
@@ -502,13 +504,11 @@ export default function App() {
         </div>
       </header>
 
-      <nav className="editorNav" aria-label="สายการผลิตวิดีโอ">
-        <a href="#character-voice-library">🎙️ คลังเสียงตัวละคร</a>
-        <a href="#voice-studio">01 ใส่บท · แยกบท · เตรียมเสียง</a>
-        <a href="#editor-media">02 ใส่ภาพและเสียง</a>
-        <a href="#editor-preview">03 พรีวิวและตัดต่อ</a>
-        <a href="#editor-ai">04 วิเคราะห์และตรวจสอบ</a>
-        <a href="#editor-timeline">05 ส่งออก</a>
+      <nav className="editorNav compactProductionNav" aria-label="เลือกพื้นที่ทำงาน">
+        <button type="button" className={activeProductionTab === "accounts" ? "active" : ""} onClick={() => setActiveProductionTab("accounts")}>💳 บัญชีและเครดิต</button>
+        <button type="button" className={activeProductionTab === "voices" ? "active" : ""} onClick={() => setActiveProductionTab("voices")}>🎙️ คลังเสียงตัวละคร</button>
+        <button type="button" className={activeProductionTab === "script" ? "active" : ""} onClick={() => setActiveProductionTab("script")}>📝 ใส่บท · แยกบท</button>
+        <button type="button" className={activeProductionTab === "editor" ? "active" : ""} onClick={() => setActiveProductionTab("editor")}>🎬 ตัดต่อ · ตรวจสอบ · ส่งออก</button>
       </nav>
 
       <ProjectToolbar
@@ -520,14 +520,14 @@ export default function App() {
         onSave={saveProjectFile}
       />
 
-      <ElevenLabsSettingsPanel />
-      <CharacterVoiceLibrary />
+      <div className="compactTabContent" hidden={activeProductionTab !== "accounts"}><ElevenLabsSettingsPanel /></div>
+      <div className="compactTabContent" hidden={activeProductionTab !== "voices"}><CharacterVoiceLibrary /></div>
 
-      <section aria-label="ขั้นตอนที่ 1 ใส่บท แยกบท และเตรียมเสียง">
+      <section className="compactTabContent" hidden={activeProductionTab !== "script"} aria-label="ขั้นตอนที่ 1 ใส่บท แยกบท และเตรียมเสียง">
         <VoiceStudioPanel />
       </section>
 
-      <section aria-label="ขั้นตอนที่ 2 ถึง 7 ผลิตและส่งออกวิดีโอ">
+      <section className="compactTabContent" hidden={activeProductionTab !== "editor"} aria-label="ขั้นตอนที่ 2 ถึง 7 ผลิตและส่งออกวิดีโอ">
       <MediaRelinkPanel
         missingMedia={missingMedia}
         relinking={relinking}
