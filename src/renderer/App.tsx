@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ContentProject } from "../shared/content-factory";
-import type { AudioLayer, AiSettingsStatus, EditingBrainPlan, FullEpisodeTestReport, ProjectDocument, ProjectLoadResult, ProjectRelinkResult, RenderProgress, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
+import type { AudioLayer, AiSettingsStatus, EditingBrainPlan, FullEpisodeTestReport, ProjectDocument, ProjectLoadResult, ProjectRelinkResult, StudioProject, RenderProgress, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
 import AudioLayersPanel from "./AudioLayersPanel";
 import EditingBrainPanel from "./EditingBrainPanel";
 import VisualBrainPanel from "./VisualBrainPanel";
@@ -490,9 +490,40 @@ export default function App() {
     }
   };
 
+  const [studioProjects, setStudioProjects] = useState<StudioProject[]>([]);
+  const [studioSelectedId, setStudioSelectedId] = useState<string | null>(null);
+  const [studioNewTitle, setStudioNewTitle] = useState("");
+  const [studioNewEpisode, setStudioNewEpisode] = useState("");
+  const [studioBusy, setStudioBusy] = useState(false);
+  const refreshStudioProjects = async () => {
+    setStudioProjects(await window.videoEditor.listStudioProjects());
+  };
+  useEffect(() => { void refreshStudioProjects().catch(e => setError(String(e))); }, []);
+  const addStudioProject = async () => {
+    if (!studioNewTitle.trim() || studioBusy) return;
+    setStudioBusy(true);
+    try {
+      const created = await window.videoEditor.createStudioProject(studioNewTitle);
+      setStudioNewTitle("");
+      await refreshStudioProjects();
+      setStudioSelectedId(created.id);
+    } catch(e) { setError(String(e)); }
+    finally { setStudioBusy(false); }
+  };
+  const addStudioEpisode = async () => {
+    if (!studioSelectedId || !studioNewEpisode.trim() || studioBusy) return;
+    setStudioBusy(true);
+    try {
+      await window.videoEditor.createStudioEpisode(studioSelectedId, studioNewEpisode);
+      setStudioNewEpisode("");
+      await refreshStudioProjects();
+    } catch(e) { setError(String(e)); }
+    finally { setStudioBusy(false); }
+  };
+  const selectedStudioProject = studioProjects.find(p => p.id === studioSelectedId);
   const browserMode=document.documentElement.dataset.runtime==="browser";
 
-  const [activeProductionTab, setActiveProductionTab] = useState<"accounts" | "voices" | "script" | "editor">("accounts");
+  const [activeProductionTab, setActiveProductionTab] = useState<"dashboard" | "settings" | "accounts" | "voices" | "script" | "editor">("dashboard");
   const [theme, setTheme] = useState(() => localStorage.getItem("studio-theme-v1") || "indigo");
   const [fontStyle, setFontStyle] = useState(() => localStorage.getItem("studio-font-v1") || "modern");
   useEffect(() => { localStorage.setItem("studio-theme-v1", theme); localStorage.setItem("studio-font-v1", fontStyle); }, [theme, fontStyle]);
@@ -504,17 +535,20 @@ export default function App() {
       <aside className="studioSidebar" aria-label="เมนูหลัก">
         <div className="studioBrand"><span className="studioBrandIcon">♫</span><div><strong>AI VOICE STUDIO</strong><small>สร้างเสียงพากย์ด้วย ElevenLabs</small></div></div>
         <div className="studioSideLinks">
-          <button type="button" className={activeProductionTab === "accounts" || activeProductionTab === "voices" ? "selected" : ""} onClick={() => setActiveProductionTab("accounts")}>⚙ ตั้งค่าเสียง · คลังตัวละคร</button>
-          <button type="button" className={activeProductionTab === "script" ? "selected" : ""} onClick={() => setActiveProductionTab("script")}>♬ สร้างเสียงพากย์ · บท</button>
-          <button type="button" className={activeProductionTab === "editor" ? "selected" : ""} onClick={() => setActiveProductionTab("editor")}>▣ ตัดต่อ · ส่งออก</button>
+          <button className={activeProductionTab === "dashboard" ? "selected" : ""} onClick={() => setActiveProductionTab("dashboard")}>▦ โปรเจกต์ของฉัน</button>
+          <button className={activeProductionTab === "accounts" ? "selected" : ""} onClick={() => setActiveProductionTab("accounts")}>♫ คลังเสียงตัวละคร</button>
+          <button className={activeProductionTab === "script" ? "selected" : ""} onClick={() => setActiveProductionTab("script")}>♬ สร้างเสียงพากย์ · บท</button>
+          <button className={activeProductionTab === "editor" ? "selected" : ""} onClick={() => setActiveProductionTab("editor")}>▣ ตัดต่อ · ส่งออก</button>
         </div>
-        <div className="studioThemeControls"><strong>🎨 ธีมแอป</strong><div className="studioThemeSwatches">{(["indigo","ocean","emerald","rose","amber","slate"] as const).map(color => <button key={color} type="button" className={`studioSwatch ${theme === color ? "chosen" : ""}`} data-color={color} aria-label={`เลือกธีม ${color}`} title={color} onClick={() => setTheme(color)} />)}</div><label>รูปแบบตัวอักษร<select value={fontStyle} onChange={event => setFontStyle(event.target.value)}><option value="modern">Modern</option><option value="rounded">Rounded</option><option value="classic">Elegant</option></select></label></div><div className="studioSideFooter">● บันทึกโปรเจกต์ในเครื่อง<br/><small>ไม่สร้างเสียงโดยไม่ยืนยัน</small></div>
-      </aside>
+        <div style={{marginTop:"auto"}} className="studioSideLinks">
+          <button className={activeProductionTab === "settings" ? "selected" : ""} onClick={() => setActiveProductionTab("settings")}>⚙ ตั้งค่า</button>
+        </div>
+            </aside>
       <main className="shell editorWorkspace studioMain">
       <header className="topbar">
         <div>
           <p className="eyebrow">AI VOICE STUDIO · PRODUCTION WORKSPACE</p>
-          <h1>{activeProductionTab === "accounts" ? "ตั้งค่าเสียงและคลังตัวละคร" : activeProductionTab === "voices" ? "คลังเสียงตัวละคร" : activeProductionTab === "script" ? "สร้างเสียงพากย์จากบท" : "AI Video Editor"}</h1>
+          <h1>{activeProductionTab === "dashboard" ? "โปรเจกต์ของฉัน" : activeProductionTab === "settings" ? "ตั้งค่า" : activeProductionTab === "accounts" ? "คลังเสียงตัวละคร" : activeProductionTab === "voices" ? "คลังเสียงตัวละคร" : activeProductionTab === "script" ? "สร้างเสียงพากย์จากบท" : "AI Video Editor"}</h1>
         </div>
         <div className="status">
           <span className="statusDot" />
@@ -524,6 +558,27 @@ export default function App() {
 
 
 
+      {activeProductionTab === "dashboard" && <section className="compactTabContent studioProjectDashboard">
+        <h2>{selectedStudioProject ? selectedStudioProject.title : "โปรเจกต์ของฉัน"}</h2>
+        {selectedStudioProject ? <>
+          <button onClick={() => setStudioSelectedId(null)}>← กลับไปโปรเจกต์ทั้งหมด</button>
+          <h3>คลังเสียงตัวละคร</h3>
+          <p>คลังตัวละครของเรื่องนี้: {selectedStudioProject.folder}/characters</p>
+          <p>ระบบเชื่อมคลังเสียงเข้ากับโปรเจกต์กำลังพัฒนา</p>
+          <h3>ตอนทั้งหมด (EP)</h3>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}><input placeholder="ชื่อตอน เช่น EP01" value={studioNewEpisode} onChange={e=>setStudioNewEpisode(e.target.value)} /><button disabled={studioBusy || !studioNewEpisode.trim()} onClick={addStudioEpisode}>+ เพิ่ม EP</button></div>
+          {selectedStudioProject.episodes.map(ep => <div key={ep.id} className="studioProjectRow"><strong>{ep.title}</strong><small>{ep.folder}</small></div>)}
+        </> : <>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}><input placeholder="ชื่อเรื่องใหม่" value={studioNewTitle} onChange={e=>setStudioNewTitle(e.target.value)} /><button disabled={studioBusy || !studioNewTitle.trim()} onClick={addStudioProject}>+ เพิ่มโปรเจกต์</button></div>
+          {studioProjects.length === 0 && <p>ยังไม่มีโปรเจกต์ในระบบใหม่ · งานเก่าของคุณยังอยู่ในระบบเดิม</p>}
+          {studioProjects.map(p => <button key={p.id} className="studioProjectRow" onClick={() => setStudioSelectedId(p.id)}><strong>{p.title}</strong><small>{p.episodes.length} EP · เปิดโปรเจกต์ →</small></button>)}
+        </>}
+      </section>}
+      {activeProductionTab === "settings" && <section className="compactTabContent">
+        <h2>ตั้งค่า</h2>
+        <ElevenLabsSettingsPanel />
+        <div className="studioThemeControls"><strong>🎨 ธีมแอป</strong><div className="studioThemeSwatches">{(["indigo","ocean","emerald","rose","amber","slate"] as const).map(color => <button key={color} type="button" className={`studioSwatch ${theme === color ? "chosen" : ""}`} data-color={color} aria-label={`เลือกธีม ${color}`} title={color} onClick={() => setTheme(color)} />)}</div><label>รูปแบบตัวอักษร<select value={fontStyle} onChange={event => setFontStyle(event.target.value)}><option value="modern">Modern</option><option value="rounded">Rounded</option><option value="classic">Elegant</option></select></label></div>
+      </section>}
       <ProjectToolbar
         title={projectTitle}
         projectPath={projectPath}
@@ -533,7 +588,7 @@ export default function App() {
         onSave={saveProjectFile}
       />
 
-      <div className="compactTabContent" hidden={activeProductionTab !== "accounts" && activeProductionTab !== "voices"}><ElevenLabsSettingsPanel /><CharacterVoiceLibrary /></div>
+      <div className="compactTabContent" hidden={activeProductionTab !== "accounts" && activeProductionTab !== "voices"}><CharacterVoiceLibrary /></div>
 
 
       <section className="compactTabContent" hidden={activeProductionTab !== "script"} aria-label="ขั้นตอนที่ 1 ใส่บท แยกบท และเตรียมเสียง">
