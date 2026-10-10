@@ -31,7 +31,7 @@ import {
   createPlaybackUrl,
   installMediaProtocol
 } from "./mediaProtocol";
-import { getAiSettingsStatus, saveOpenAiApiKey, getReplicateApiToken, saveReplicateApiToken, getElevenLabsApiKey, saveElevenLabsApiKey, getReplicateVideoModel, saveReplicateVideoModel } from "./settings";
+import { getAiSettingsStatus, saveOpenAiApiKey, getReplicateApiToken, saveReplicateApiToken, getElevenLabsApiKey, saveElevenLabsApiKey, listElevenLabsWorkspaces, saveElevenLabsWorkspace, selectElevenLabsWorkspace, getReplicateVideoModel, saveReplicateVideoModel } from "./settings";
 import {
   autosaveProject,
   findMissingMedia,
@@ -322,6 +322,21 @@ async function contentProviderStatus() {
 }
 
 ipcMain.handle("content:provider-status", contentProviderStatus);
+ipcMain.handle("voice:workspaces", () => listElevenLabsWorkspaces());
+ipcMain.handle("voice:add-workspace", (_event, name: string, key: string) => saveElevenLabsWorkspace(name, key));
+ipcMain.handle("voice:select-workspace", (_event, id: string) => selectElevenLabsWorkspace(id));
+ipcMain.handle("voice:subscription", async () => {
+  const key = await getElevenLabsApiKey();
+  if (!key) throw new Error("ยังไม่ได้ตั้งค่า API Key");
+  const response = await fetch("https://api.elevenlabs.io/v1/user/subscription", { headers: { "xi-api-key": key, Accept: "application/json" }, signal: AbortSignal.timeout(15000) });
+  if (!response.ok) throw new Error(response.status === 403 ? "API Key ไม่มีสิทธิ์อ่านข้อมูล Subscription" : response.status === 401 ? "API Key ไม่ถูกต้อง" : `อ่านเครดิตไม่สำเร็จ (HTTP ${response.status})`);
+  const data: unknown = await response.json();
+  if (!data || typeof data !== "object") throw new Error("ข้อมูลเครดิตไม่ถูกต้อง");
+  const record = data as Record<string, unknown>;
+  const used = typeof record.character_count === "number" ? record.character_count : null;
+  const limit = typeof record.character_limit === "number" ? record.character_limit : null;
+  return { used, limit, remaining: used !== null && limit !== null ? Math.max(0, limit - used) : null, resetAt: typeof record.next_character_count_reset_unix === "number" ? record.next_character_count_reset_unix : null };
+});
 ipcMain.handle("voice:list-elevenlabs-voices", async () => {
   const key = await getElevenLabsApiKey();
   if (!key) throw new Error("ยังไม่ได้ตั้งค่า ElevenLabs API Key");
