@@ -322,6 +322,20 @@ async function contentProviderStatus() {
 }
 
 ipcMain.handle("content:provider-status", contentProviderStatus);
+ipcMain.handle("voice:list-elevenlabs-voices", async () => {
+  const key = await getElevenLabsApiKey();
+  if (!key) throw new Error("ยังไม่ได้ตั้งค่า ElevenLabs API Key");
+  const response = await fetch("https://api.elevenlabs.io/v1/voices", {
+    headers: { "xi-api-key": key, Accept: "application/json" },
+    signal: AbortSignal.timeout(15000)
+  });
+  if (!response.ok) throw new Error(response.status === 401 ? "API Key ไม่ถูกต้อง" : response.status === 403 ? "API Key ไม่มีสิทธิ์อ่านรายชื่อเสียง" : `โหลดรายชื่อเสียงไม่สำเร็จ (HTTP ${response.status})`);
+  const payload: unknown = await response.json();
+  if (!payload || typeof payload !== "object" || !("voices" in payload) || !Array.isArray(payload.voices)) throw new Error("ข้อมูลเสียงไม่ถูกต้อง");
+  return payload.voices.filter((item: unknown) => item && typeof item === "object" && "voice_id" in item && "name" in item && typeof item.voice_id === "string" && typeof item.name === "string").map((item: { voice_id: string; name: string }) => ({ id: item.voice_id, name: item.name }));
+});
+
+
 ipcMain.handle("content:save-replicate-token", async (_event, token: string) => {
   await saveReplicateApiToken(token);
   return contentProviderStatus();
