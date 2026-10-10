@@ -64,3 +64,16 @@ export async function loadStudioEpisodeScript(projectId: string, episodeId: stri
     throw error;
   }
 }
+
+export async function saveStudioEpisodeScript(projectId: string, episodeId: string, script: string): Promise<void> {
+  if (typeof script !== "string" || script.length > 2000000) throw new Error("Script exceeds the maximum length");
+  const project = (await readIndex()).find(item => item.id === projectId);
+  const episode = project?.episodes.find(item => item.id === episodeId);
+  if (!episode) throw new Error("Episode not found");
+  const directory = path.join(episode.folder, "script");
+  await mkdir(directory, { recursive: true });
+  const temp = path.join(directory, "source-" + randomUUID() + ".tmp");
+  await writeFile(temp, script, { flag: "wx" });
+  const { rename } = await import("node:fs/promises");
+  await rename(temp, path.join(directory, "source.txt"));
+}
