@@ -56,6 +56,7 @@ export default function VoiceStudioPanel() {
   const [realWorkspaces, setRealWorkspaces] = useState<Array<{ id: string; name: string; configured: boolean }>>([]);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const [workspaceMessage, setWorkspaceMessage] = useState("");
+  const [importedPlanWorkspaceId, setImportedPlanWorkspaceId] = useState<string | null>(null);
   const [workspaceCredits, setWorkspaceCredits] = useState<{ used: number | null; limit: number | null; remaining: number | null; resetAt: number | null } | null>(null);
   const readWorkspaceVoices = (id: string): Record<string, string> => {
     try {
