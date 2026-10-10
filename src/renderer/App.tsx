@@ -55,6 +55,7 @@ export default function App() {
   const [transcript, setTranscript] = useState<TranscriptResult | null>(null);
   const [editingPlan, setEditingPlan] = useState<EditingBrainPlan | null>(null);
   const [audioLayers, setAudioLayers] = useState<AudioLayer[]>([]);
+  const [aiSfxEnabled, setAiSfxEnabled] = useState(false);
   const [contentProject, setContentProject] = useState<ContentProject | null>(null);
   const [aiStatus, setAiStatus] = useState<AiSettingsStatus>({
     configured: false,
@@ -91,6 +92,7 @@ export default function App() {
         : null
     );
     setAudioLayers(project.audioLayers);
+    setAiSfxEnabled(project.aiSfxEnabled ?? false);
     setContentProject(project.contentProject ?? null);
     setRenderHistory(project.renderHistory ?? []);
     setMissingMedia(loaded.missingMedia);
@@ -155,6 +157,7 @@ export default function App() {
       editingPlan,
       timeline,
       audioLayers,
+      aiSfxEnabled,
       contentProject,
       renderHistory
     }),
@@ -168,6 +171,7 @@ export default function App() {
       editingPlan,
       timeline,
       audioLayers,
+      aiSfxEnabled,
       contentProject,
       renderHistory
     ]
@@ -224,6 +228,7 @@ export default function App() {
         : null
     );
     setAudioLayers(project.audioLayers);
+    setAiSfxEnabled(project.aiSfxEnabled ?? false);
     setRenderHistory(project.renderHistory ?? renderHistory);
     setMissingMedia(result.missingMedia);
     setNotice(
@@ -536,6 +541,10 @@ export default function App() {
       </section>
 
       <section className="compactTabContent" hidden={activeProductionTab !== "editor"} aria-label="ขั้นตอนที่ 2 ถึง 7 ผลิตและส่งออกวิดีโอ">
+      <div className="aiSfxToggleBar">
+        <div><strong>🎧 AI เสียงเอฟเฟกต์ (SFX)</strong><p>{aiSfxEnabled ? "เปิดไว้สำหรับการวิเคราะห์ SFX เมื่อระบบพร้อมใช้งาน · ไม่มีการใช้เครดิตอัตโนมัติ" : "ปิดอยู่ · ไม่ต้องวิเคราะห์หรือค้นหา SFX ด้วย AI · เสียงที่เพิ่มเองยังใช้งานได้"}</p></div>
+        <label className="aiSfxToggleControl"><input type="checkbox" checked={aiSfxEnabled} onChange={(event) => setAiSfxEnabled(event.target.checked)} /><span>{aiSfxEnabled ? "เปิด" : "ปิด"}</span></label>
+      </div>
       <MediaRelinkPanel
         missingMedia={missingMedia}
         relinking={relinking}
