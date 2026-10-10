@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - feature/ai-content-factory
+      - feature/script-speaker-parser
 
 jobs:
   build-windows:
@@ -19,8 +20,11 @@ jobs:
           node-version: 22
       - run: npm install --no-audit --no-fund
       - run: npm run typecheck
+      - run: npm run test:voice-studio
       - run: npm run test:content
       - run: npm run dist:win
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
       - name: Verify packaged Windows runtime
         shell: powershell
         run: |
@@ -48,4 +52,4 @@ jobs:
             release/*.exe
             release/latest*.yml
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30
