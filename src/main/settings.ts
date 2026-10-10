@@ -7,6 +7,8 @@ type PersistedSettings = {
   openAiApiKeyEncrypted?: string;
   replicateApiTokenEncrypted?: string;
   elevenLabsApiKeyEncrypted?: string;
+  elevenLabsWorkspaces?: Array<{ id: string; name: string; encryptedKey: string }>;
+  activeElevenLabsWorkspaceId?: string;
   replicateVideoModel?: string;
 };
 
@@ -137,13 +139,54 @@ export async function saveReplicateApiToken(value: string) {
   return saveEncryptedSecret(value.trim(), "replicateApiTokenEncrypted");
 }
 
+export async function listElevenLabsWorkspaces() {
+  const settings = await readSettings();
+  const entries = settings.elevenLabsWorkspaces ?? [];
+  return { activeId: settings.activeElevenLabsWorkspaceId ?? "legacy", workspaces: [
+    ...(settings.elevenLabsApiKeyEncrypted || sessionElevenLabsKey || process.env.ELEVENLABS_API_KEY ? [{ id: "legacy", name: "Workspace หลัก", configured: true }] : []),
+    ...entries.map(({ id, name }) => ({ id, name, configured: true }))
+  ] };
+}
+
+export async function saveElevenLabsWorkspace(name: string, apiKey: string) {
+  if (!safeStorage.isEncryptionAvailable()) throw new Error("เครื่องนี้ยังไม่รองรับการเข้ารหัส API Key จึงไม่บันทึกคีย์แบบถาวร");
+  const normalizedName = name.trim(), normalizedKey = apiKey.trim();
+  if (!normalizedName || normalizedName.length > 80 || !normalizedKey || normalizedKey.length > 500) throw new Error("ชื่อ Workspace หรือ API Key ไม่ถูกต้อง");
+  const settings = await readSettings();
+  const id = `elevenlabs-${crypto.randomUUID()}`;
+  settings.elevenLabsWorkspaces = [...(settings.elevenLabsWorkspaces ?? []), { id, name: normalizedName, encryptedKey: safeStorage.encryptString(normalizedKey).toString("base64") }];
+  settings.activeElevenLabsWorkspaceId = id;
+  await writeSettings(settings);
+  return listElevenLabsWorkspaces();
+}
+
+export async function selectElevenLabsWorkspace(id: string) {
+  const settings = await readSettings();
+  if (id !== "legacy" && !(settings.elevenLabsWorkspaces ?? []).some(item => item.id === id)) throw new Error("ไม่พบ Workspace");
+  if (id === "legacy" && !await getEncryptedSecret(sessionElevenLabsKey, "ELEVENLABS_API_KEY", "elevenLabsApiKeyEncrypted")) throw new Error("Workspace หลักยังไม่มี API Key");
+  settings.activeElevenLabsWorkspaceId = id;
+  await writeSettings(settings);
+  return listElevenLabsWorkspaces();
+}
+
 export async function getElevenLabsApiKey() {
+  const settings = await readSettings();
+  const active = settings.activeElevenLabsWorkspaceId;
+  if (active && active !== "legacy") {
+    const entry = settings.elevenLabsWorkspaces?.find(item => item.id === active);
+    if (!entry || !safeStorage.isEncryptionAvailable()) return null;
+    try { return safeStorage.decryptString(Buffer.from(entry.encryptedKey, "base64")); } catch { return null; }
+  }
   return getEncryptedSecret(sessionElevenLabsKey, "ELEVENLABS_API_KEY", "elevenLabsApiKeyEncrypted");
 }
 
 export async function saveElevenLabsApiKey(value: string) {
   sessionElevenLabsKey = value.trim() || null;
-  return saveEncryptedSecret(value.trim(), "elevenLabsApiKeyEncrypted");
+  const saved = await saveEncryptedSecret(value.trim(), "elevenLabsApiKeyEncrypted");
+  const settings = await readSettings();
+  settings.activeElevenLabsWorkspaceId = "legacy";
+  await writeSettings(settings);
+  return saved;
 }
 
 export async function getReplicateVideoModel(): Promise<string | null> {
