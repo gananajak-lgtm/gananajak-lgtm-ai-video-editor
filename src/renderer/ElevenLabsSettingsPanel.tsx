@@ -99,6 +99,6 @@ export default function ElevenLabsSettingsPanel() {
         <button type="button" disabled={busy || !newName.trim() || !newKey.trim()} onClick={() => void addWorkspace()}>เพิ่มและเลือกใช้งาน</button>
       </div>
     </div>
-    {message && <p role="status">{message}</p>
+    {message && <p role="status">{message}</p>}
   </section>;
 }
