@@ -15,7 +15,7 @@ export function parseNovelScript(script: string): VoiceLine[] {
   const result: VoiceLine[] = [];
   let activeTag: { speaker: string; emotion: string; kind: VoiceLine["kind"] } | null = null;
   let previousSpeaker: string | null = null;
-  const strictLabels = script.split(/\r?\n/).some(line => /^\s*\[(?:ผู้บรรยาย|SFX|พูด\s*:|บรรยาย\s*\]|[^\]\r\n|:]{1,100}\])/.test(line));
+  const strictLabels = script.split(/\r?\n/).some(line => /^\s*\[[^\]\r\n|:]{1,100}(?:\s*\|\s*อารมณ์\s*:\s*[^\]]+)?\]/.test(line));
   const push = (text: string, speaker: string, emotion: string, kind: VoiceLine["kind"], needsReview = false) => {
     const trimmed = text.trim();
     if (!trimmed) return;
