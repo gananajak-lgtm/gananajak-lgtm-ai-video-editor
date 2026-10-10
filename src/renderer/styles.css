@@ -2510,3 +2510,41 @@ label { font-size: 10px; }
 .studioMain .premiumCharacterGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:10px}.studioMain .premiumCharacterCard{background:linear-gradient(155deg,#122a46,#12172e);border:1px solid #294365;padding:14px;border-radius:14px}.studioMain .premiumCharacterAvatar{background:linear-gradient(130deg,#6e35ce,#1c56b8)}
 @media(min-width:1450px){.studioMain .premiumWorkspaceGrid.studioAccountGrid{grid-template-columns:repeat(5,minmax(0,1fr))}}
 @media(max-width:900px){.studioLayout{grid-template-columns:1fr}.studioSidebar{position:relative;height:auto;padding:10px 12px;gap:8px}.studioBrand{padding:3px}.studioSideLinks{display:flex;overflow-x:auto;gap:5px}.studioSideLinks button{width:auto;white-space:nowrap;font-size:11px;padding:9px}.studioSideFooter{display:none}.studioMain.shell{padding:12px}.studioMain .premiumWorkspaceGrid.studioAccountGrid{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}}
+
+/* User-selectable studio palettes and typography */
+.studioLayout{--studio-accent:#6152ef;--studio-accent2:#1c65e3;--studio-panel:#0b1a31;--studio-card:#132542;--studio-ink:#eaf1ff}
+.studioTheme-ocean{--studio-accent:#007fbe;--studio-accent2:#1ac4da;--studio-panel:#071e2b;--studio-card:#0e3545}
+.studioTheme-emerald{--studio-accent:#087d68;--studio-accent2:#17b890;--studio-panel:#0b241e;--studio-card:#133c32}
+.studioTheme-rose{--studio-accent:#a43180;--studio-accent2:#e45d9b;--studio-panel:#271427;--studio-card:#38203b}
+.studioTheme-amber{--studio-accent:#a5661b;--studio-accent2:#e4aa35;--studio-panel:#251e15;--studio-card:#393021}
+.studioTheme-slate{--studio-accent:#475569;--studio-accent2:#8293ae;--studio-panel:#161d2b;--studio-card:#242f42}
+.studioLayout.studioFont-rounded{font-family:"Trebuchet MS","Segoe UI",Tahoma,sans-serif;letter-spacing:.12px}
+.studioLayout.studioFont-classic{font-family:Georgia,"Noto Serif Thai",Tahoma,serif;letter-spacing:.1px}
+.studioLayout.studioFont-modern{font-family:Inter,"Segoe UI",Tahoma,sans-serif}
+.studioLayout .studioSidebar{background:linear-gradient(180deg,#080f20,var(--studio-panel))}
+.studioLayout .studioSideLinks button.selected,.studioLayout .studioSideLinks button:hover{background:linear-gradient(110deg,var(--studio-accent),var(--studio-accent2))}
+.studioLayout .studioMain .premiumVoicePanel,.studioLayout .studioMain .voiceRegistry{background:var(--studio-panel);border-color:color-mix(in srgb,var(--studio-accent) 26%,#253955)}
+.studioLayout .studioMain .premiumWorkspaceCard,.studioLayout .studioMain .premiumCharacterCard{background:var(--studio-card)}
+.studioLayout .studioMain .premiumWorkspaceCard.isActive,.studioLayout .studioMain .premiumCharacterCard.isSelected{border-color:var(--studio-accent);box-shadow:inset 0 0 0 1px var(--studio-accent)}
+.studioThemeControls{padding:12px 8px;border:1px solid #293957;border-radius:12px;background:#0b1729;display:grid;gap:9px;color:#e5edff;font-size:12px}
+.studioThemeSwatches{display:flex;gap:7px;flex-wrap:wrap}
+.studioThemeSwatches .studioSwatch{width:25px;height:25px;min-height:25px;padding:0;border-radius:50%;border:2px solid #526078;background:linear-gradient(135deg,var(--swatch1),var(--swatch2))}
+.studioSwatch[data-color=indigo]{--swatch1:#6040d6;--swatch2:#1d6bec}.studioSwatch[data-color=ocean]{--swatch1:#0b73b3;--swatch2:#22ced5}.studioSwatch[data-color=emerald]{--swatch1:#087e65;--swatch2:#18c995}.studioSwatch[data-color=rose]{--swatch1:#a63887;--swatch2:#ec73ac}.studioSwatch[data-color=amber]{--swatch1:#a76418;--swatch2:#edbc40}.studioSwatch[data-color=slate]{--swatch1:#39475b;--swatch2:#94a3b8}
+.studioThemeSwatches .studioSwatch.chosen{outline:2px solid white;outline-offset:2px}
+.studioThemeControls label{display:grid;gap:5px}.studioThemeControls select{width:100%;background:#152542;color:#e8efff;border:1px solid #324969;border-radius:7px;padding:7px}
+.studioMain .compactCharacterGrid{grid-template-columns:repeat(auto-fill,minmax(135px,1fr));gap:8px}
+.studioMain .compactCharacterCard{padding:0;border-radius:11px;min-height:0;overflow:hidden}
+.studioMain .compactCharacterFace{display:flex;align-items:center;gap:8px;width:100%;min-height:54px;padding:9px 10px;text-align:left;background:transparent;border:0;border-radius:0}
+.studioMain .compactCharacterFace:hover{background:#ffffff0a}
+.studioMain .compactCharacterFace .premiumCharacterAvatar{width:30px;height:30px;font-size:13px;flex-shrink:0}
+.studioMain .compactCharacterFace .premiumCharacterName{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.studioMain .compactCharacterChevron{margin-left:auto;color:#8ea5cb}
+.studioMain .compactCharacterDetails{padding:9px;border-top:1px solid #35415b;font-size:11px}
+.studioMain .compactCharacterDetails label{display:grid;gap:5px}
+.studioMain .compactCharacterDetails input{width:100%;min-width:0}
+.studioMain .compactCharacterDetails .voiceStudioActions{gap:5px;flex-wrap:wrap}
+.studioMain .compactCharacterDetails button{font-size:11px;padding:6px 9px}
+.studioMain .premiumWorkspaceGrid.studioAccountGrid{grid-template-columns:repeat(auto-fill,minmax(125px,1fr));gap:7px}
+.studioMain .premiumWorkspaceCard{min-height:80px;padding:9px}
+.studioMain .premiumVoicePanel{padding:12px 14px}
+@media(max-width:900px){.studioThemeControls{max-width:360px}.studioMain .compactCharacterGrid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}}
