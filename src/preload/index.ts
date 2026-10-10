@@ -36,6 +36,7 @@ const api: DesktopApi = {
   saveReplicateApiToken: (token) => ipcRenderer.invoke("content:save-replicate-token", token),
   saveReplicateVideoModel: (model) => ipcRenderer.invoke("content:save-replicate-video-model", model),
   saveElevenLabsApiKey: (apiKey) => ipcRenderer.invoke("content:save-elevenlabs-key", apiKey),
+  listElevenLabsVoices: () => ipcRenderer.invoke("voice:list-elevenlabs-voices"),
   generateContentProject: (brief) =>
     ipcRenderer.invoke("content:generate-project", brief),
   generateLocalTestProject: (brief) =>
