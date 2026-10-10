@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { parseNovelScript } from "./novel-voice-parser";
+import { readCharacterVoiceLibrary } from "./CharacterVoiceLibrary";
 import type { VoiceLine } from "./novel-voice-parser";
 import { buildVoiceProductionPlan, voicePlanSummary } from "./voice-production-plan";
 import { canScheduleWorkspaceJob } from "./elevenlabs-workspace-profiles";
@@ -22,6 +23,22 @@ export default function VoiceStudioPanel() {
         : {};
     } catch { return {}; }
   });
+  useEffect(() => {
+    const applyLibrary = () => {
+      const saved = readCharacterVoiceLibrary();
+      setVoiceIds(previous => {
+        let changed = false;
+        const next = { ...previous };
+        for (const [name, id] of Object.entries(saved)) {
+          if (!next[name] && id.trim()) { next[name] = id; changed = true; }
+        }
+        return changed ? next : previous;
+      });
+    };
+    applyLibrary();
+    window.addEventListener("character-voices-updated", applyLibrary);
+    return () => window.removeEventListener("character-voices-updated", applyLibrary);
+  }, []);
   const [availableVoices, setAvailableVoices] = useState<Array<{ id: string; name: string }>>([]);
   const [loadingVoices, setLoadingVoices] = useState(false);
   const [voiceLoadError, setVoiceLoadError] = useState("");
