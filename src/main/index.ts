@@ -347,7 +347,7 @@ ipcMain.handle("voice:list-elevenlabs-voices", async () => {
   if (!response.ok) throw new Error(response.status === 401 ? "API Key ไม่ถูกต้อง" : response.status === 403 ? "API Key ไม่มีสิทธิ์อ่านรายชื่อเสียง" : `โหลดรายชื่อเสียงไม่สำเร็จ (HTTP ${response.status})`);
   const payload: unknown = await response.json();
   if (!payload || typeof payload !== "object" || !("voices" in payload) || !Array.isArray(payload.voices)) throw new Error("ข้อมูลเสียงไม่ถูกต้อง");
-  return payload.voices.flatMap((item: unknown) => item && typeof item === "object" && "voice_id" in item && "name" in item && typeof item.voice_id === "string" && typeof item.name === "string" ? [{ id: item.voice_id, name: item.name }] : []);
+  return payload.voices.flatMap((item: unknown) => item && typeof item === "object" && "voice_id" in item && "name" in item && typeof item.voice_id === "string" && typeof item.name === "string" ? [{ id: item.voice_id, name: item.name, previewUrl: "preview_url" in item && typeof item.preview_url === "string" && /^https:\/\//.test(item.preview_url) ? item.preview_url : null }] : []);
 });
 
 
