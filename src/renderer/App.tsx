@@ -492,11 +492,22 @@ export default function App() {
   return (
     <>
       {browserMode && <div className="browserModeBanner"><strong>🌐 Browser Mode</strong><span>เปิดใช้งานจากเว็บได้แล้ว · งาน Render / AI / Publish จะย้ายไปทำผ่าน Backend Worker</span></div>}
-      <main className="shell editorWorkspace">
+      <div className="studioLayout">
+      <aside className="studioSidebar" aria-label="เมนูหลัก">
+        <div className="studioBrand"><span className="studioBrandIcon">♫</span><div><strong>AI VOICE STUDIO</strong><small>สร้างเสียงพากย์ด้วย ElevenLabs</small></div></div>
+        <div className="studioSideLinks">
+          <button type="button" className={activeProductionTab === "accounts" ? "selected" : ""} onClick={() => setActiveProductionTab("accounts")}>⚙ ตั้งค่าระบบเสียง</button>
+          <button type="button" className={activeProductionTab === "voices" ? "selected" : ""} onClick={() => setActiveProductionTab("voices")}>♙ คลังเสียงตัวละคร</button>
+          <button type="button" className={activeProductionTab === "script" ? "selected" : ""} onClick={() => setActiveProductionTab("script")}>♬ สร้างเสียงพากย์ · บท</button>
+          <button type="button" className={activeProductionTab === "editor" ? "selected" : ""} onClick={() => setActiveProductionTab("editor")}>▣ ตัดต่อ · ส่งออก</button>
+        </div>
+        <div className="studioSideFooter">● บันทึกโปรเจกต์ในเครื่อง<br/><small>ไม่สร้างเสียงโดยไม่ยืนยัน</small></div>
+      </aside>
+      <main className="shell editorWorkspace studioMain">
       <header className="topbar">
         <div>
-          <p className="eyebrow">GANANAJAK LAB</p>
-          <h1>AI Video Editor</h1>
+          <p className="eyebrow">AI VOICE STUDIO · PRODUCTION WORKSPACE</p>
+          <h1>{activeProductionTab === "accounts" ? "ตั้งค่าระบบเสียง ElevenLabs" : activeProductionTab === "voices" ? "คลังเสียงตัวละคร" : activeProductionTab === "script" ? "สร้างเสียงพากย์จากบท" : "AI Video Editor"}</h1>
         </div>
         <div className="status">
           <span className="statusDot" />
@@ -836,6 +847,7 @@ export default function App() {
       )}
       </section>
     </main>
+    </div>
     </>
   );
 }
