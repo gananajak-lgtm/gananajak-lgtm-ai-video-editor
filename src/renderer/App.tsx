@@ -36,6 +36,7 @@ function formatTime(seconds: number) {
 }
 
 export default function App() {
+  const [workspacePage, setWorkspacePage] = useState<"voice" | "video">("voice");
   const [projectId, setProjectId] = useState(() => `project-${Date.now()}`);
   const [projectTitle, setProjectTitle] = useState("เรื่องไม่มีชื่อ");
   const [projectCreatedAt, setProjectCreatedAt] = useState(
@@ -502,11 +503,8 @@ export default function App() {
       </header>
 
       <nav className="editorNav" aria-label="พื้นที่ทำงาน">
-        <a href="#voice-studio">สตูดิโอเสียง</a>
-        <a href="#editor-media">สื่อ</a>
-        <a href="#editor-ai">AI วิเคราะห์</a>
-        <a href="#editor-preview">พรีวิว</a>
-        <a href="#editor-timeline">ไทม์ไลน์</a>
+        <button type="button" aria-pressed={workspacePage === "voice"} onClick={() => setWorkspacePage("voice")}>🎙️ บทละครและเสียงพากย์</button>
+        <button type="button" aria-pressed={workspacePage === "video"} onClick={() => setWorkspacePage("video")}>🎬 ตัดต่อและสร้างวิดีโอ</button>
       </nav>
 
       <ProjectToolbar
@@ -518,6 +516,11 @@ export default function App() {
         onSave={saveProjectFile}
       />
 
+      <div style={{ display: workspacePage === "voice" ? "block" : "none" }}>
+        <VoiceStudioPanel />
+      </div>
+
+      <div style={{ display: workspacePage === "video" ? "block" : "none" }}>
       <MediaRelinkPanel
         missingMedia={missingMedia}
         relinking={relinking}
@@ -535,8 +538,6 @@ export default function App() {
         </div>
         <div className="heroBadge">🎧</div>
       </details>
-
-      <VoiceStudioPanel />
 
       <ContentFactoryPanel
         aiConfigured={aiStatus.configured}
@@ -837,6 +838,7 @@ export default function App() {
           <TimelineEditor plan={timeline} onChange={setTimeline} />
         </section>
       )}
+      </div>
     </main>
     </>
   );
