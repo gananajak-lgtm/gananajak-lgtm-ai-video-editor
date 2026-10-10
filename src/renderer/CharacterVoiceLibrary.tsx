@@ -15,6 +15,7 @@ export default function CharacterVoiceLibrary() {
   const [voices, setVoices] = useState<Array<{ id: string; name: string }>>([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); window.dispatchEvent(new Event("character-voices-updated")); }
     catch { setMessage("บันทึกคลังเสียงในเครื่องไม่สำเร็จ"); }
@@ -30,18 +31,22 @@ export default function CharacterVoiceLibrary() {
     const id = voiceId.trim();
     if (!character || !id || character.length > 150 || id.length > 250) { setMessage("กรุณากรอกชื่อตัวละครและ Voice ID ให้ถูกต้อง"); return; }
     setEntries(previous => ({ ...previous, [character]: id }));
-    setName(""); setVoiceId(""); setMessage("บันทึกเสียงประจำตัวละครแล้ว");
+    setName(""); setVoiceId(""); setShowAdd(false); setMessage("บันทึกเสียงประจำตัวละครแล้ว กด ＋ เพิ่มตัวละครใหม่ เพื่อเพิ่มคนถัดไป");
   };
   return <section className="voiceStudioPanel" id="character-voice-library" aria-label="คลังเสียงตัวละคร">
     <h2>🎙️ คลังเสียงตัวละครถาวร</h2>
     <p className="muted">กำหนดเสียงครั้งเดียวเพื่อใช้กับบททุกตอนในเครื่องนี้ ไม่ต้องแยกบทก่อน สามารถแก้ไขหรือเปลี่ยนเสียงภายหลังได้</p>
     <div className="voiceStudioActions">
+      <button type="button" onClick={() => { setShowAdd(previous => !previous); setMessage(""); }}>{showAdd ? "ยกเลิก" : "＋ เพิ่มตัวละครใหม่"}</button>
+      <strong>บันทึกแล้ว {Object.keys(entries).length} ตัวละคร</strong>
+    </div>
+    {showAdd && <div className="voiceStudioActions">
       <label>ชื่อตัวละคร <input value={name} onChange={event => setName(event.target.value)} placeholder="เช่น พรานสิง" /></label>
       <label>Voice ID <input value={voiceId} onChange={event => setVoiceId(event.target.value)} placeholder="วาง Voice ID จาก ElevenLabs" /></label>
       <button type="button" disabled={loading} onClick={() => void loadVoices()}>{loading ? "กำลังโหลด..." : "ดึงเสียงจาก ElevenLabs"}</button>
       {voices.length > 0 && <label>เลือกเสียง <select value={voices.some(item => item.id === voiceId) ? voiceId : ""} onChange={event => setVoiceId(event.target.value)}><option value="">เลือกเสียง</option>{voices.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
-      <button type="button" onClick={add} disabled={!name.trim() || !voiceId.trim()}>บันทึกตัวละคร</button>
-    </div>
+      <button type="button" onClick={add} disabled={!name.trim() || !voiceId.trim()}>＋ บันทึกและเพิ่มตัวละคร</button>
+    </div>}
     {message && <p role="status">{message}</p>}
     {Object.keys(entries).length === 0 ? <p className="muted">ยังไม่มีเสียงตัวละครที่บันทึกไว้</p> : <div className="voiceRegistry"><h3>เสียงที่บันทึกแล้ว ({Object.keys(entries).length})</h3>{Object.entries(entries).sort(([a], [b]) => a.localeCompare(b, "th")).map(([character, id]) => <div className="voiceStudioActions" key={character}><strong>{character}</strong><input aria-label={`Voice ID ของ ${character}`} value={id} onChange={event => setEntries(previous => ({ ...previous, [character]: event.target.value }))}/><button type="button" onClick={() => { setEntries(previous => { const next = { ...previous }; delete next[character]; return next; }); }}>ลบ</button></div>)}</div>}
   </section>;
