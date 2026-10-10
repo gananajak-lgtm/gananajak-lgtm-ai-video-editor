@@ -38,7 +38,7 @@ export function parseNovelScript(script: string): VoiceLine[] {
   };
   for (const paragraph of script.split(/\r?\n/)) {
     const line = paragraph.trim();
-    if (!line) { activeTag = null; continue; }
+    if (!line) { continue; }
     const named = line.match(/^\[([^\]\r\n|:]{1,100})(?:\s*\|\s*อารมณ์\s*:\s*([^\]]+))?\]\s*(.*)$/);
     if (named && !/^(บรรยาย|พูด|SFX)$/i.test(named[1].trim())) {
       const name = named[1].trim();
