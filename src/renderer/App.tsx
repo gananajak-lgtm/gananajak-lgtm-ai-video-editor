@@ -13,6 +13,7 @@ import QuickPreviewPanel from "./QuickPreviewPanel";
 import EpisodeQcPackPanel from "./EpisodeQcPackPanel";
 import FullEpisodeTestPanel from "./FullEpisodeTestPanel";
 import VoiceStudioPanel from "./VoiceStudioPanel";
+import ElevenLabsSettingsPanel from "./ElevenLabsSettingsPanel";
 
 const providerStatusLabel: Record<string, string> = {
   missing_key: "ยังไม่ได้ตั้งค่า API Key",
@@ -516,6 +517,8 @@ export default function App() {
         onOpen={openProjectFile}
         onSave={saveProjectFile}
       />
+
+      <ElevenLabsSettingsPanel />
 
       <section aria-label="ขั้นตอนที่ 1 ใส่บท แยกบท และเตรียมเสียง">
         <VoiceStudioPanel />
