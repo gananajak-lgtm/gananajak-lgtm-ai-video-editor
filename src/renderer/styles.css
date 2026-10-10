@@ -2467,3 +2467,31 @@ label { font-size: 10px; }
 .premiumCharacterCard input { display:block; width:100%; margin-top:6px; }
 .premiumRemoveButton { margin-top:auto; }
 @media(max-width:650px) { .premiumVoicePanel { padding:14px; } .premiumWorkspaceGrid { grid-template-columns:repeat(auto-fit,minmax(145px,1fr)); } }
+
+
+/* Compact, single-viewport production dashboard. */
+.compactProductionNav { display:flex; flex-wrap:wrap; gap:7px; padding:8px; position:sticky; top:0; z-index:20; background:#0a1325; border:1px solid #263656; border-radius:12px; }
+.compactProductionNav button { flex:1 1 150px; min-height:35px; border-radius:9px; padding:7px 10px; background:#14223b; color:#c9d7ef; border:1px solid #2b3b5c; font-size:12px; font-weight:700; cursor:pointer; }
+.compactProductionNav button.active { background:linear-gradient(125deg,#4933b9,#1b57c4); border-color:#8376ff; color:#fff; }
+.compactTabContent[hidden] { display:none !important; }
+.compactTabContent { min-height:0; }
+.compactTabContent > .premiumVoicePanel { margin-block:8px; }
+.editorWorkspace .premiumVoicePanel { padding:14px 17px; border-radius:14px; }
+.editorWorkspace .premiumHeading { margin-bottom:5px; }
+.editorWorkspace .premiumHeading h2 { font-size:19px; margin:2px 0; }
+.editorWorkspace .premiumHeadingIcon { font-size:16px; padding:6px 10px; border-radius:9px; }
+.editorWorkspace .premiumVoicePanel .voiceRegistry { padding:12px; margin-top:8px; border-radius:12px; }
+.editorWorkspace .premiumVoicePanel p { margin-block:6px; }
+.editorWorkspace .premiumWorkspaceGrid { grid-template-columns:repeat(auto-fill,minmax(132px,1fr)); gap:7px; margin:8px 0 10px; }
+.editorWorkspace .premiumWorkspaceCard { min-height:88px; gap:5px; padding:10px; border-radius:11px; }
+.editorWorkspace .premiumWorkspaceIndex { width:27px; height:27px; font-size:12px; border-radius:7px; }
+.editorWorkspace .premiumWorkspaceName { font-size:12px; line-height:1.3; }
+.editorWorkspace .premiumWorkspaceState { font-size:10px; }
+.editorWorkspace .premiumCharacterGrid { grid-template-columns:repeat(auto-fill,minmax(165px,1fr)); gap:8px; margin-top:8px; }
+.editorWorkspace .premiumCharacterCard { padding:11px; gap:6px; border-radius:11px; }
+.editorWorkspace .premiumCharacterAvatar { width:36px; height:36px; border-radius:9px; font-size:18px; }
+.editorWorkspace .premiumCharacterName { font-size:14px; }
+.editorWorkspace .premiumCharacterTag { font-size:10px; padding:3px 7px; }
+.editorWorkspace .premiumCharacterCard input { min-height:30px; }
+.editorWorkspace .premiumVoicePanel button { min-height:30px; font-size:12px; }
+@media(min-width:900px) { .editorWorkspace .premiumWorkspaceGrid { grid-template-columns:repeat(9,minmax(0,1fr)); } .editorWorkspace .premiumWorkspaceCard { min-width:0; } }
