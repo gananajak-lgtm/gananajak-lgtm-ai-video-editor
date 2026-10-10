@@ -12,7 +12,6 @@ import EpisodeReadinessPanel from "./EpisodeReadinessPanel";
 import QuickPreviewPanel from "./QuickPreviewPanel";
 import EpisodeQcPackPanel from "./EpisodeQcPackPanel";
 import FullEpisodeTestPanel from "./FullEpisodeTestPanel";
-import ContentFactoryPanel from "./ContentFactoryPanel";
 import VoiceStudioPanel from "./VoiceStudioPanel";
 
 const providerStatusLabel: Record<string, string> = {
@@ -540,17 +539,6 @@ export default function App() {
         </div>
         <div className="heroBadge">🎧</div>
       </details>
-
-      <ContentFactoryPanel
-        aiConfigured={aiStatus.configured}
-        project={contentProject}
-        onGenerated={(project) => {
-          setContentProject(project);
-          setProjectTitle(project.title);
-          setNotice(`AI Content Factory created ${project.scenes.length} planned scenes.`);
-          setError(null);
-        }}
-      />
 
       <div className="editorThreePane">
         <div className="editorMediaPane">
