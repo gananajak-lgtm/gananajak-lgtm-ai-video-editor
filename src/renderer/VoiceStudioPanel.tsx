@@ -3,8 +3,6 @@ import { parseNovelScript } from "./novel-voice-parser";
 import { readCharacterVoiceLibrary } from "./CharacterVoiceLibrary";
 import type { VoiceLine } from "./novel-voice-parser";
 import { buildVoiceProductionPlan, voicePlanSummary } from "./voice-production-plan";
-import { canScheduleWorkspaceJob } from "./elevenlabs-workspace-profiles";
-import type { ElevenLabsWorkspaceProfile } from "./elevenlabs-workspace-profiles";
 
 export default function VoiceStudioPanel() {
   const [script, setScript] = useState("");
@@ -55,33 +53,54 @@ export default function VoiceStudioPanel() {
   const [planMessage, setPlanMessage] = useState("");
   const [draftName, setDraftName] = useState("ตอนที่ 1");
   const [previewLineId, setPreviewLineId] = useState<string | null>(null);
-  const [workspaceProfiles, setWorkspaceProfiles] = useState<Array<{ id: string; label: string; budget: string; used: string }>>(() => {
-    try {
-      const saved: unknown = JSON.parse(localStorage.getItem("voice-studio-workspaces-v1") || "null");
-      if (Array.isArray(saved) && saved.length > 0 && saved.length <= 100 && saved.every(x => x && typeof x.id === "string" && typeof x.label === "string" && typeof x.budget === "string" && typeof x.used === "string")) return saved;
-    } catch { /* Ignore corrupted local data. */ }
-    return [{ id: "workspace-1", label: "Workspace หลัก", budget: "10000", used: "" }];
-  });
-  useEffect(() => { try { localStorage.setItem("voice-studio-workspaces-v1", JSON.stringify(workspaceProfiles)); } catch { /* Storage may be unavailable. */ } }, [workspaceProfiles]);
-  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState(() => {
-    try {
-      const saved = localStorage.getItem("voice-studio-selected-workspace-v1");
-      return saved && workspaceProfiles.some(profile => profile.id === saved) ? saved : workspaceProfiles[0].id;
-    } catch { return workspaceProfiles[0].id; }
-  });
-  useEffect(() => { try { localStorage.setItem("voice-studio-selected-workspace-v1", selectedWorkspaceId); } catch { /* Storage may be unavailable. */ } }, [selectedWorkspaceId]);
-  useEffect(() => { try { localStorage.setItem(`voice-studio-voice-map-v2:${selectedWorkspaceId}`, JSON.stringify(voiceIds)); } catch { /* Storage may be unavailable. */ } }, [voiceIds, selectedWorkspaceId]);
-  const [workspaceLabel, setWorkspaceLabel] = useState("Workspace หลัก");
+  const [realWorkspaces, setRealWorkspaces] = useState<Array<{ id: string; name: string; configured: boolean }>>([]);
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
+  const [workspaceMessage, setWorkspaceMessage] = useState("");
+  const [workspaceCredits, setWorkspaceCredits] = useState<{ used: number | null; limit: number | null; remaining: number | null; resetAt: number | null } | null>(null);
   const readWorkspaceVoices = (id: string): Record<string, string> => {
     try {
-      const raw: unknown = JSON.parse(localStorage.getItem(`voice-studio-voice-map-v2:${id}`) || "{}");
-      if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
-      return Object.fromEntries(Object.entries(raw).filter(([key, value]) => key.length <= 150 && typeof value === "string" && value.length <= 250)) as Record<string, string>;
+      const data: unknown = JSON.parse(localStorage.getItem(`voice-studio-voice-map-v2:${id}`) || "{}");
+      return data && typeof data === "object" && !Array.isArray(data) ? Object.fromEntries(Object.entries(data).filter(([k,v]) => k.length <= 150 && typeof v === "string" && v.length <= 250)) as Record<string,string> : {};
     } catch { return {}; }
   };
-  const [creditBudget, setCreditBudget] = useState("10000");
-  const [usedCredits, setUsedCredits] = useState("");
-  const [importedPlanWorkspaceId, setImportedPlanWorkspaceId] = useState<string | null>(null);
+  const syncWorkspaces = async () => {
+    try {
+      const result = await window.videoEditor.listElevenLabsWorkspaces();
+      setRealWorkspaces(result.workspaces);
+      setSelectedWorkspaceId(result.activeId);
+      setWorkspaceMessage(result.workspaces.length ? "" : "กรุณาเพิ่มบัญชี ElevenLabs ในหน้าตั้งค่าเสียง");
+    } catch (error) { setWorkspaceMessage(error instanceof Error ? error.message : "อ่านบัญชีไม่สำเร็จ"); }
+  };
+  useEffect(() => {
+    void syncWorkspaces();
+    const onChange = () => { void syncWorkspaces(); setWorkspaceCredits(null); setConfirmed(false); };
+    window.addEventListener("elevenlabs-workspace-changed", onChange);
+    return () => window.removeEventListener("elevenlabs-workspace-changed", onChange);
+  }, []);
+  const switchRealWorkspace = async (id: string) => {
+    if (id === selectedWorkspaceId) return;
+    setWorkspaceMessage("กำลังสลับบัญชี...");
+    try {
+      await window.videoEditor.selectElevenLabsWorkspace(id);
+      setWorkspaceCredits(null); setAvailableVoices([]); setConfirmed(false);
+      await syncWorkspaces();
+      window.dispatchEvent(new Event("elevenlabs-workspace-changed"));
+    } catch (error) { setWorkspaceMessage(error instanceof Error ? error.message : "สลับบัญชีไม่สำเร็จ"); }
+  };
+  const refreshRealCredits = async () => {
+    setWorkspaceMessage("กำลังตรวจสอบเครดิตจริง...");
+    try { setWorkspaceCredits(await window.videoEditor.getElevenLabsSubscription()); setWorkspaceMessage(""); }
+    catch (error) { setWorkspaceCredits(null); setWorkspaceMessage(error instanceof Error ? error.message : "ตรวจสอบเครดิตไม่สำเร็จ"); }
+  };
+  useEffect(() => {
+    if (!selectedWorkspaceId) return;
+    setVoiceIds({ ...readCharacterVoiceLibrary(), ...readWorkspaceVoices(selectedWorkspaceId) });
+    setConfirmed(false);
+  }, [selectedWorkspaceId]);
+  useEffect(() => {
+    if (!selectedWorkspaceId) return;
+    try { localStorage.setItem(`voice-studio-voice-map-v2:${selectedWorkspaceId}`, JSON.stringify(voiceIds)); } catch { /* ignore */ }
+  }, [voiceIds]);
   const speakers = useMemo(() => [...new Set(lines.filter(line => line.kind === "dialogue").map(line => line.speaker))], [lines]);
   const reviewCount = lines.filter(line => line.needsReview).length;
   const unresolvedVoiceCount = lines.filter(line => line.kind !== "sfx" && !line.needsReview && !(voiceIds[line.speaker] || "").trim()).length;
@@ -140,13 +159,6 @@ export default function VoiceStudioPanel() {
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     setPlanMessage("ส่งออกแผนเสียงแล้ว โปรดเก็บไฟล์ JSON ไว้สำหรับขั้นตอนสร้างเสียง");
   };
-  useEffect(() => {
-    const selected = workspaceProfiles.find(profile => profile.id === selectedWorkspaceId);
-    if (!selected) return;
-    setWorkspaceLabel(selected.label); setCreditBudget(selected.budget); setUsedCredits(selected.used);
-  }, []);
-  const workspaceProfile: ElevenLabsWorkspaceProfile = { id: selectedWorkspaceId, label: workspaceLabel, workspaceLabel, enabled: true, keyReference: null, monthlyCreditBudget: creditBudget.trim() && Number.isFinite(Number(creditBudget)) && Number(creditBudget) >= 0 ? Number(creditBudget) : null, usedCredits: usedCredits.trim() && Number.isFinite(Number(usedCredits)) && Number(usedCredits) >= 0 ? Number(usedCredits) : null, voiceIds };
-  const workspaceBudgetCheck = canScheduleWorkspaceJob(workspaceProfile, 0);
   const productionPlan = useMemo(() => buildVoiceProductionPlan(draftName, lines, voiceIds, {}, selectedWorkspaceId), [draftName, lines, voiceIds, selectedWorkspaceId]);
   const productionSummary = useMemo(() => voicePlanSummary(productionPlan), [productionPlan]);
   const exportProductionPlan = () => {
@@ -166,7 +178,13 @@ export default function VoiceStudioPanel() {
     </div>
     {lines.length > 0 && <div className="voiceRegistry"><h3>จัดการชื่อผู้พูดทั้งตอน</h3><p className="muted">รวมชื่อที่ AI แยกต่างกัน เช่น สิงห์ และ พรานสิง โดยเปลี่ยนทุกบทพร้อมกัน</p><label>ชื่อเดิม<input value={findSpeaker} onChange={event => setFindSpeaker(event.target.value)} list="voice-speaker-names" placeholder="เช่น สิงห์" /></label><datalist id="voice-speaker-names">{speakers.map(name => <option key={name} value={name} />)}</datalist><label>ชื่อใหม่<input value={replaceSpeaker} onChange={event => setReplaceSpeaker(event.target.value)} placeholder="เช่น พรานสิง" /></label><button disabled={!findSpeaker.trim() || !replaceSpeaker.trim() || findSpeaker.trim() === replaceSpeaker.trim()} onClick={renameSpeaker}>เปลี่ยนชื่อทุกบท</button><h3>คลังเสียงประจำตัวละคร (Voice ID)</h3><button type="button" disabled={loadingVoices} onClick={() => void loadVoices()}>{loadingVoices ? "กำลังโหลดเสียง..." : "ดึงรายชื่อเสียงจาก ElevenLabs"}</button>{voiceLoadError && <p role="alert">{voiceLoadError}</p>}{availableVoices.length > 0 && <p className="muted">พบเสียง {availableVoices.length} รายการ เลือกเสียงให้แต่ละตัวละครได้เลย</p>}<p className="muted">กำหนด ElevenLabs Voice ID สำหรับแต่ละตัวละครและผู้บรรยาย ระบบยังไม่ส่งคำขอสร้างเสียง</p>{allSpeakers.map(speaker => <label key={speaker}>{speaker}<input aria-label={`Voice ID ของ ${speaker}`} value={voiceIds[speaker] ?? ""} onChange={event => { setConfirmed(false); setVoiceIds(previous => ({ ...previous, [speaker]: event.target.value })); }} placeholder="ElevenLabs Voice ID" />{availableVoices.length > 0 && <select aria-label={`เลือกเสียงให้ ${speaker}`} value={availableVoices.some(voice => voice.id === voiceIds[speaker]) ? voiceIds[speaker] : ""} onChange={event => { if (event.target.value) { setConfirmed(false); setVoiceIds(previous => ({ ...previous, [speaker]: event.target.value })); } }}><option value="">เลือกเสียงจากรายการ</option>{availableVoices.map(voice => <option key={voice.id} value={voice.id}>{voice.name}</option>)}</select>}</label>)}<p className="muted">จุดที่ต้องตรวจสอบ: ผู้พูดไม่ชัดเจน {reviewCount} ช่วง · ยังไม่กำหนด Voice ID {unresolvedVoiceCount} ช่วง</p></div>}
     {lines.length > 0 && <div className="voiceStudioActions"><button disabled={reviewCount > 0 || unresolvedVoiceCount > 0} onClick={() => setConfirmed(true)}>ยืนยันบทและเสียงทั้งหมด</button><button disabled={!confirmed || reviewCount > 0 || unresolvedVoiceCount > 0} onClick={exportPlan}>ส่งออกแผนเสียง JSON</button><span>{confirmed ? "✓ ตรวจบทแล้ว พร้อมส่งออก" : "ต้องตรวจผู้พูดและ Voice ID ก่อนยืนยัน"}</span></div>}
-    {lines.length > 0 && <div className="voiceRegistry"><h3>Workspace และงบเครดิต (เตรียมระบบ)</h3><label>เลือก Workspace<select value={selectedWorkspaceId} onChange={event => { const profile = workspaceProfiles.find(item => item.id === event.target.value); if (!profile) return; setSelectedWorkspaceId(profile.id); setVoiceIds(readWorkspaceVoices(profile.id)); setWorkspaceLabel(profile.label); setCreditBudget(profile.budget); setUsedCredits(profile.used); setConfirmed(false); }}>{workspaceProfiles.map(profile => <option key={profile.id} value={profile.id}>{profile.label}</option>)}</select></label><button onClick={() => { const id = `workspace-${Date.now()}`; const profile = { id, label: `Workspace ${workspaceProfiles.length + 1}`, budget: "", used: "" }; setWorkspaceProfiles(previous => [...previous, profile]); setSelectedWorkspaceId(id); setVoiceIds({}); setWorkspaceLabel(profile.label); setCreditBudget(""); setUsedCredits(""); setConfirmed(false); }}>เพิ่มโปรไฟล์ Workspace (ไม่มี API Key)</button><button disabled={workspaceProfiles.length <= 1} onClick={() => { const remaining = workspaceProfiles.filter(item => item.id !== selectedWorkspaceId); setWorkspaceProfiles(remaining); const next = remaining[0]; setSelectedWorkspaceId(next.id); setVoiceIds(readWorkspaceVoices(next.id)); setWorkspaceLabel(next.label); setCreditBudget(next.budget); setUsedCredits(next.used); setConfirmed(false); }}>ลบโปรไฟล์ที่เลือก</button><button onClick={() => { setWorkspaceProfiles(previous => previous.map(item => item.id === selectedWorkspaceId ? { ...item, label: workspaceLabel, budget: creditBudget, used: usedCredits } : item)); setPlanMessage("บันทึกข้อมูลโปรไฟล์ลงเครื่องแล้ว (ไม่รวม API Key)"); }}>บันทึกข้อมูลโปรไฟล์ในหน้านี้</button><label>ชื่อ Workspace<input value={workspaceLabel} onChange={event => setWorkspaceLabel(event.target.value)} /></label><label>เพดานเครดิตที่ตั้งไว้<input inputMode="numeric" value={creditBudget} onChange={event => setCreditBudget(event.target.value)} /></label><label>เครดิตที่ใช้ไป (กรอกเอง)<input inputMode="numeric" value={usedCredits} onChange={event => setUsedCredits(event.target.value)} placeholder="ยังไม่ทราบ" /></label><p className="muted">{workspaceBudgetCheck.allowed ? "ข้อมูลเพดานและยอดใช้งานพร้อมสำหรับตรวจสอบเบื้องต้น" : workspaceBudgetCheck.reason} · ยังไม่เชื่อม API ตรวจยอดจริง และยังไม่ใช้ตัวเลขนี้อนุมัติการสร้างเสียง</p></div>}
+    {lines.length > 0 && <div className="voiceRegistry"><h3>Workspace ElevenLabs (บัญชีจริง)</h3><div className="voiceStudioActions">
+      <label>เลือกบัญชี<select value={selectedWorkspaceId} onChange={event => void switchRealWorkspace(event.target.value)}>{realWorkspaces.map(item => <option key={item.id} value={item.id}>{item.name}{item.configured ? "" : " (ยังไม่มีคีย์)"}</option>)}</select></label>
+      <button type="button" onClick={() => void syncWorkspaces()}>โหลดรายการบัญชีใหม่</button>
+      <button type="button" disabled={!selectedWorkspaceId} onClick={() => void refreshRealCredits()}>ตรวจสอบเครดิตจริง</button></div>
+      {workspaceCredits && <p>ใช้ไป {workspaceCredits.used?.toLocaleString() ?? "ไม่ทราบ"} · ทั้งหมด {workspaceCredits.limit?.toLocaleString() ?? "ไม่ทราบ"} · คงเหลือ <strong>{workspaceCredits.remaining?.toLocaleString() ?? "ไม่ทราบ"}</strong></p>}
+      {workspaceMessage && <p role="status">{workspaceMessage}</p>}
+      <p className="muted">บัญชีเดียวกับหน้าตั้งค่า ElevenLabs ไม่มีโปรไฟล์จำลองหรือเครดิตกรอกเอง</p></div>}
     {importedPlanWorkspaceId !== null && importedPlanWorkspaceId !== selectedWorkspaceId && <p role="alert">แผนเสียงที่นำเข้ามาจาก Workspace อื่น กรุณาเลือก Workspace ให้ตรงกับไฟล์และนำเข้าใหม่ก่อนส่งออกคิว</p>}
     {sourceIsStale && <p role="alert">ต้นฉบับถูกแก้ไขหลังวิเคราะห์ กรุณากดวิเคราะห์และแยกบทอีกครั้งก่อนส่งออกคิวเสียง</p>}
     {lines.length > 0 && <div className="voiceRegistry"><h3>คิวเตรียมสร้างเสียง (ออฟไลน์)</h3><p className="muted">พร้อมสร้าง {productionSummary.ready} บรรทัด · ต้องแก้ไข {productionSummary.blocked} บรรทัด · SFX {productionSummary.sfx} จุด · ประมาณ {productionSummary.estimatedCharacters.toLocaleString()} ตัวอักษรที่รอส่ง ElevenLabs</p><button disabled={!confirmed || sourceIsStale || (importedPlanWorkspaceId !== null && importedPlanWorkspaceId !== selectedWorkspaceId) || productionSummary.blocked > 0} onClick={exportProductionPlan}>ส่งออกคิวสร้างเสียง JSON (ไม่เรียก API)</button><p className="muted">ระบบยังไม่เริ่มสร้างเสียงและไม่หักเครดิต คิวนี้เป็นเพียงข้อมูลสำหรับเชื่อมระบบภายหลัง</p></div>}
