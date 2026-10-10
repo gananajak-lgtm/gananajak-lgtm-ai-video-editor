@@ -21,7 +21,7 @@ async function writeIndex(projects: StudioProject[]) {
   const temp = path.join(root(), `projects-${randomUUID()}.tmp`);
   await writeFile(temp, JSON.stringify(projects, null, 2), { flag: "wx" });
   const { rename } = await import("node:fs/promises");
-  await rename(temp, indexPath);
+  await rename(temp, indexPath());
 }
 function requireTitle(title: string) {
   const value = title.trim();
