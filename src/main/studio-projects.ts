@@ -52,3 +52,15 @@ export async function createStudioEpisode(projectId: string, title: string) {
   await writeIndex(projects);
   return episode;
 }
+
+export async function loadStudioEpisodeScript(projectId: string, episodeId: string): Promise<string> {
+  const project = (await readIndex()).find(item => item.id === projectId);
+  const episode = project?.episodes.find(item => item.id === episodeId);
+  if (!episode) throw new Error("Episode not found");
+  try {
+    return await readFile(path.join(episode.folder, "script", "source.txt"), "utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return "";
+    throw error;
+  }
+}
