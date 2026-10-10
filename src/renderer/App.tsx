@@ -499,8 +499,7 @@ export default function App() {
       <aside className="studioSidebar" aria-label="เมนูหลัก">
         <div className="studioBrand"><span className="studioBrandIcon">♫</span><div><strong>AI VOICE STUDIO</strong><small>สร้างเสียงพากย์ด้วย ElevenLabs</small></div></div>
         <div className="studioSideLinks">
-          <button type="button" className={activeProductionTab === "accounts" ? "selected" : ""} onClick={() => setActiveProductionTab("accounts")}>⚙ ตั้งค่าระบบเสียง</button>
-          <button type="button" className={activeProductionTab === "voices" ? "selected" : ""} onClick={() => setActiveProductionTab("accounts")}>♙ คลังเสียงตัวละคร</button>
+          <button type="button" className={activeProductionTab === "accounts" || activeProductionTab === "voices" ? "selected" : ""} onClick={() => setActiveProductionTab("accounts")}>⚙ ตั้งค่าเสียง · คลังตัวละคร</button>
           <button type="button" className={activeProductionTab === "script" ? "selected" : ""} onClick={() => setActiveProductionTab("script")}>♬ สร้างเสียงพากย์ · บท</button>
           <button type="button" className={activeProductionTab === "editor" ? "selected" : ""} onClick={() => setActiveProductionTab("editor")}>▣ ตัดต่อ · ส่งออก</button>
         </div>
@@ -510,7 +509,7 @@ export default function App() {
       <header className="topbar">
         <div>
           <p className="eyebrow">AI VOICE STUDIO · PRODUCTION WORKSPACE</p>
-          <h1>{activeProductionTab === "accounts" ? "ตั้งค่าระบบเสียง ElevenLabs" : activeProductionTab === "voices" ? "คลังเสียงตัวละคร" : activeProductionTab === "script" ? "สร้างเสียงพากย์จากบท" : "AI Video Editor"}</h1>
+          <h1>{activeProductionTab === "accounts" ? "ตั้งค่าเสียงและคลังตัวละคร" : activeProductionTab === "voices" ? "คลังเสียงตัวละคร" : activeProductionTab === "script" ? "สร้างเสียงพากย์จากบท" : "AI Video Editor"}</h1>
         </div>
         <div className="status">
           <span className="statusDot" />
