@@ -36,7 +36,6 @@ function formatTime(seconds: number) {
 }
 
 export default function App() {
-  const [workspacePage, setWorkspacePage] = useState<"voice" | "video">("voice");
   const [projectId, setProjectId] = useState(() => `project-${Date.now()}`);
   const [projectTitle, setProjectTitle] = useState("เรื่องไม่มีชื่อ");
   const [projectCreatedAt, setProjectCreatedAt] = useState(
@@ -502,9 +501,12 @@ export default function App() {
         </div>
       </header>
 
-      <nav className="editorNav" aria-label="พื้นที่ทำงาน">
-        <button type="button" aria-pressed={workspacePage === "voice"} onClick={() => setWorkspacePage("voice")}>🎙️ บทละครและเสียงพากย์</button>
-        <button type="button" aria-pressed={workspacePage === "video"} onClick={() => setWorkspacePage("video")}>🎬 ตัดต่อและสร้างวิดีโอ</button>
+      <nav className="editorNav" aria-label="สายการผลิตวิดีโอ">
+        <a href="#voice-studio">01 ใส่บท · แยกบท · เตรียมเสียง</a>
+        <a href="#editor-media">02 ใส่ภาพและเสียง</a>
+        <a href="#editor-preview">03 พรีวิวและตัดต่อ</a>
+        <a href="#editor-ai">04 วิเคราะห์และตรวจสอบ</a>
+        <a href="#editor-timeline">05 ส่งออก</a>
       </nav>
 
       <ProjectToolbar
@@ -516,11 +518,11 @@ export default function App() {
         onSave={saveProjectFile}
       />
 
-      <div style={{ display: workspacePage === "voice" ? "block" : "none" }}>
+      <section aria-label="ขั้นตอนที่ 1 ใส่บท แยกบท และเตรียมเสียง">
         <VoiceStudioPanel />
-      </div>
+      </section>
 
-      <div style={{ display: workspacePage === "video" ? "block" : "none" }}>
+      <section aria-label="ขั้นตอนที่ 2 ถึง 7 ผลิตและส่งออกวิดีโอ">
       <MediaRelinkPanel
         missingMedia={missingMedia}
         relinking={relinking}
@@ -838,7 +840,7 @@ export default function App() {
           <TimelineEditor plan={timeline} onChange={setTimeline} />
         </section>
       )}
-      </div>
+      </section>
     </main>
     </>
   );
