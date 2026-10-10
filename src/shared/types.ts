@@ -24,6 +24,7 @@ export type ProjectDocument = {
   editingPlan: EditingBrainPlan | null;
   timeline: TimelinePlan | null;
   audioLayers: AudioLayer[];
+  aiSfxEnabled?: boolean;
   contentProject?: ContentProject | null;
   renderHistory?: FullEpisodeTestReport[];
 };
