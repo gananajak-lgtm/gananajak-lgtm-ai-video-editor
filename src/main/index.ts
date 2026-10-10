@@ -1,3 +1,4 @@
+import { listStudioProjects, createStudioProject, createStudioEpisode } from "./studio-projects";
 import { checkProviderConnection } from "./provider-connection";
 import { createMetaBrokerSession, exchangeMetaBrokerSession, validateMetaBrokerConfig } from "./meta-auth-broker";
 import { explainAffiliateProduct } from "./affiliate-product-search";
@@ -242,6 +243,10 @@ ipcMain.handle("media:select-audio-layers", async () => {
 
   return assets;
 });
+
+ipcMain.handle("studio:list-projects", () => listStudioProjects());
+ipcMain.handle("studio:create-project", (_event, title: string) => createStudioProject(title));
+ipcMain.handle("studio:create-episode", (_event, projectId: string, title: string) => createStudioEpisode(projectId, title));
 
 ipcMain.handle("project:open", async () => {
   return openProject();
