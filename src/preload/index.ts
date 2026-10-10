@@ -14,6 +14,9 @@ const api: DesktopApi = {
   readImagePreview: (filePath) =>
     ipcRenderer.invoke("media:image-preview", filePath),
   selectAudioLayers: () => ipcRenderer.invoke("media:select-audio-layers"),
+  listStudioProjects: () => ipcRenderer.invoke("studio:list-projects"),
+  createStudioProject: (title) => ipcRenderer.invoke("studio:create-project", title),
+  createStudioEpisode: (projectId, title) => ipcRenderer.invoke("studio:create-episode", projectId, title),
   openProject: () => ipcRenderer.invoke("project:open"),
   saveProject: (project, filePath) =>
     ipcRenderer.invoke("project:save", project, filePath),
