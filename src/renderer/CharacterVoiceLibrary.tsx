@@ -61,6 +61,8 @@ export default function CharacterVoiceLibrary({ projectId }: { projectId?: strin
       setReadyProjectId(projectId);
       return () => { active = false; };
     }
+    // Never display characters from the previous project while the new library loads.
+    setEntries({});
     void window.videoEditor.loadStudioCharacterVoices(projectId).then(loaded => {
       if (!active || currentProjectId.current !== projectId || voiceDataRevision.current !== loadRevision) return;
       setEntries(loaded);
