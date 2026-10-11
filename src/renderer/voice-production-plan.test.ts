@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { VoiceLine } from "./novel-voice-parser";
-import { buildVoiceProductionPlan, reusableVoiceCache, voiceFingerprint, voicePlanSummary, validateVoiceProductionPlan } from "./voice-production-plan";
+import { buildVoiceProductionPlan, prepareVoiceGeneration, reusableVoiceCache, voiceFingerprint, voicePlanSummary, validateVoiceProductionPlan } from "./voice-production-plan";
 
 const line: VoiceLine = { id: "line-1", kind: "dialogue", speaker: "สิงห์", text: "หยุดก่อน", emotion: "กระซิบ", needsReview: false };
 const workspace = "workspace-A";
@@ -79,4 +79,42 @@ test("rejects duplicate line IDs and modified fingerprints", () => {
   const errors = validateVoiceProductionPlan(result);
   assert.ok(errors.some(error => error.includes("รหัสบรรทัดซ้ำ")));
   assert.ok(errors.some(error => error.includes("รหัสตรวจสอบ")));
+});
+
+test("preflight sends only uncached lines and counts only payable characters", () => {
+  const next: VoiceLine = { ...line, id: "line-2", text: "กลับไปก่อน" };
+  const result = buildVoiceProductionPlan("ตอน 1", [line, next], { [line.speaker]: voice }, cache, workspace);
+  const preflight = prepareVoiceGeneration(result);
+  assert.equal(preflight.canGenerate, true);
+  assert.deepEqual(preflight.pending.map(job => job.lineId), ["line-2"]);
+  assert.deepEqual(preflight.reused.map(job => job.lineId), ["line-1"]);
+  assert.equal(preflight.estimatedCharacters, next.text.length);
+  assert.deepEqual(preflight.errors, []);
+});
+
+test("preflight blocks invalid queues without returning payable jobs", () => {
+  const result = buildVoiceProductionPlan("ตอน 1", [line], {}, {}, workspace);
+  const preflight = prepareVoiceGeneration(result);
+  assert.equal(preflight.canGenerate, false);
+  assert.deepEqual(preflight.pending, []);
+  assert.equal(preflight.estimatedCharacters, 0);
+  assert.ok(preflight.errors.length > 0);
+});
+
+test("preflight refuses in-progress jobs to prevent duplicate paid calls", () => {
+  const result = buildVoiceProductionPlan("ตอน 1", [line], { [line.speaker]: voice }, {}, workspace);
+  result.jobs[0].state = "generating";
+  const preflight = prepareVoiceGeneration(result);
+  assert.equal(preflight.canGenerate, false);
+  assert.deepEqual(preflight.pending, []);
+  assert.equal(preflight.estimatedCharacters, 0);
+  assert.ok(preflight.errors.length > 0);
+});
+
+test("preflight with all cached lines needs no paid generation", () => {
+  const preflight = prepareVoiceGeneration(plan(line));
+  assert.equal(preflight.canGenerate, false);
+  assert.equal(preflight.estimatedCharacters, 0);
+  assert.equal(preflight.reused.length, 1);
+  assert.deepEqual(preflight.errors, []);
 });
