@@ -59,6 +59,27 @@ export default function CharacterVoiceLibrary({ projectId }: { projectId?: strin
     }).finally(() => { if (active) setProjectLoading(false); });
     return () => { active = false; };
   }, [projectId, projectVersion]);
+  useEffect(() => {
+    if (!projectId) return;
+    let active = true;
+    let revision = 0;
+    const refresh = () => {
+      const request = ++revision;
+      void window.videoEditor.loadStudioCharacterVoices(projectId).then(latest => {
+        if (!active || request !== revision || currentProjectId.current !== projectId) return;
+        setEntries(latest);
+      }).catch(error => {
+        if (active && request === revision && currentProjectId.current === projectId)
+          setMessage("รีเฟรชคลังเสียงไม่สำเร็จ: " + String(error));
+      });
+    };
+    window.addEventListener("character-voices-updated", refresh);
+    return () => {
+      active = false;
+      revision++;
+      window.removeEventListener("character-voices-updated", refresh);
+    };
+  }, [projectId]);
   const updateEntries = async (nextInput: Record<string, string>) => {
     let next = nextInput;
     if (!projectReady || projectLoading) return false;
