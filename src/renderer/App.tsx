@@ -658,7 +658,7 @@ export default function App() {
 
 
       <section className="compactTabContent" hidden={activeProductionTab !== "script"} aria-label="ขั้นตอนที่ 1 ใส่บท แยกบท และเตรียมเสียง">
-        <VoiceStudioPanel projectId={studioSelectedId} />
+        <VoiceStudioPanel projectId={studioSelectedId} episodeId={studioEpisodeId} />
       </section>
 
       <section className="compactTabContent" hidden={activeProductionTab !== "editor"} aria-label="ขั้นตอนที่ 2 ถึง 7 ผลิตและส่งออกวิดีโอ">
