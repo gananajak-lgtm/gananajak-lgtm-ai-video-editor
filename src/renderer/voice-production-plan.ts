@@ -152,3 +152,39 @@ export function validateVoiceProductionPlan(plan: VoiceProductionPlan): string[]
   }
   return errors;
 }
+
+/**
+ * Pure preflight selection for the paid generation stage. Never calls a provider.
+ * Only ready jobs may be synthesized; completed jobs remain cached.
+ */
+export type VoiceGenerationPreflight = {
+  canGenerate: boolean;
+  errors: string[];
+  pending: VoiceJob[];
+  reused: VoiceJob[];
+  estimatedCharacters: number;
+};
+
+export function prepareVoiceGeneration(plan: VoiceProductionPlan): VoiceGenerationPreflight {
+  const errors = validateVoiceProductionPlan(plan);
+  if (errors.length) return { canGenerate: false, errors, pending: [], reused: [], estimatedCharacters: 0 };
+  const pending = plan.jobs.filter(job => job.state === "ready");
+  const reused = plan.jobs.filter(job => job.state === "completed");
+  const unsupported = plan.jobs.filter(job => !["ready", "completed"].includes(job.state));
+  if (unsupported.length) {
+    return {
+      canGenerate: false,
+      errors: ["มีงานที่กำลังสร้าง รอคิว หรือสร้างไม่สำเร็จ กรุณาจัดการสถานะก่อนเริ่มรอบใหม่"],
+      pending: [],
+      reused,
+      estimatedCharacters: 0
+    };
+  }
+  return {
+    canGenerate: pending.length > 0,
+    errors: [],
+    pending,
+    reused,
+    estimatedCharacters: pending.reduce((sum, job) => sum + job.text.length, 0)
+  };
+}
