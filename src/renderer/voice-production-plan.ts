@@ -121,6 +121,7 @@ export function validateVoiceProductionPlan(plan: VoiceProductionPlan): string[]
     errors.push("จำนวนงานสร้างเสียงไม่ถูกต้อง");
     return errors;
   }
+  if (!Array.isArray(plan.sfxCues)) errors.push("ข้อมูลเอฟเฟกต์เสียงไม่ถูกต้อง");
   const ids = new Set<string>();
   const lineIds = new Set<string>();
   for (const item of plan.jobs) {
@@ -133,6 +134,8 @@ export function validateVoiceProductionPlan(plan: VoiceProductionPlan): string[]
     else ids.add(job.id);
     if (typeof job.lineId !== "string" || !job.lineId.trim() || lineIds.has(job.lineId)) errors.push(`งาน ${String(job.id)} มีรหัสบรรทัดซ้ำหรือว่าง`);
     else lineIds.add(job.lineId);
+    if (!Number.isSafeInteger(job.order) || job.order < 0) errors.push(`งาน ${String(job.id)} มีลำดับไม่ถูกต้อง`);
+    if (typeof job.speaker !== "string" || !job.speaker.trim()) errors.push(`งาน ${String(job.id)} ไม่มีชื่อผู้พูด`);
     if (job.workspaceId !== plan.workspaceId || job.modelId !== plan.modelId) errors.push(`งาน ${String(job.id)} ใช้ Workspace หรือโมเดลไม่ตรงกับคิว`);
     if (typeof job.voiceId !== "string" || !job.voiceId.trim() || typeof job.text !== "string" || !job.text.trim() || job.state === "blocked") {
       errors.push(`งาน ${String(job.id)} ยังไม่พร้อมสร้างเสียง`);
@@ -144,6 +147,7 @@ export function validateVoiceProductionPlan(plan: VoiceProductionPlan): string[]
     }
     const expected = JSON.stringify([job.text.trim(), job.emotion.trim(), job.voiceId.trim(), job.workspaceId.trim(), job.modelId.trim()]);
     if (job.fingerprint !== expected) errors.push(`งาน ${String(job.id)} มีข้อมูลเปลี่ยนจากรหัสตรวจสอบ`);
+    if (job.state !== "completed" && job.outputPath) errors.push(`งาน ${String(job.id)} มีไฟล์เสียงทั้งที่ยังสร้างไม่เสร็จ`);
     if (job.state === "completed" && (typeof job.outputPath !== "string" || !job.outputPath.trim())) errors.push(`งาน ${String(job.id)} ไม่มีตำแหน่งไฟล์เสียง`);
   }
   return errors;
