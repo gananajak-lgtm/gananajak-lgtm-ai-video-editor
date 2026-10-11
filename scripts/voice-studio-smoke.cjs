@@ -70,6 +70,31 @@ assert.equal(planA.modelId, "eleven_multilingual_v2");
 assert.equal(planOtherModel.jobs[0].modelId, "eleven_flash_v2_5");
 assert.notEqual(planA.jobs[0].fingerprint, planOtherModel.jobs[0].fingerprint);
 
+// Cache reuse must invalidate when any synthesis input changes.
+const { voiceFingerprint, reusableVoiceCache } = loadModule("src/renderer/voice-production-plan.ts");
+const speech = { id: "line-1", kind: "dialogue", speaker: "พรานสิง", text: "หยุดก่อน", emotion: "กระซิบ", needsReview: false };
+const cached = { "line-1": { fingerprint: voiceFingerprint(speech, "hunter", "workspace-A"), outputPath: "dialogue/line-1.mp3" } };
+const withCache = (line, voice = "hunter", workspace = "workspace-A", model = "eleven_multilingual_v2") =>
+  buildVoiceProductionPlan("ตอนที่ 1", [line], { [line.speaker]: voice }, cached, workspace, model);
+const unchanged = withCache(speech);
+assert.equal(unchanged.jobs[0].state, "completed");
+assert.equal(voicePlanSummary(unchanged).estimatedCharacters, 0);
+assert.equal(Object.keys(reusableVoiceCache(unchanged, cached)).length, 1);
+for (const changed of [
+  withCache({ ...speech, text: "หยุดเดี๋ยวนี้" }),
+  withCache({ ...speech, emotion: "ตะโกน" }),
+  withCache(speech, "different-voice"),
+  withCache(speech, "workspace-B"),
+  withCache(speech, "hunter", "workspace-A", "eleven_flash_v2_5")
+]) {
+  assert.equal(changed.jobs[0].state, "ready");
+  assert.equal(changed.jobs[0].outputPath, undefined);
+  assert.equal(Object.keys(reusableVoiceCache(changed, cached)).length, 0);
+}
+assert.equal(withCache({ ...speech, needsReview: true }).jobs[0].state, "blocked");
+assert.equal(withCache(speech, "").jobs[0].state, "blocked");
+assert.equal(withCache(speech, "hunter", "").jobs[0].state, "blocked");
+
 const profile = { id: "workspace-A", label: "A", workspaceLabel: "A", enabled: true, keyReference: null, monthlyCreditBudget: 100, usedCredits: 90, voiceIds: { "พรานสิง": "hunter" } };
 assert.equal(selectWorkspaceVoice([profile], "workspace-A", "พรานสิง").voiceId, "hunter");
 assert.equal(canScheduleWorkspaceJob(profile, 11).allowed, false);
