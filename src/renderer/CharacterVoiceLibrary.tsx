@@ -58,7 +58,7 @@ export default function CharacterVoiceLibrary({ projectId }: { projectId?: strin
       setEntries(loaded);
       setReadyProjectId(projectId);
     }).catch(error => {
-      if (active) setMessage("โหลดคลังเสียงโปรเจกต์ไม่สำเร็จ: " + String(error));
+      if (active && voiceDataRevision.current === loadRevision && currentProjectId.current === projectId) setMessage("โหลดคลังเสียงโปรเจกต์ไม่สำเร็จ: " + String(error));
     }).finally(() => { if (active) setProjectLoading(false); });
     return () => { active = false; };
   }, [projectId, projectVersion]);
@@ -73,7 +73,7 @@ export default function CharacterVoiceLibrary({ projectId }: { projectId?: strin
         if (!active || request !== revision || currentProjectId.current !== projectId || voiceDataRevision.current !== loadRevision) return;
         setEntries(latest);
       }).catch(error => {
-        if (active && request === revision && currentProjectId.current === projectId)
+        if (active && request === revision && currentProjectId.current === projectId && voiceDataRevision.current === loadRevision)
           setMessage("รีเฟรชคลังเสียงไม่สำเร็จ: " + String(error));
       });
     };
