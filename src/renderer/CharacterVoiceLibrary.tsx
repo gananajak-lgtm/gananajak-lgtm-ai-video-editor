@@ -62,7 +62,7 @@ export default function CharacterVoiceLibrary({ projectId }: { projectId?: strin
       return () => { active = false; };
     }
     void window.videoEditor.loadStudioCharacterVoices(projectId).then(loaded => {
-      if (!active || voiceDataRevision.current !== loadRevision) return;
+      if (!active || currentProjectId.current !== projectId || voiceDataRevision.current !== loadRevision) return;
       setEntries(loaded);
       setReadyProjectId(projectId);
     }).catch(error => {
