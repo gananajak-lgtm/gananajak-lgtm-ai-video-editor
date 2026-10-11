@@ -10,6 +10,7 @@ export function readCharacterVoiceLibrary(): Record<string, string> {
 }
 export default function CharacterVoiceLibrary({ projectId }: { projectId?: string | null }) {
   const voiceDataRevision = useRef(0);
+  const saveInFlight = useRef(false);
   const currentProjectId = useRef(projectId);
   currentProjectId.current = projectId;
   const [projectLoading, setProjectLoading] = useState(false);
@@ -97,7 +98,8 @@ export default function CharacterVoiceLibrary({ projectId }: { projectId?: strin
   }, [projectId]);
   const updateEntries = async (nextInput: Record<string, string>) => {
     let next = nextInput;
-    if (!projectReady || projectLoading) return false;
+    if (!projectReady || projectLoading || saveInFlight.current) return false;
+    saveInFlight.current = true;
     const saveRevision = ++voiceDataRevision.current;
     setProjectLoading(true);
     try {
@@ -119,7 +121,7 @@ export default function CharacterVoiceLibrary({ projectId }: { projectId?: strin
     } catch (error) {
       if (currentProjectId.current === projectId && voiceDataRevision.current === saveRevision) setMessage("บันทึกคลังเสียงไม่สำเร็จ: " + String(error));
       return false;
-    } finally { if (currentProjectId.current === projectId && voiceDataRevision.current === saveRevision) setProjectLoading(false); }
+    } finally { saveInFlight.current = false; if (currentProjectId.current === projectId && voiceDataRevision.current === saveRevision) setProjectLoading(false); }
   };
   const loadVoices = async () => {
     stopPreview(); setLoading(true); setMessage("");
