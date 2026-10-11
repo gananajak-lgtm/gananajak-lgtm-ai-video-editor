@@ -47,6 +47,8 @@ export default function CharacterVoiceLibrary({ projectId }: { projectId?: strin
     setReadyProjectId(undefined);
     setProjectLoading(Boolean(projectId));
     setSelectedCharacter(null);
+    setConfirmDelete(null);
+    setMessage("");
     if (!projectId) {
       setEntries(readCharacterVoiceLibrary());
       setProjectLoading(false);
@@ -89,7 +91,7 @@ export default function CharacterVoiceLibrary({ projectId }: { projectId?: strin
   const updateEntries = async (nextInput: Record<string, string>) => {
     let next = nextInput;
     if (!projectReady || projectLoading) return false;
-    ++voiceDataRevision.current;
+    const saveRevision = ++voiceDataRevision.current;
     setProjectLoading(true);
     try {
       if (projectId) {
@@ -102,15 +104,15 @@ export default function CharacterVoiceLibrary({ projectId }: { projectId?: strin
           next = await window.videoEditor.patchStudioCharacterVoice(projectId, character, null);
         }
       } else localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      if (currentProjectId.current === projectId) {
+      if (currentProjectId.current === projectId && voiceDataRevision.current === saveRevision) {
         setEntries(next);
         window.dispatchEvent(new Event("character-voices-updated"));
       }
       return true;
     } catch (error) {
-      if (currentProjectId.current === projectId) setMessage("บันทึกคลังเสียงไม่สำเร็จ: " + String(error));
+      if (currentProjectId.current === projectId && voiceDataRevision.current === saveRevision) setMessage("บันทึกคลังเสียงไม่สำเร็จ: " + String(error));
       return false;
-    } finally { if (currentProjectId.current === projectId) setProjectLoading(false); }
+    } finally { if (currentProjectId.current === projectId && voiceDataRevision.current === saveRevision) setProjectLoading(false); }
   };
   const loadVoices = async () => {
     stopPreview(); setLoading(true); setMessage("");
@@ -154,9 +156,9 @@ export default function CharacterVoiceLibrary({ projectId }: { projectId?: strin
       {selectedCharacter === character && <div className="compactCharacterDetails">
         <p className="muted">Voice ID ถูกซ่อนไว้เพื่อป้องกันการแก้ไขโดยไม่ตั้งใจ</p>
         <div className="voiceStudioActions"><button type="button" onClick={() => { setEditId(id); setConfirmDelete(null); setSelectedCharacter(character + "::edit"); }}>แก้ไข Voice ID</button><button type="button" className="premiumRemoveButton" onClick={() => setConfirmDelete(character)}>ลบเสียงนี้</button></div>
-        {confirmDelete === character && <div className="voiceStudioActions"><strong>ยืนยันลบเสียง {character}?</strong><button type="button" onClick={() => { void updateEntries(Object.fromEntries(Object.entries(entries).filter(([key]) => key !== character))); setSelectedCharacter(null); setConfirmDelete(null); }}>ยืนยันลบ</button><button type="button" onClick={() => setConfirmDelete(null)}>ยกเลิก</button></div>}
+        {confirmDelete === character && <div className="voiceStudioActions"><strong>ยืนยันลบเสียง {character}?</strong><button type="button" onClick={() => { void updateEntries(Object.fromEntries(Object.entries(entries).filter(([key]) => key !== character))).then(saved => { if (saved && currentProjectId.current === projectId) { setSelectedCharacter(null); setConfirmDelete(null); } }); }}>ยืนยันลบ</button><button type="button" onClick={() => setConfirmDelete(null)}>ยกเลิก</button></div>}
       </div>}
-      {selectedCharacter === character + "::edit" && <div className="compactCharacterDetails"><label>แก้ไข Voice ID <input value={editId} onChange={event => setEditId(event.target.value)} /></label><div className="voiceStudioActions"><button type="button" disabled={!editId.trim()} onClick={() => { void updateEntries({...entries,[character]:editId.trim()}); setSelectedCharacter(character); }}>บันทึกการแก้ไข</button><button type="button" onClick={() => setSelectedCharacter(character)}>ยกเลิก</button></div></div>}
+      {selectedCharacter === character + "::edit" && <div className="compactCharacterDetails"><label>แก้ไข Voice ID <input value={editId} onChange={event => setEditId(event.target.value)} /></label><div className="voiceStudioActions"><button type="button" disabled={!editId.trim()} onClick={() => { void updateEntries({...entries,[character]:editId.trim()}).then(saved => { if (saved && currentProjectId.current === projectId) setSelectedCharacter(character); }); }}>บันทึกการแก้ไข</button><button type="button" onClick={() => setSelectedCharacter(character)}>ยกเลิก</button></div></div>}
     </article>)}</div></div>}
   </section>;
 }
