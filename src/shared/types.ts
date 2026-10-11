@@ -71,8 +71,8 @@ export type TimelineClip = {
   motion: ShotMotion;
 };
 
-export type AudioLayerKind = "sfx" | "music" | "ambience";
-export type AudioLayerOrigin = "manual" | "auto-sfx";
+export type AudioLayerKind = "sfx" | "music" | "ambience" | "dialogue";
+export type AudioLayerOrigin = "manual" | "auto-sfx" | "studio-dialogue";
 
 export type AudioAsset = {
   id: string;

@@ -530,6 +530,40 @@ export default function App() {
       .filter(([lineId]) => Number.isFinite(studioVoiceDurations[lineId]) && studioVoiceDurations[lineId] > 0)
       .map(([lineId, entry]) => ({ lineId, filePath: entry.outputPath, duration: studioVoiceDurations[lineId] }))
   );
+  const importStudioDialogueToTimeline = async () => {
+    if (!studioSelectedId || !studioEpisodeId || !timeline) {
+      setError("กรุณาเลือกตอนและสร้างไทม์ไลน์ภาพก่อนนำเข้าเสียงตัวละคร");
+      return;
+    }
+    if (studioVoiceSchedule.length === 0 || studioVoiceSchedule.length !== Object.keys(studioVoiceFiles).length) {
+      setError("กรุณารอให้ตรวจสอบความยาว MP3 ครบทุกบรรทัดก่อนนำเข้า");
+      return;
+    }
+    if (studioVoiceSchedule[studioVoiceSchedule.length - 1].end > timeline.duration + 0.001) {
+      setError("เสียงตัวละครยาวกว่าไทม์ไลน์ภาพ กรุณาขยายระยะเวลาวิดีโอก่อนนำเข้า");
+      return;
+    }
+    try {
+      const imported = await Promise.all(studioVoiceSchedule.map(async clip => ({
+        id: "studio-dialogue:" + studioSelectedId + ":" + studioEpisodeId + ":" + clip.lineId,
+        filePath: await window.videoEditor.resolveStudioVoiceAudio(studioSelectedId, studioEpisodeId, clip.filePath),
+        kind: "dialogue" as const,
+        start: clip.start,
+        duration: clip.duration,
+        volume: 1,
+        loop: false,
+        fadeIn: 0,
+        fadeOut: 0,
+        origin: "studio-dialogue" as const,
+        label: clip.lineId
+      })));
+      setAudioLayers(previous => [...previous.filter(layer => layer.origin !== "studio-dialogue"), ...imported]);
+      setError(null);
+      setNotice("นำเข้าเสียงตัวละคร " + imported.length + " บรรทัดเป็นแทร็กสำหรับเรนเดอร์แล้ว กรุณาบันทึกโปรเจกต์");
+    } catch (error) {
+      setError("นำเข้าเสียงตัวละครไม่สำเร็จ: " + String(error));
+    }
+  };
   const [studioScript, setStudioScript] = useState("");
   const [studioSavedScript, setStudioSavedScript] = useState("");
   const [studioScriptBusy, setStudioScriptBusy] = useState(false);
@@ -771,7 +805,7 @@ export default function App() {
   <div className="studioTimelineRuler"><span>00:00</span><span>{timeline ? formatTime(timeline.duration / 4) : "00:15"}</span><span>{timeline ? formatTime(timeline.duration / 2) : "00:30"}</span><span>{timeline ? formatTime(timeline.duration * .75) : "00:45"}</span><span>{timeline ? formatTime(timeline.duration) : "01:00"}</span></div>
   <div className="studioTimelineTrack"><strong>▧ ภาพ</strong><div className="studioTimelineLane">{timeline?.clips.length ? timeline.clips.map((clip, index) => <span key={clip.id} className="studioTimelineClip" style={{ flexGrow: Math.max(.6, clip.duration) }} title={`${fileName(clip.imagePath)} · ${clip.duration.toFixed(1)} วินาที`}>{index + 1}. {fileName(clip.imagePath)}</span>) : <em>เพิ่มภาพและสร้างไทม์ไลน์เพื่อเริ่มตัดต่อ</em>}</div></div>
   <div className="studioTimelineTrack"><strong>♫ เสียงพากย์</strong><div className="studioTimelineLane">{narration ? <span className="studioTimelineAudio">{fileName(narration)}</span> : <em>ยังไม่ได้เลือกไฟล์เสียงพากย์</em>}</div></div>
-  <div className="studioTimelineTrack"><strong>🎙 เสียงตัวละคร</strong><div className="studioTimelineLane">{Object.keys(studioVoiceFiles).length ? <div className="studioVoiceInventory"><strong>MP3 ที่ตรวจสอบแล้ว {Object.keys(studioVoiceFiles).length} บรรทัด</strong><ol>{Object.entries(studioVoiceFiles).sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true })).map(([lineId, entry]) => <li key={lineId} title={entry.outputPath}><span>{lineId}</span> · <span>{fileName(entry.outputPath)}</span> · <span>{(() => { const slot = studioVoiceSchedule.find(item => item.lineId === lineId); return slot ? `${slot.start.toFixed(2)}–${slot.end.toFixed(2)} วินาที` : "กำลังอ่านระยะเวลา"; })()}</span></li>)}</ol><small>ช่วงเวลาต่อเนื่องจากความยาว MP3 ที่ตรวจสอบแล้ว (ยังไม่เชื่อมเข้าการส่งออกวิดีโอ)</small></div> : <em>ยังไม่มี MP3 ของตัวละครในตอนนี้</em>}</div></div>
+  <div className="studioTimelineTrack"><strong>🎙 เสียงตัวละคร</strong><div className="studioTimelineLane">{Object.keys(studioVoiceFiles).length ? <div className="studioVoiceInventory"><strong>MP3 ที่ตรวจสอบแล้ว {Object.keys(studioVoiceFiles).length} บรรทัด</strong><ol>{Object.entries(studioVoiceFiles).sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true })).map(([lineId, entry]) => <li key={lineId} title={entry.outputPath}><span>{lineId}</span> · <span>{fileName(entry.outputPath)}</span> · <span>{(() => { const slot = studioVoiceSchedule.find(item => item.lineId === lineId); return slot ? `${slot.start.toFixed(2)}–${slot.end.toFixed(2)} วินาที` : "กำลังอ่านระยะเวลา"; })()}</span></li>)}</ol><small>ช่วงเวลาต่อเนื่องจากความยาว MP3 ที่ตรวจสอบแล้ว · นำเข้าเป็นแทร็กเสียงเพื่อรวมตอนเรนเดอร์</small><button type="button" onClick={() => { void importStudioDialogueToTimeline(); }} disabled={!timeline || studioVoiceSchedule.length !== Object.keys(studioVoiceFiles).length}>นำเสียงตัวละครเข้าไทม์ไลน์</button></div> : <em>ยังไม่มี MP3 ของตัวละครในตอนนี้</em>}</div></div>
   <div className="studioTimelineTrack"><strong>▤ คำบรรยาย</strong><div className="studioTimelineLane">{timeline?.subtitles.length ? timeline.subtitles.map((cue, index) => <span key={cue.id} className="studioTimelineSubtitle" title={cue.text}>{index + 1}</span>) : <em>ยังไม่มีคำบรรยาย</em>}</div></div>
   <p className="studioTimelineHint">นี่คือภาพรวมไทม์ไลน์ · เมื่อสร้างไทม์ไลน์แล้ว ใช้แผงแก้ไขช็อตด้านล่างเพื่อลากสลับคลิปและปรับจุดตัด</p>
 </section>
