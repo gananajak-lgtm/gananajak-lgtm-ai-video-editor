@@ -115,7 +115,7 @@ export default function CharacterVoiceLibrary({ projectId }: { projectId?: strin
         setEntries(next);
         window.dispatchEvent(new Event("character-voices-updated"));
       }
-      return true;
+      return currentProjectId.current === projectId && voiceDataRevision.current === saveRevision;
     } catch (error) {
       if (currentProjectId.current === projectId && voiceDataRevision.current === saveRevision) setMessage("บันทึกคลังเสียงไม่สำเร็จ: " + String(error));
       return false;
