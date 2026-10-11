@@ -611,7 +611,7 @@ export default function App() {
   return (
     <>
       {browserMode && <div className="browserModeBanner"><strong>🌐 Browser Mode</strong><span>เปิดใช้งานจากเว็บได้แล้ว · งาน Render / AI / Publish จะย้ายไปทำผ่าน Backend Worker</span></div>}
-      <div className={`studioLayout studioTheme-${theme} studioFont-${fontStyle}`} style={{ "--studio-user-background": backgroundColor, "--studio-user-card": cardColor, "--studio-user-card-text": cardTextColor } as React.CSSProperties}>
+      <div className={`studioLayout studioTheme-${theme} studioFont-${fontStyle} ${cardPalette === "cream" ? "studioLightCards" : ""}`} style={{ "--studio-user-background": backgroundColor, "--studio-user-card": cardColor, "--studio-user-card-text": cardTextColor } as React.CSSProperties}>
       <aside className="studioSidebar" aria-label="เมนูหลัก">
         <div className="studioBrand"><span className="studioBrandIcon">♫</span><div><strong>AI VOICE STUDIO</strong><small>สร้างเสียงพากย์ด้วย ElevenLabs</small></div></div>
         <div className="studioSideLinks">
