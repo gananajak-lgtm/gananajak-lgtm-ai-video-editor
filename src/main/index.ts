@@ -1,4 +1,4 @@
-import { listStudioProjects, createStudioProject, createStudioEpisode, loadStudioEpisodeScript, saveStudioEpisodeScript } from "./studio-projects";
+import { listStudioProjects, createStudioProject, createStudioEpisode, loadStudioEpisodeScript, saveStudioEpisodeScript, loadStudioCharacterVoices, saveStudioCharacterVoices } from "./studio-projects";
 import { checkProviderConnection } from "./provider-connection";
 import { createMetaBrokerSession, exchangeMetaBrokerSession, validateMetaBrokerConfig } from "./meta-auth-broker";
 import { explainAffiliateProduct } from "./affiliate-product-search";
@@ -249,6 +249,8 @@ ipcMain.handle("studio:create-project", (_event, title: string) => createStudioP
 ipcMain.handle("studio:create-episode", (_event, projectId: string, title: string) => createStudioEpisode(projectId, title));
 ipcMain.handle("studio:load-episode-script", (_event, projectId: string, episodeId: string) => loadStudioEpisodeScript(projectId, episodeId));
 ipcMain.handle("studio:save-episode-script", (_event, projectId: string, episodeId: string, script: string) => saveStudioEpisodeScript(projectId, episodeId, script));
+ipcMain.handle("studio:load-character-voices", (_event, projectId: string) => loadStudioCharacterVoices(projectId));
+ipcMain.handle("studio:save-character-voices", (_event, projectId: string, voices: Record<string, string>) => saveStudioCharacterVoices(projectId, voices));
 
 ipcMain.handle("project:open", async () => {
   return openProject();
