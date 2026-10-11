@@ -41,14 +41,16 @@ export default function VoiceStudioPanel({ projectId }: { projectId?: string | n
     return () => window.removeEventListener("character-voices-updated", applyLibrary);
   }, []);
   const [projectVoiceIds, setProjectVoiceIds] = useState<Record<string, string>>({});
-  const [projectVoicesReady, setProjectVoicesReady] = useState(!activeProjectId);
+  const [loadedProjectId, setLoadedProjectId] = useState<string | null>(null);
+  const projectVoicesReady = !activeProjectId || loadedProjectId === activeProjectId;
   useEffect(() => {
     let active = true;
     setProjectVoiceIds({});
-    setProjectVoicesReady(!activeProjectId);
+    setLoadedProjectId(null);
+    setConfirmed(false);
     if (activeProjectId) {
       void window.videoEditor.loadStudioCharacterVoices(activeProjectId)
-        .then(voices => { if (active) { setProjectVoiceIds(voices); setProjectVoicesReady(true); } })
+        .then(voices => { if (active) { setProjectVoiceIds(voices); setLoadedProjectId(activeProjectId); } })
         .catch(() => { if (active) setWorkspaceMessage("โหลดเสียงตัวละครของโปรเจกต์ไม่สำเร็จ กรุณากลับไปตรวจคลังเสียง"); });
     }
     return () => { active = false; };
@@ -71,7 +73,7 @@ export default function VoiceStudioPanel({ projectId }: { projectId?: string | n
     } finally { setSavingProjectVoice(false); }
   };
   // A project must never inherit voice assignments from another workspace or project.
-  const resolvedVoiceIds = activeProjectId ? projectVoiceIds : voiceIds;
+  const resolvedVoiceIds = activeProjectId ? (projectVoicesReady ? projectVoiceIds : {}) : voiceIds;
   const [availableVoices, setAvailableVoices] = useState<Array<{ id: string; name: string }>>([]);
   const [loadingVoices, setLoadingVoices] = useState(false);
   const [voiceLoadError, setVoiceLoadError] = useState("");
