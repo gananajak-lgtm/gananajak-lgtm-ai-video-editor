@@ -53,7 +53,7 @@ export default function VoiceStudioPanel({ projectId }: { projectId?: string | n
     if (activeProjectId) {
       void window.videoEditor.loadStudioCharacterVoices(activeProjectId)
         .then(voices => { if (active && voiceLoadRevision.current === loadRevision) { setProjectVoiceIds(voices); setLoadedProjectId(activeProjectId); } })
-        .catch(() => { if (active) setWorkspaceMessage("โหลดเสียงตัวละครของโปรเจกต์ไม่สำเร็จ กรุณากลับไปตรวจคลังเสียง"); });
+        .catch(() => { if (active && voiceLoadRevision.current === loadRevision) setWorkspaceMessage("โหลดเสียงตัวละครของโปรเจกต์ไม่สำเร็จ กรุณากลับไปตรวจคลังเสียง"); });
     }
     return () => { active = false; };
   }, [activeProjectId]);
@@ -84,6 +84,8 @@ export default function VoiceStudioPanel({ projectId }: { projectId?: string | n
   const saveProjectSpeakerVoice = async (speaker: string, voiceId: string) => {
     if (!activeProjectId || !projectVoicesReady || savingProjectVoice) return;
     const generation = ++voiceSaveGeneration.current;
+    // A pending refresh must not replace the result of this newer save.
+    ++voiceLoadRevision.current;
     setSavingProjectVoice(true);
     try {
       const next = await window.videoEditor.patchStudioCharacterVoice(activeProjectId, speaker, voiceId);
