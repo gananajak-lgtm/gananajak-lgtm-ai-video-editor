@@ -3,7 +3,7 @@ import ffmpegPath from "ffmpeg-static";
 
 /** Decode the entire MP3 stream before accepting a cached asset. No paid API calls. */
 export async function isDecodableMp3(filePath: string): Promise<boolean> {
-  if (!ffmpegPath) return false;
+  if (typeof ffmpegPath !== "string" || !ffmpegPath) return false;
   return new Promise(resolve => {
     const child = spawn(ffmpegPath, [
       "-hide_banner", "-nostdin", "-v", "error", "-xerror",
