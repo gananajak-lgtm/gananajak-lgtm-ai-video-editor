@@ -80,9 +80,11 @@ export default function VoiceStudioPanel({ projectId }: { projectId?: string | n
   }, [activeProjectId]);
   const [savingProjectVoice, setSavingProjectVoice] = useState(false);
   const voiceSaveGeneration = useRef(0);
-  useEffect(() => { voiceSaveGeneration.current++; setSavingProjectVoice(false); }, [activeProjectId]);
+  const voiceSaveInFlight = useRef(false);
+  useEffect(() => { voiceSaveGeneration.current++; voiceSaveInFlight.current = false; setSavingProjectVoice(false); }, [activeProjectId]);
   const saveProjectSpeakerVoice = async (speaker: string, voiceId: string) => {
-    if (!activeProjectId || !projectVoicesReady || savingProjectVoice) return;
+    if (!activeProjectId || !projectVoicesReady || voiceSaveInFlight.current) return;
+    voiceSaveInFlight.current = true;
     const generation = ++voiceSaveGeneration.current;
     // A pending refresh must not replace the result of this newer save.
     ++voiceLoadRevision.current;
@@ -96,7 +98,7 @@ export default function VoiceStudioPanel({ projectId }: { projectId?: string | n
       }
     } catch (error) {
       if (projectIdentity.current === activeProjectId && voiceSaveGeneration.current === generation) setWorkspaceMessage("บันทึกเสียงตัวละครของโปรเจกต์ไม่สำเร็จ: " + String(error));
-    } finally { if (projectIdentity.current === activeProjectId && voiceSaveGeneration.current === generation) setSavingProjectVoice(false); }
+    } finally { if (projectIdentity.current === activeProjectId && voiceSaveGeneration.current === generation) { voiceSaveInFlight.current = false; setSavingProjectVoice(false); } }
   };
   // A project must never inherit voice assignments from another workspace or project.
   const resolvedVoiceIds = activeProjectId ? (projectVoicesReady ? projectVoiceIds : {}) : voiceIds;
