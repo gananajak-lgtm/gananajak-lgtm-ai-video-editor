@@ -13,7 +13,7 @@ import { probeDuration } from "../video/probe";
  * in the selected episode. This function is never called by preflight/tests.
  * Callers must require a fresh, explicit paid-generation confirmation.
  */
-export async function generateStudioVoiceLine(
+async function generateStudioVoiceLineUnchecked(
   projectId: string,
   episodeId: string,
   lineId: string,
@@ -26,8 +26,10 @@ export async function generateStudioVoiceLine(
       !/^[a-zA-Z0-9_-]{1,100}$/.test(modelId)) {
     throw new Error("Invalid ElevenLabs voice generation request");
   }
-  const { resolveStudioEpisodeVoiceOutput, registerStudioEpisodeVoiceAudio } = await import("../studio-projects");
+  const { resolveStudioEpisodeVoiceOutput, registerStudioEpisodeVoiceAudio, loadStudioEpisodeVoiceAudio } = await import("../studio-projects");
   const destination = await resolveStudioEpisodeVoiceOutput(projectId, episodeId, lineId);
+  const existing = (await loadStudioEpisodeVoiceAudio(projectId, episodeId))[lineId];
+  if (existing?.fingerprint === fingerprint) return { outputPath: existing.outputPath };
   const apiKey = await getElevenLabsApiKey();
   if (!apiKey) throw new Error("ElevenLabs API key is not configured");
   const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
@@ -51,6 +53,25 @@ export async function generateStudioVoiceLine(
   } finally {
     await rm(temporaryPath, { force: true });
   }
+}
+
+const studioVoiceRequests = new Map<string, Promise<{ outputPath: string }>>();
+/** Coalesce concurrent requests for the same line to avoid double billing. */
+export async function generateStudioVoiceLine(
+  projectId: string, episodeId: string, lineId: string,
+  fingerprint: string, text: string, voiceId: string,
+  modelId = "eleven_multilingual_v2"
+): Promise<{ outputPath: string }> {
+  if (!projectId || !episodeId || !lineId || !fingerprint) throw new Error("Missing voice request identity");
+  const key = JSON.stringify([projectId, episodeId, lineId]);
+  const active = studioVoiceRequests.get(key);
+  if (active) {
+    throw new Error("Voice generation is already running for this line");
+  }
+  const request = generateStudioVoiceLineUnchecked(projectId, episodeId, lineId, fingerprint, text, voiceId, modelId);
+  studioVoiceRequests.set(key, request);
+  try { return await request; }
+  finally { if (studioVoiceRequests.get(key) === request) studioVoiceRequests.delete(key); }
 }
 
 export class ElevenLabsVoiceProvider implements AssetProvider {
