@@ -75,6 +75,7 @@ export default function AudioLayersPanel({ layers, onChange }: Props) {
                     })
                   }
                 >
+                  <option value="dialogue">เสียงตัวละคร</option>
                   <option value="sfx">SFX</option>
                   <option value="ambience">เสียงบรรยากาศ</option>
                   <option value="music">ดนตรี</option>
