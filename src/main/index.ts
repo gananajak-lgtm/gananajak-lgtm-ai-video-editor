@@ -1,5 +1,5 @@
 import { generateStudioVoiceLine } from "./providers/elevenlabs-voice-provider";
-import { listStudioProjects, createStudioProject, createStudioEpisode, loadStudioEpisodeScript, saveStudioEpisodeScript, loadStudioCharacterVoices, saveStudioCharacterVoices, patchStudioCharacterVoice, loadStudioEpisodeVoiceAudio, getStudioVoiceAudioDuration } from "./studio-projects";
+import { listStudioProjects, createStudioProject, createStudioEpisode, loadStudioEpisodeScript, saveStudioEpisodeScript, loadStudioCharacterVoices, saveStudioCharacterVoices, patchStudioCharacterVoice, loadStudioEpisodeVoiceAudio, getStudioVoiceAudioDuration, findReusableStudioEpisodeAudio } from "./studio-projects";
 import { checkProviderConnection } from "./provider-connection";
 import { createMetaBrokerSession, exchangeMetaBrokerSession, validateMetaBrokerConfig } from "./meta-auth-broker";
 import { explainAffiliateProduct } from "./affiliate-product-search";
@@ -264,6 +264,11 @@ ipcMain.handle("studio:generate-voice-line", async (_event, request: {
 });
 ipcMain.handle("studio:load-voice-audio", (_event, projectId: string, episodeId: string) => loadStudioEpisodeVoiceAudio(projectId, episodeId));
   ipcMain.handle("studio:voice-audio-duration", (_event, projectId: string, episodeId: string, relativePath: string) => getStudioVoiceAudioDuration(projectId, episodeId, relativePath));
+  ipcMain.handle("studio:resolve-voice-audio", async (_event, projectId: string, episodeId: string, relativePath: string) => {
+    const verified = await findReusableStudioEpisodeAudio(projectId, episodeId, relativePath);
+    if (!verified) throw new Error("Dialogue MP3 is missing or invalid");
+    return verified;
+  });
 ipcMain.handle("studio:load-character-voices", (_event, projectId: string) => loadStudioCharacterVoices(projectId));
 ipcMain.handle("studio:save-character-voices", (_event, projectId: string, voices: Record<string, string>) => saveStudioCharacterVoices(projectId, voices));
 ipcMain.handle("studio:patch-character-voice", (_event, projectId: string, character: string, voiceId: string | null) => patchStudioCharacterVoice(projectId, character, voiceId));
