@@ -61,7 +61,7 @@ export default function CharacterVoiceLibrary({ projectId }: { projectId?: strin
   }, [projectId, projectVersion]);
   const updateEntries = async (nextInput: Record<string, string>) => {
     let next = nextInput;
-    if (!projectReady || projectLoading) return;
+    if (!projectReady || projectLoading) return false;
     setProjectLoading(true);
     try {
       if (projectId) {
@@ -77,8 +77,10 @@ export default function CharacterVoiceLibrary({ projectId }: { projectId?: strin
         setEntries(next);
         window.dispatchEvent(new Event("character-voices-updated"));
       }
+      return true;
     } catch (error) {
       if (currentProjectId.current === projectId) setMessage("บันทึกคลังเสียงไม่สำเร็จ: " + String(error));
+      return false;
     } finally { if (currentProjectId.current === projectId) setProjectLoading(false); }
   };
   const loadVoices = async () => {
@@ -91,8 +93,12 @@ export default function CharacterVoiceLibrary({ projectId }: { projectId?: strin
     const character = name.trim();
     const id = voiceId.trim();
     if (!character || !id || character.length > 150 || id.length > 250) { setMessage("กรุณากรอกชื่อตัวละครและ Voice ID ให้ถูกต้อง"); return; }
-    void updateEntries({ ...entries, [character]: id });
-    setName(""); setVoiceId(""); setShowAdd(false); setMessage("บันทึกเสียงประจำตัวละครแล้ว กด ＋ เพิ่มตัวละครใหม่ เพื่อเพิ่มคนถัดไป");
+    if (!projectReady || projectLoading) { setMessage("กรุณารอให้คลังเสียงพร้อมก่อนบันทึก"); return; }
+    void updateEntries({ ...entries, [character]: id }).then(saved => {
+      if (!saved || currentProjectId.current !== projectId) return;
+      setName(""); setVoiceId(""); setShowAdd(false);
+      setMessage("บันทึกเสียงประจำตัวละครแล้ว กด ＋ เพิ่มตัวละครใหม่ เพื่อเพิ่มคนถัดไป");
+    });
   };
   return <section className="voiceStudioPanel premiumVoicePanel" id="character-voice-library" aria-label="คลังเสียงตัวละคร">
     <div className="premiumHeading"><div><p className="eyebrow">CHARACTER VOICE LIBRARY</p><h2>🎙️ คลังเสียงตัวละครถาวร</h2></div></div>
