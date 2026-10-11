@@ -4,7 +4,8 @@ import { readCharacterVoiceLibrary } from "./CharacterVoiceLibrary";
 import type { VoiceLine } from "./novel-voice-parser";
 import { buildVoiceProductionPlan, voicePlanSummary } from "./voice-production-plan";
 
-export default function VoiceStudioPanel() {
+export default function VoiceStudioPanel({ projectId }: { projectId?: string | null }) {
+  const activeProjectId = projectId ?? null;
   const [script, setScript] = useState("");
   const MAX_SCRIPT_CHARACTERS = 5000;
   const scriptTooLong = script.length > MAX_SCRIPT_CHARACTERS;
@@ -37,6 +38,20 @@ export default function VoiceStudioPanel() {
     window.addEventListener("character-voices-updated", applyLibrary);
     return () => window.removeEventListener("character-voices-updated", applyLibrary);
   }, []);
+  const [projectVoiceIds, setProjectVoiceIds] = useState<Record<string, string>>({});
+  const [projectVoicesReady, setProjectVoicesReady] = useState(!activeProjectId);
+  useEffect(() => {
+    let active = true;
+    setProjectVoiceIds({});
+    setProjectVoicesReady(!activeProjectId);
+    if (activeProjectId) {
+      void window.videoEditor.loadStudioCharacterVoices(activeProjectId)
+        .then(voices => { if (active) { setProjectVoiceIds(voices); setProjectVoicesReady(true); } })
+        .catch(() => { if (active) setWorkspaceMessage("โหลดเสียงตัวละครของโปรเจกต์ไม่สำเร็จ กรุณากลับไปตรวจคลังเสียง"); });
+    }
+    return () => { active = false; };
+  }, [activeProjectId]);
+  const resolvedVoiceIds = activeProjectId ? { ...voiceIds, ...projectVoiceIds } : voiceIds;
   const [availableVoices, setAvailableVoices] = useState<Array<{ id: string; name: string }>>([]);
   const [loadingVoices, setLoadingVoices] = useState(false);
   const [voiceLoadError, setVoiceLoadError] = useState("");
@@ -104,7 +119,7 @@ export default function VoiceStudioPanel() {
   }, [voiceIds]);
   const speakers = useMemo(() => [...new Set(lines.filter(line => line.kind === "dialogue").map(line => line.speaker))], [lines]);
   const reviewCount = lines.filter(line => line.needsReview).length;
-  const unresolvedVoiceCount = lines.filter(line => line.kind !== "sfx" && !line.needsReview && !(voiceIds[line.speaker] || "").trim()).length;
+  const unresolvedVoiceCount = lines.filter(line => line.kind !== "sfx" && !line.needsReview && !(resolvedVoiceIds[line.speaker] || "").trim()).length;
   const patch = (id: string, change: Partial<VoiceLine>) => { setConfirmed(false); setLines(previous => previous.map(line => line.id === id ? { ...line, ...change } : line)); };
   const renameSpeaker = () => {
     const oldName = findSpeaker.trim();
