@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { parseNovelScript } from "./novel-voice-parser";
 import { readCharacterVoiceLibrary } from "./CharacterVoiceLibrary";
 import type { VoiceLine } from "./novel-voice-parser";
-import { buildVoiceProductionPlan, prepareVoiceGeneration, reusableVoiceCache, voiceApprovalFingerprint, validateVoiceProductionPlan, voicePlanSummary } from "./voice-production-plan";
+import { buildVoiceProductionPlan, prepareVoiceGeneration, reusableVoiceCache, voiceApprovalFingerprint, validateVoiceProductionPlan, voiceBatchProgress, voicePlanSummary } from "./voice-production-plan";
 
 export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?: string | null; episodeId?: string | null }) {
   const activeProjectId = projectId ?? null;
