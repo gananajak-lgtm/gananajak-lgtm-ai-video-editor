@@ -88,26 +88,63 @@ export function voicePlanSummary(plan: VoiceProductionPlan) {
  * Validate an offline queue before any future paid generation step.
  * Importing or validating a plan never calls ElevenLabs.
  */
+export type CompletedVoiceCache = Record<string, { fingerprint: string; outputPath: string }>;
+
+/**
+ * Accept cached audio only when its complete synthesis fingerprint matches.
+ * The caller must separately verify that each output file still exists on disk.
+ */
+export function reusableVoiceCache(plan: VoiceProductionPlan, cache: CompletedVoiceCache): CompletedVoiceCache {
+  const reusable: CompletedVoiceCache = {};
+  for (const job of plan.jobs) {
+    const entry = cache[job.lineId];
+    if (entry && entry.fingerprint === job.fingerprint && typeof entry.outputPath === "string" && entry.outputPath.trim()) {
+      reusable[job.lineId] = { fingerprint: entry.fingerprint, outputPath: entry.outputPath };
+    }
+  }
+  return reusable;
+}
+
+/**
+ * Validate an untrusted offline queue before any future paid generation step.
+ * No network calls or credit usage occur here.
+ */
 export function validateVoiceProductionPlan(plan: VoiceProductionPlan): string[] {
   const errors: string[] = [];
+  if (!plan || typeof plan !== "object") return ["ข้อมูลคิวสร้างเสียงไม่ถูกต้อง"];
   if (plan.schemaVersion !== 1 || plan.provider !== "elevenlabs" || plan.requiresExplicitApproval !== true) {
     errors.push("รูปแบบคิวสร้างเสียงไม่ถูกต้องหรือไม่มีข้อกำหนดการอนุมัติ");
   }
-  if (!plan.workspaceId?.trim()) errors.push("ยังไม่ได้เลือก ElevenLabs Workspace");
-  if (!plan.modelId?.trim()) errors.push("ยังไม่ได้ระบุโมเดลเสียง");
+  if (typeof plan.workspaceId !== "string" || !plan.workspaceId.trim()) errors.push("ยังไม่ได้เลือก ElevenLabs Workspace");
+  if (typeof plan.modelId !== "string" || !plan.modelId.trim()) errors.push("ยังไม่ได้ระบุโมเดลเสียง");
   if (!Array.isArray(plan.jobs) || plan.jobs.length > 10000) {
     errors.push("จำนวนงานสร้างเสียงไม่ถูกต้อง");
     return errors;
   }
-  const seen = new Set<string>();
-  for (const job of plan.jobs) {
-    if (!job.id || seen.has(job.id)) errors.push("พบรหัสงานซ้ำหรือว่าง");
-    seen.add(job.id);
-    if (job.workspaceId !== plan.workspaceId || job.modelId !== plan.modelId) errors.push(`งาน ${job.id} ใช้ Workspace หรือโมเดลไม่ตรงกับคิว`);
-    if (job.state === "blocked" || !job.voiceId?.trim() || !job.text.trim()) errors.push(`งาน ${job.id} ยังไม่พร้อมสร้างเสียง`);
-    if (job.fingerprint !== JSON.stringify([job.text.trim(), job.emotion.trim(), job.voiceId?.trim() || "", job.workspaceId?.trim() || "", job.modelId.trim()])) {
-      errors.push(`งาน ${job.id} มีข้อมูลเปลี่ยนจากรหัสตรวจสอบ`);
+  const ids = new Set<string>();
+  const lineIds = new Set<string>();
+  for (const item of plan.jobs) {
+    if (!item || typeof item !== "object") {
+      errors.push("พบงานสร้างเสียงที่มีรูปแบบไม่ถูกต้อง");
+      continue;
     }
+    const job = item as VoiceJob;
+    if (typeof job.id !== "string" || !job.id.trim() || ids.has(job.id)) errors.push("พบรหัสงานซ้ำหรือว่าง");
+    else ids.add(job.id);
+    if (typeof job.lineId !== "string" || !job.lineId.trim() || lineIds.has(job.lineId)) errors.push(`งาน ${String(job.id)} มีรหัสบรรทัดซ้ำหรือว่าง`);
+    else lineIds.add(job.lineId);
+    if (job.workspaceId !== plan.workspaceId || job.modelId !== plan.modelId) errors.push(`งาน ${String(job.id)} ใช้ Workspace หรือโมเดลไม่ตรงกับคิว`);
+    if (typeof job.voiceId !== "string" || !job.voiceId.trim() || typeof job.text !== "string" || !job.text.trim() || job.state === "blocked") {
+      errors.push(`งาน ${String(job.id)} ยังไม่พร้อมสร้างเสียง`);
+    }
+    if (!["ready", "queued", "generating", "completed", "failed"].includes(job.state)) errors.push(`งาน ${String(job.id)} มีสถานะไม่ถูกต้อง`);
+    if (typeof job.emotion !== "string" || typeof job.modelId !== "string" || typeof job.workspaceId !== "string" || typeof job.voiceId !== "string" || typeof job.text !== "string") {
+      errors.push(`งาน ${String(job.id)} มีข้อมูลสำหรับสร้างเสียงไม่ครบ`);
+      continue;
+    }
+    const expected = JSON.stringify([job.text.trim(), job.emotion.trim(), job.voiceId.trim(), job.workspaceId.trim(), job.modelId.trim()]);
+    if (job.fingerprint !== expected) errors.push(`งาน ${String(job.id)} มีข้อมูลเปลี่ยนจากรหัสตรวจสอบ`);
+    if (job.state === "completed" && (typeof job.outputPath !== "string" || !job.outputPath.trim())) errors.push(`งาน ${String(job.id)} ไม่มีตำแหน่งไฟล์เสียง`);
   }
   return errors;
 }
