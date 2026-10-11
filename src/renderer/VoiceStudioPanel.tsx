@@ -42,15 +42,17 @@ export default function VoiceStudioPanel({ projectId }: { projectId?: string | n
   }, []);
   const [projectVoiceIds, setProjectVoiceIds] = useState<Record<string, string>>({});
   const [loadedProjectId, setLoadedProjectId] = useState<string | null>(null);
+  const voiceLoadRevision = useRef(0);
   const projectVoicesReady = !activeProjectId || loadedProjectId === activeProjectId;
   useEffect(() => {
     let active = true;
+    const loadRevision = ++voiceLoadRevision.current;
     setProjectVoiceIds({});
     setLoadedProjectId(null);
     setConfirmed(false);
     if (activeProjectId) {
       void window.videoEditor.loadStudioCharacterVoices(activeProjectId)
-        .then(voices => { if (active) { setProjectVoiceIds(voices); setLoadedProjectId(activeProjectId); } })
+        .then(voices => { if (active && voiceLoadRevision.current === loadRevision) { setProjectVoiceIds(voices); setLoadedProjectId(activeProjectId); } })
         .catch(() => { if (active) setWorkspaceMessage("โหลดเสียงตัวละครของโปรเจกต์ไม่สำเร็จ กรุณากลับไปตรวจคลังเสียง"); });
     }
     return () => { active = false; };
@@ -60,10 +62,12 @@ export default function VoiceStudioPanel({ projectId }: { projectId?: string | n
     let revision = 0;
     const refresh = () => {
       const currentRevision = ++revision;
+      const loadRevision = ++voiceLoadRevision.current;
       void window.videoEditor.loadStudioCharacterVoices(activeProjectId)
         .then(voices => {
-          if (projectIdentity.current !== activeProjectId || currentRevision !== revision) return;
+          if (projectIdentity.current !== activeProjectId || currentRevision !== revision || voiceLoadRevision.current !== loadRevision) return;
           setProjectVoiceIds(voices);
+          setLoadedProjectId(activeProjectId);
           setConfirmed(false);
         })
         .catch(() => {
