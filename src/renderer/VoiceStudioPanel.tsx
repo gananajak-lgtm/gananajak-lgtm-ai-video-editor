@@ -70,7 +70,8 @@ export default function VoiceStudioPanel({ projectId }: { projectId?: string | n
       if (projectIdentity.current === activeProjectId) setWorkspaceMessage("บันทึกเสียงตัวละครของโปรเจกต์ไม่สำเร็จ: " + String(error));
     } finally { setSavingProjectVoice(false); }
   };
-  const resolvedVoiceIds = activeProjectId ? { ...voiceIds, ...projectVoiceIds } : voiceIds;
+  // A project must never inherit voice assignments from another workspace or project.
+  const resolvedVoiceIds = activeProjectId ? projectVoiceIds : voiceIds;
   const [availableVoices, setAvailableVoices] = useState<Array<{ id: string; name: string }>>([]);
   const [loadingVoices, setLoadingVoices] = useState(false);
   const [voiceLoadError, setVoiceLoadError] = useState("");
