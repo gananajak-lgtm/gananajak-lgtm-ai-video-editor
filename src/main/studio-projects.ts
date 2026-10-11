@@ -258,3 +258,26 @@ export async function saveStudioEpisodeVoiceAudio(
   const { rename } = await import("node:fs/promises");
   await rename(temp, path.join(directory, "voice-manifest.json"));
 }
+
+/**
+ * Resolve a safe destination for a generated dialogue MP3 inside the selected
+ * episode. This only calculates a path; it never creates audio or calls an API.
+ */
+export async function resolveStudioEpisodeVoiceOutput(
+  projectId: string,
+  episodeId: string,
+  lineId: string
+): Promise<{ absolutePath: string; relativePath: string }> {
+  if (typeof lineId !== "string" || !/^[a-zA-Z0-9_-]{1,120}$/.test(lineId)) {
+    throw new Error("Invalid voice line ID");
+  }
+  const project = (await readIndex()).find(item => item.id === projectId);
+  const episode = project?.episodes.find(item => item.id === episodeId);
+  if (!episode) throw new Error("Episode not found");
+  const relativePath = `dialogue/${lineId}.mp3`;
+  const audioRoot = path.resolve(episode.folder, "audio");
+  const absolutePath = path.resolve(audioRoot, relativePath);
+  if (!absolutePath.startsWith(audioRoot + path.sep)) throw new Error("Unsafe voice output path");
+  await mkdir(path.dirname(absolutePath), { recursive: true });
+  return { absolutePath, relativePath };
+}
