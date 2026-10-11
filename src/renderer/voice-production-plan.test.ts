@@ -155,7 +155,7 @@ test("batch progress counts cached, active, failed and pending voice jobs", () =
   result.jobs[1].state = "generating";
   result.jobs[2].state = "failed";
   assert.deepEqual(voiceBatchProgress(result), {
-    total: 4, completed: 1, failed: 1, active: 1, remaining: 1, percent: 50
+    total: 4, completed: 1, failed: 1, active: 1, remaining: 1, percent: 25
   });
 });
 

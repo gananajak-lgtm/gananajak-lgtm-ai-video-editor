@@ -238,6 +238,6 @@ export function voiceBatchProgress(plan: VoiceProductionPlan): VoiceBatchProgres
     failed,
     active,
     remaining,
-    percent: total === 0 ? 100 : Math.round(((completed + failed) / total) * 100)
+    percent: total === 0 ? 100 : Math.round((completed / total) * 100)
   };
 }
