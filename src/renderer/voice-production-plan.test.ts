@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { VoiceLine } from "./novel-voice-parser";
-import { buildVoiceProductionPlan, reusableVoiceCache, voiceFingerprint, voicePlanSummary } from "./voice-production-plan";
+import { buildVoiceProductionPlan, reusableVoiceCache, voiceFingerprint, voicePlanSummary, validateVoiceProductionPlan } from "./voice-production-plan";
 
 const line: VoiceLine = { id: "line-1", kind: "dialogue", speaker: "สิงห์", text: "หยุดก่อน", emotion: "กระซิบ", needsReview: false };
 const workspace = "workspace-A";
@@ -55,4 +55,28 @@ test("SFX cues are never sent to voice generation", () => {
   const result = buildVoiceProductionPlan("ตอน 1", [line, sfx], { [line.speaker]: voice }, cache, workspace);
   assert.equal(result.jobs.length, 1);
   assert.equal(result.sfxCues.length, 1);
+});
+
+test("validates a ready queue without triggering paid generation", () => {
+  const result = buildVoiceProductionPlan("ตอน 1", [line], { [line.speaker]: voice }, {}, workspace);
+  assert.deepEqual(validateVoiceProductionPlan(result), []);
+});
+
+test("rejects malformed speaker, order and premature output path", () => {
+  const result = buildVoiceProductionPlan("ตอน 1", [line], { [line.speaker]: voice }, {}, workspace);
+  result.jobs[0].speaker = "";
+  result.jobs[0].order = -1;
+  result.jobs[0].outputPath = "dialogue/unverified.mp3";
+  const errors = validateVoiceProductionPlan(result);
+  assert.ok(errors.some(error => error.includes("ผู้พูด")));
+  assert.ok(errors.some(error => error.includes("ลำดับ")));
+  assert.ok(errors.some(error => error.includes("ยังสร้างไม่เสร็จ")));
+});
+
+test("rejects duplicate line IDs and modified fingerprints", () => {
+  const result = buildVoiceProductionPlan("ตอน 1", [line], { [line.speaker]: voice }, {}, workspace);
+  result.jobs.push({ ...result.jobs[0], id: "voice-other", text: "ข้อความถูกเปลี่ยน" });
+  const errors = validateVoiceProductionPlan(result);
+  assert.ok(errors.some(error => error.includes("รหัสบรรทัดซ้ำ")));
+  assert.ok(errors.some(error => error.includes("รหัสตรวจสอบ")));
 });
