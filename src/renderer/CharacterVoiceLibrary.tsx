@@ -65,13 +65,14 @@ export default function CharacterVoiceLibrary({ projectId }: { projectId?: strin
     setProjectLoading(true);
     try {
       if (projectId) {
-        const latest = await window.videoEditor.loadStudioCharacterVoices(projectId);
-        const changes = Object.fromEntries(Object.entries(next).filter(([character, id]) => entries[character] !== id));
+        const changes = Object.entries(next).filter(([character, id]) => entries[character] !== id);
         const removed = Object.keys(entries).filter(character => !(character in next));
-        const merged = { ...latest, ...changes };
-        for (const character of removed) delete merged[character];
-        await window.videoEditor.saveStudioCharacterVoices(projectId, merged);
-        next = merged;
+        for (const [character, id] of changes) {
+          next = await window.videoEditor.patchStudioCharacterVoice(projectId, character, id);
+        }
+        for (const character of removed) {
+          next = await window.videoEditor.patchStudioCharacterVoice(projectId, character, null);
+        }
       } else localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       if (currentProjectId.current === projectId) {
         setEntries(next);
