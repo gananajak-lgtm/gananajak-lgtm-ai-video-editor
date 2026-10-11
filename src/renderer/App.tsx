@@ -500,6 +500,15 @@ export default function App() {
   const [studioSavedScript, setStudioSavedScript] = useState("");
   const [studioScriptBusy, setStudioScriptBusy] = useState(false);
   const studioScriptDirty = studioScript !== studioSavedScript;
+  useEffect(() => {
+    if (!studioScriptDirty) return;
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    return () => window.removeEventListener("beforeunload", warnBeforeUnload);
+  }, [studioScriptDirty]);
   const openStudioEpisode = async (episodeId: string) => {
     if (!studioSelectedId || studioScriptBusy) return;
     if (studioScriptDirty && !window.confirm("บทที่แก้ไขยังไม่ได้บันทึก ต้องการทิ้งการแก้ไขหรือไม่?")) return;
@@ -564,6 +573,10 @@ export default function App() {
   const browserMode=document.documentElement.dataset.runtime==="browser";
 
   const [activeProductionTab, setActiveProductionTab] = useState<"dashboard" | "settings" | "accounts" | "voices" | "script" | "editor">("dashboard");
+  const navigateStudioTab = (tab: typeof activeProductionTab) => {
+    if (tab !== activeProductionTab && studioScriptDirty && !window.confirm("บทที่แก้ไขยังไม่ได้บันทึก ต้องการเปลี่ยนเมนูโดยไม่บันทึกหรือไม่?")) return;
+    setActiveProductionTab(tab);
+  };
   const [theme, setTheme] = useState(() => localStorage.getItem("studio-theme-v1") || "indigo");
   const [fontStyle, setFontStyle] = useState(() => localStorage.getItem("studio-font-v1") || "modern");
   useEffect(() => { localStorage.setItem("studio-theme-v1", theme); localStorage.setItem("studio-font-v1", fontStyle); }, [theme, fontStyle]);
@@ -575,13 +588,13 @@ export default function App() {
       <aside className="studioSidebar" aria-label="เมนูหลัก">
         <div className="studioBrand"><span className="studioBrandIcon">♫</span><div><strong>AI VOICE STUDIO</strong><small>สร้างเสียงพากย์ด้วย ElevenLabs</small></div></div>
         <div className="studioSideLinks">
-          <button className={activeProductionTab === "dashboard" ? "selected" : ""} onClick={() => setActiveProductionTab("dashboard")}>▦ โปรเจกต์ของฉัน</button>
-          <button className={activeProductionTab === "accounts" ? "selected" : ""} onClick={() => setActiveProductionTab("accounts")}>♫ คลังเสียงตัวละคร</button>
-          <button className={activeProductionTab === "script" ? "selected" : ""} onClick={() => setActiveProductionTab("script")}>♬ สร้างเสียงพากย์ · บท</button>
-          <button className={activeProductionTab === "editor" ? "selected" : ""} onClick={() => setActiveProductionTab("editor")}>▣ ตัดต่อ · ส่งออก</button>
+          <button className={activeProductionTab === "dashboard" ? "selected" : ""} onClick={() => navigateStudioTab("dashboard")}>▦ โปรเจกต์ของฉัน</button>
+          <button className={activeProductionTab === "accounts" ? "selected" : ""} onClick={() => navigateStudioTab("accounts")}>♫ คลังเสียงตัวละคร</button>
+          <button className={activeProductionTab === "script" ? "selected" : ""} onClick={() => navigateStudioTab("script")}>♬ สร้างเสียงพากย์ · บท</button>
+          <button className={activeProductionTab === "editor" ? "selected" : ""} onClick={() => navigateStudioTab("editor")}>▣ ตัดต่อ · ส่งออก</button>
         </div>
         <div style={{marginTop:"auto"}} className="studioSideLinks">
-          <button className={activeProductionTab === "settings" ? "selected" : ""} onClick={() => setActiveProductionTab("settings")}>⚙ ตั้งค่า</button>
+          <button className={activeProductionTab === "settings" ? "selected" : ""} onClick={() => navigateStudioTab("settings")}>⚙ ตั้งค่า</button>
         </div>
             </aside>
       <main className="shell editorWorkspace studioMain">
