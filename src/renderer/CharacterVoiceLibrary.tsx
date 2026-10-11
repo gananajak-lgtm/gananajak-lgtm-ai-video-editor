@@ -8,7 +8,10 @@ export function readCharacterVoiceLibrary(): Record<string, string> {
     return Object.fromEntries(Object.entries(value).filter(([name, id]) => name.trim().length > 0 && name.length <= 150 && typeof id === "string" && id.length <= 250)) as Record<string, string>;
   } catch { return {}; }
 }
-export default function CharacterVoiceLibrary() {
+export default function CharacterVoiceLibrary({ projectId }: { projectId?: string | null }) {
+  const [projectLoading, setProjectLoading] = useState(false);
+  const [projectReady, setProjectReady] = useState(false);
+  const [projectVersion, setProjectVersion] = useState(0);
   const [entries, setEntries] = useState<Record<string, string>>(readCharacterVoiceLibrary);
   const [name, setName] = useState("");
   const [voiceId, setVoiceId] = useState("");
@@ -35,9 +38,37 @@ export default function CharacterVoiceLibrary() {
     void audio.play().catch(() => { if (previewAudio.current === audio) { stopPreview(); setMessage("ไม่สามารถเล่นเสียงตัวอย่างนี้ได้"); } });
   };
   useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); window.dispatchEvent(new Event("character-voices-updated")); }
-    catch { setMessage("บันทึกคลังเสียงในเครื่องไม่สำเร็จ"); }
-  }, [entries]);
+    let active = true;
+    setProjectReady(false);
+    setProjectLoading(Boolean(projectId));
+    setSelectedCharacter(null);
+    if (!projectId) {
+      setEntries(readCharacterVoiceLibrary());
+      setProjectLoading(false);
+      setProjectReady(true);
+      return () => { active = false; };
+    }
+    void window.videoEditor.loadStudioCharacterVoices(projectId).then(loaded => {
+      if (!active) return;
+      setEntries(loaded);
+      setProjectReady(true);
+    }).catch(error => {
+      if (active) setMessage("โหลดคลังเสียงโปรเจกต์ไม่สำเร็จ: " + String(error));
+    }).finally(() => { if (active) setProjectLoading(false); });
+    return () => { active = false; };
+  }, [projectId, projectVersion]);
+  const updateEntries = async (next: Record<string, string>) => {
+    if (!projectReady || projectLoading) return;
+    setProjectLoading(true);
+    try {
+      if (projectId) await window.videoEditor.saveStudioCharacterVoices(projectId, next);
+      else localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      setEntries(next);
+      window.dispatchEvent(new Event("character-voices-updated"));
+    } catch (error) {
+      setMessage("บันทึกคลังเสียงไม่สำเร็จ: " + String(error));
+    } finally { setProjectLoading(false); }
+  };
   const loadVoices = async () => {
     stopPreview(); setLoading(true); setMessage("");
     try { setVoices(await window.videoEditor.listElevenLabsVoices()); }
@@ -48,12 +79,14 @@ export default function CharacterVoiceLibrary() {
     const character = name.trim();
     const id = voiceId.trim();
     if (!character || !id || character.length > 150 || id.length > 250) { setMessage("กรุณากรอกชื่อตัวละครและ Voice ID ให้ถูกต้อง"); return; }
-    setEntries(previous => ({ ...previous, [character]: id }));
+    void updateEntries({ ...entries, [character]: id });
     setName(""); setVoiceId(""); setShowAdd(false); setMessage("บันทึกเสียงประจำตัวละครแล้ว กด ＋ เพิ่มตัวละครใหม่ เพื่อเพิ่มคนถัดไป");
   };
   return <section className="voiceStudioPanel premiumVoicePanel" id="character-voice-library" aria-label="คลังเสียงตัวละคร">
     <div className="premiumHeading"><div><p className="eyebrow">CHARACTER VOICE LIBRARY</p><h2>🎙️ คลังเสียงตัวละครถาวร</h2></div></div>
-    <p className="muted">กำหนดเสียงครั้งเดียวเพื่อใช้กับบททุกตอนในเครื่องนี้ ไม่ต้องแยกบทก่อน สามารถแก้ไขหรือเปลี่ยนเสียงภายหลังได้</p>
+    <p className="muted">{projectId ? "คลังเสียงเฉพาะโปรเจกต์นี้ ไม่ปะปนกับเรื่องอื่น" : "คลังเสียงส่วนกลางเดิมของเครื่อง (ไม่ถูกลบหรือย้ายอัตโนมัติ)"}</p>
+    {projectLoading && <p role="status">กำลังอ่านหรือบันทึกคลังเสียง...</p>}
+    {projectId && !projectReady && !projectLoading && <button type="button" onClick={() => setProjectVersion(value => value + 1)}>โหลดคลังเสียงอีกครั้ง</button>}
     <div className="voiceStudioActions">
       <button type="button" onClick={() => { setShowAdd(previous => !previous); setMessage(""); }}>{showAdd ? "ยกเลิก" : "＋ เพิ่มตัวละครใหม่"}</button>
       <strong>บันทึกแล้ว {Object.keys(entries).length} ตัวละคร</strong>
@@ -64,7 +97,7 @@ export default function CharacterVoiceLibrary() {
       <button type="button" disabled={loading} onClick={() => void loadVoices()}>{loading ? "กำลังโหลด..." : "ดึงเสียงจาก ElevenLabs"}</button>
       {voices.length > 0 && <label>เลือกเสียง <select value={voices.some(item => item.id === voiceId) ? voiceId : ""} onChange={event => setVoiceId(event.target.value)}><option value="">เลือกเสียง</option>{voices.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
       {voiceId && voices.some(item => item.id === voiceId) && <button type="button" disabled={!voices.find(item => item.id === voiceId)?.previewUrl} onClick={() => playPreview(voiceId)}>{playingVoiceId === voiceId ? "■ หยุดฟัง" : voices.find(item => item.id === voiceId)?.previewUrl ? "▶ ฟังเสียงตัวอย่าง" : "ไม่มีเสียงตัวอย่าง"}</button>}
-      <button type="button" onClick={add} disabled={!name.trim() || !voiceId.trim()}>＋ บันทึกและเพิ่มตัวละคร</button>
+      <button type="button" onClick={add} disabled={!projectReady || projectLoading || !name.trim() || !voiceId.trim()}>＋ บันทึกและเพิ่มตัวละคร</button>
     </div>}
     {message && <p role="status">{message}</p>}
     {Object.keys(entries).length === 0 ? <p className="muted">ยังไม่มีเสียงตัวละครที่บันทึกไว้</p> : <div className="voiceRegistry"><h3>เสียงที่บันทึกแล้ว ({Object.keys(entries).length})</h3><div className="premiumCharacterGrid compactCharacterGrid">{Object.entries(entries).sort(([a], [b]) => a.localeCompare(b, "th")).map(([character, id]) => <article className={`premiumCharacterCard compactCharacterCard ${selectedCharacter === character ? "isSelected" : ""}`} key={character}>
@@ -74,9 +107,9 @@ export default function CharacterVoiceLibrary() {
       {selectedCharacter === character && <div className="compactCharacterDetails">
         <p className="muted">Voice ID ถูกซ่อนไว้เพื่อป้องกันการแก้ไขโดยไม่ตั้งใจ</p>
         <div className="voiceStudioActions"><button type="button" onClick={() => { setEditId(id); setConfirmDelete(null); setSelectedCharacter(character + "::edit"); }}>แก้ไข Voice ID</button><button type="button" className="premiumRemoveButton" onClick={() => setConfirmDelete(character)}>ลบเสียงนี้</button></div>
-        {confirmDelete === character && <div className="voiceStudioActions"><strong>ยืนยันลบเสียง {character}?</strong><button type="button" onClick={() => { setEntries(previous => { const next = { ...previous }; delete next[character]; return next; }); setSelectedCharacter(null); setConfirmDelete(null); }}>ยืนยันลบ</button><button type="button" onClick={() => setConfirmDelete(null)}>ยกเลิก</button></div>}
+        {confirmDelete === character && <div className="voiceStudioActions"><strong>ยืนยันลบเสียง {character}?</strong><button type="button" onClick={() => { void updateEntries(Object.fromEntries(Object.entries(entries).filter(([key]) => key !== character))); setSelectedCharacter(null); setConfirmDelete(null); }}>ยืนยันลบ</button><button type="button" onClick={() => setConfirmDelete(null)}>ยกเลิก</button></div>}
       </div>}
-      {selectedCharacter === character + "::edit" && <div className="compactCharacterDetails"><label>แก้ไข Voice ID <input value={editId} onChange={event => setEditId(event.target.value)} /></label><div className="voiceStudioActions"><button type="button" disabled={!editId.trim()} onClick={() => { setEntries(previous => ({...previous,[character]:editId.trim()})); setSelectedCharacter(character); }}>บันทึกการแก้ไข</button><button type="button" onClick={() => setSelectedCharacter(character)}>ยกเลิก</button></div></div>}
+      {selectedCharacter === character + "::edit" && <div className="compactCharacterDetails"><label>แก้ไข Voice ID <input value={editId} onChange={event => setEditId(event.target.value)} /></label><div className="voiceStudioActions"><button type="button" disabled={!editId.trim()} onClick={() => { void updateEntries({...entries,[character]:editId.trim()}); setSelectedCharacter(character); }}>บันทึกการแก้ไข</button><button type="button" onClick={() => setSelectedCharacter(character)}>ยกเลิก</button></div></div>}
     </article>)}</div></div>}
   </section>;
 }
