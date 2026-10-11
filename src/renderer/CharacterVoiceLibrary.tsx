@@ -72,6 +72,8 @@ export default function CharacterVoiceLibrary({ projectId }: { projectId?: strin
       void window.videoEditor.loadStudioCharacterVoices(projectId).then(latest => {
         if (!active || request !== revision || currentProjectId.current !== projectId || voiceDataRevision.current !== loadRevision) return;
         setEntries(latest);
+        setReadyProjectId(projectId);
+        setProjectLoading(false);
       }).catch(error => {
         if (active && request === revision && currentProjectId.current === projectId && voiceDataRevision.current === loadRevision)
           setMessage("รีเฟรชคลังเสียงไม่สำเร็จ: " + String(error));
