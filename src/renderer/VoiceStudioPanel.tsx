@@ -75,20 +75,22 @@ export default function VoiceStudioPanel({ projectId }: { projectId?: string | n
     return () => { revision++; window.removeEventListener("character-voices-updated", refresh); };
   }, [activeProjectId]);
   const [savingProjectVoice, setSavingProjectVoice] = useState(false);
-  useEffect(() => { setSavingProjectVoice(false); }, [activeProjectId]);
+  const voiceSaveGeneration = useRef(0);
+  useEffect(() => { voiceSaveGeneration.current++; setSavingProjectVoice(false); }, [activeProjectId]);
   const saveProjectSpeakerVoice = async (speaker: string, voiceId: string) => {
     if (!activeProjectId || !projectVoicesReady || savingProjectVoice) return;
+    const generation = ++voiceSaveGeneration.current;
     setSavingProjectVoice(true);
     try {
       const next = await window.videoEditor.patchStudioCharacterVoice(activeProjectId, speaker, voiceId);
-      if (projectIdentity.current === activeProjectId) {
+      if (projectIdentity.current === activeProjectId && voiceSaveGeneration.current === generation) {
         setProjectVoiceIds(next);
         setConfirmed(false);
         window.dispatchEvent(new Event("character-voices-updated"));
       }
     } catch (error) {
-      if (projectIdentity.current === activeProjectId) setWorkspaceMessage("บันทึกเสียงตัวละครของโปรเจกต์ไม่สำเร็จ: " + String(error));
-    } finally { if (projectIdentity.current === activeProjectId) setSavingProjectVoice(false); }
+      if (projectIdentity.current === activeProjectId && voiceSaveGeneration.current === generation) setWorkspaceMessage("บันทึกเสียงตัวละครของโปรเจกต์ไม่สำเร็จ: " + String(error));
+    } finally { if (projectIdentity.current === activeProjectId && voiceSaveGeneration.current === generation) setSavingProjectVoice(false); }
   };
   // A project must never inherit voice assignments from another workspace or project.
   const resolvedVoiceIds = activeProjectId ? (projectVoicesReady ? projectVoiceIds : {}) : voiceIds;
