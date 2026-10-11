@@ -214,3 +214,30 @@ export function voiceApprovalFingerprint(plan: VoiceProductionPlan): string {
   const preflight = prepareVoiceGeneration(plan);
   return JSON.stringify(preflight.pending.map(job => [job.lineId, job.fingerprint]));
 }
+
+/** Offline progress projection for a future per-line synthesis runner. */
+export type VoiceBatchProgress = {
+  total: number;
+  completed: number;
+  failed: number;
+  active: number;
+  remaining: number;
+  percent: number;
+};
+
+export function voiceBatchProgress(plan: VoiceProductionPlan): VoiceBatchProgress {
+  const jobs = Array.isArray(plan?.jobs) ? plan.jobs : [];
+  const total = jobs.length;
+  const completed = jobs.filter(job => job.state === "completed").length;
+  const failed = jobs.filter(job => job.state === "failed").length;
+  const active = jobs.filter(job => job.state === "generating").length;
+  const remaining = Math.max(0, total - completed - failed - active);
+  return {
+    total,
+    completed,
+    failed,
+    active,
+    remaining,
+    percent: total === 0 ? 100 : Math.round(((completed + failed) / total) * 100)
+  };
+}
