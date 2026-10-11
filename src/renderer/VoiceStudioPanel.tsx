@@ -314,6 +314,8 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
   const [batchRunActive, setBatchRunActive] = useState(false);
   const activeEpisodeIdentityRef = useRef(currentAudioIdentity);
   activeEpisodeIdentityRef.current = currentAudioIdentity;
+  const activeQueueFingerprintRef = useRef(currentQueueFingerprint);
+  activeQueueFingerprintRef.current = currentQueueFingerprint;
   const generateApprovedVoiceBatch = async () => {
     if (voiceGenerationLock.current || !activeProjectId || !activeEpisodeId ||
         !audioCacheMatchesEpisode || !approvalReady) return;
@@ -324,6 +326,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
     }
     const pending = authorization.pending;
     if (!pending.length || pending.some(job => !job.voiceId)) return;
+    const approvedQueueFingerprint = currentQueueFingerprint;
     voiceGenerationLock.current = true;
     batchCancelRequested.current = false;
     setBatchCancelPending(false);
@@ -336,7 +339,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
     try {
       for (const job of pending) {
         // Stop if the user switched projects while the preceding request ran.
-        if (batchCancelRequested.current || projectIdentity.current !== activeProjectId || activeEpisodeIdentityRef.current !== currentAudioIdentity) break;
+        if (batchCancelRequested.current || projectIdentity.current !== activeProjectId || activeEpisodeIdentityRef.current !== currentAudioIdentity || activeQueueFingerprintRef.current !== approvedQueueFingerprint) break;
         setVoiceGenerationStatus(`กำลังสร้างบรรทัด ${job.order + 1} (${done + failed + 1}/${pending.length})`);
         try {
           await window.videoEditor.generateStudioVoiceLine({
@@ -359,7 +362,9 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
           } catch { /* Keep the generation result; reload on reopening the episode. */ }
         }
       }
-      setVoiceGenerationStatus(`สร้างสำเร็จ ${done}/${pending.length} บรรทัด · ล้มเหลว ${failed}${batchCancelRequested.current ? " · หยุดตามคำสั่งแล้ว" : ""} · งานที่เหลือต้องอนุมัติใหม่`);
+      const queueChanged = activeQueueFingerprintRef.current !== approvedQueueFingerprint;
+      const episodeChanged = activeEpisodeIdentityRef.current !== currentAudioIdentity || projectIdentity.current !== activeProjectId;
+      setVoiceGenerationStatus(`สร้างสำเร็จ ${done}/${pending.length} บรรทัด · ล้มเหลว ${failed}${batchCancelRequested.current ? " · หยุดตามคำสั่งแล้ว" : queueChanged || episodeChanged ? " · หยุดเนื่องจากคิวหรือโปรเจกต์เปลี่ยน" : ""} · งานที่เหลือต้องอนุมัติใหม่`);
     } finally {
       voiceGenerationLock.current = false;
       setVoiceGenerating(false);
