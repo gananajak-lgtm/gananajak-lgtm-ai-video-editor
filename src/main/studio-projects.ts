@@ -192,6 +192,45 @@ export async function findReusableStudioEpisodeAudio(
   }
 }
 
+/** Probe a verified dialogue MP3 without making any provider request. */
+export async function getStudioVoiceAudioDuration(
+  projectId: string,
+  episodeId: string,
+  relativePath: string
+): Promise<number> {
+  const verifiedPath = await findReusableStudioEpisodeAudio(projectId, episodeId, relativePath);
+  if (!verifiedPath) throw new Error("Dialogue MP3 is missing or invalid");
+  const { spawn } = await import("node:child_process");
+  const ffmpeg = (await import("ffmpeg-static")).default;
+  if (typeof ffmpeg !== "string" || !ffmpeg) throw new Error("FFmpeg unavailable");
+  return new Promise<number>((resolve, reject) => {
+    const child = spawn(ffmpeg, ["-hide_banner", "-nostdin", "-i", verifiedPath, "-f", "null", "-"], {
+      stdio: ["ignore", "ignore", "pipe"], windowsHide: true
+    });
+    let output = "";
+    let settled = false;
+    const finish = (error?: Error, duration?: number) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      if (error) reject(error);
+      else resolve(duration!);
+    };
+    const timeout = setTimeout(() => { child.kill(); finish(new Error("MP3 duration probe timed out")); }, 30000);
+    child.stderr.on("data", (chunk: Buffer) => { output = (output + chunk.toString()).slice(-32000); });
+    child.on("error", (error: Error) => finish(error));
+    child.on("close", (code: number | null) => {
+      if (code !== 0) return finish(new Error("MP3 duration probe failed"));
+      const matches = [...output.matchAll(/time=(\d+):(\d+):(\d+(?:\.\d+)?)/g)];
+      const last = matches[matches.length - 1];
+      if (!last) return finish(new Error("MP3 duration unavailable"));
+      const duration = Number(last[1]) * 3600 + Number(last[2]) * 60 + Number(last[3]);
+      if (!Number.isFinite(duration) || duration <= 0) return finish(new Error("Invalid MP3 duration"));
+      finish(undefined, duration);
+    });
+  });
+}
+
 export type StudioVoiceAudioEntry = {
   fingerprint: string;
   outputPath: string;
