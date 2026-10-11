@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { VoiceLine } from "./novel-voice-parser";
-import { authorizeVoiceGeneration, buildVoiceProductionPlan, prepareVoiceGeneration, reusableVoiceCache, voiceApprovalFingerprint, voiceFingerprint, voicePlanSummary, validateVoiceProductionPlan } from "./voice-production-plan";
+import { authorizeVoiceGeneration, buildVoiceProductionPlan, prepareVoiceGeneration, reusableVoiceCache, voiceApprovalFingerprint, voiceBatchProgress, voiceFingerprint, voicePlanSummary, validateVoiceProductionPlan } from "./voice-production-plan";
 
 const line: VoiceLine = { id: "line-1", kind: "dialogue", speaker: "สิงห์", text: "หยุดก่อน", emotion: "กระซิบ", needsReview: false };
 const workspace = "workspace-A";
@@ -147,4 +147,24 @@ test("an invalid queue cannot be authorized even with an acknowledgement", () =>
   const attempt = authorizeVoiceGeneration(result, voiceApprovalFingerprint(result), true);
   assert.equal(attempt.canGenerate, false);
   assert.deepEqual(attempt.pending, []);
+});
+
+test("batch progress counts cached, active, failed and pending voice jobs", () => {
+  const inputs: VoiceLine[] = [line, ...["line-2", "line-3", "line-4"].map((id, i) => ({ ...line, id, text: `ข้อความ ${i + 1}` }))];
+  const result = buildVoiceProductionPlan("ตอน 1", inputs, { [line.speaker]: voice }, cache, workspace);
+  result.jobs[1].state = "generating";
+  result.jobs[2].state = "failed";
+  assert.deepEqual(voiceBatchProgress(result), {
+    total: 4, completed: 1, failed: 1, active: 1, remaining: 1, percent: 50
+  });
+});
+
+test("batch progress handles empty and fully completed queues", () => {
+  const empty = buildVoiceProductionPlan("ตอน 1", [], {}, {}, workspace);
+  assert.deepEqual(voiceBatchProgress(empty), {
+    total: 0, completed: 0, failed: 0, active: 0, remaining: 0, percent: 100
+  });
+  const cached = plan(line);
+  assert.equal(voiceBatchProgress(cached).percent, 100);
+  assert.equal(voiceBatchProgress(cached).remaining, 0);
 });
