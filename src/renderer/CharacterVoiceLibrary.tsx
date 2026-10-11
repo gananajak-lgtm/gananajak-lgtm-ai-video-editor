@@ -13,7 +13,8 @@ export default function CharacterVoiceLibrary({ projectId }: { projectId?: strin
   const currentProjectId = useRef(projectId);
   currentProjectId.current = projectId;
   const [projectLoading, setProjectLoading] = useState(false);
-  const [projectReady, setProjectReady] = useState(false);
+  const [readyProjectId, setReadyProjectId] = useState<string | null | undefined>(undefined);
+  const projectReady = readyProjectId !== undefined && readyProjectId === projectId;
   const [projectVersion, setProjectVersion] = useState(0);
   const [entries, setEntries] = useState<Record<string, string>>(readCharacterVoiceLibrary);
   const [name, setName] = useState("");
@@ -43,19 +44,19 @@ export default function CharacterVoiceLibrary({ projectId }: { projectId?: strin
   useEffect(() => {
     let active = true;
     const loadRevision = ++voiceDataRevision.current;
-    setProjectReady(false);
+    setReadyProjectId(undefined);
     setProjectLoading(Boolean(projectId));
     setSelectedCharacter(null);
     if (!projectId) {
       setEntries(readCharacterVoiceLibrary());
       setProjectLoading(false);
-      setProjectReady(true);
+      setReadyProjectId(projectId);
       return () => { active = false; };
     }
     void window.videoEditor.loadStudioCharacterVoices(projectId).then(loaded => {
       if (!active || voiceDataRevision.current !== loadRevision) return;
       setEntries(loaded);
-      setProjectReady(true);
+      setReadyProjectId(projectId);
     }).catch(error => {
       if (active) setMessage("โหลดคลังเสียงโปรเจกต์ไม่สำเร็จ: " + String(error));
     }).finally(() => { if (active) setProjectLoading(false); });
