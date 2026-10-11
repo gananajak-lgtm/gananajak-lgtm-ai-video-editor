@@ -38,6 +38,17 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
   const [analyzedSource, setAnalyzedSource] = useState<string | null>(null);
   const sourceIsStale = analyzedSource !== null && script !== analyzedSource;
   const [lines, setLines] = useState<VoiceLine[]>([]);
+  // Never carry a previous episode's script, speaker decisions, or approval into another episode.
+  useEffect(() => {
+    setScript("");
+    setAnalyzedSource(null);
+    setLines([]);
+    setConfirmed(false);
+    setImportedPlanWorkspaceId(null);
+    setPlanMessage("");
+    setPreviewLineId(null);
+  }, [activeProjectId, activeEpisodeId]);
+
   const [filter, setFilter] = useState<"all" | "review">("all");
   const [voiceIds, setVoiceIds] = useState<Record<string, string>>(() => {
     try {
