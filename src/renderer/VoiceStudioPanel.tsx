@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { parseNovelScript } from "./novel-voice-parser";
 import { readCharacterVoiceLibrary } from "./CharacterVoiceLibrary";
 import type { VoiceLine } from "./novel-voice-parser";
@@ -6,6 +6,8 @@ import { buildVoiceProductionPlan, voicePlanSummary } from "./voice-production-p
 
 export default function VoiceStudioPanel({ projectId }: { projectId?: string | null }) {
   const activeProjectId = projectId ?? null;
+  const projectIdentity = useRef(activeProjectId);
+  projectIdentity.current = activeProjectId;
   const [script, setScript] = useState("");
   const MAX_SCRIPT_CHARACTERS = 5000;
   const scriptTooLong = script.length > MAX_SCRIPT_CHARACTERS;
@@ -59,11 +61,13 @@ export default function VoiceStudioPanel({ projectId }: { projectId?: string | n
       const latest = await window.videoEditor.loadStudioCharacterVoices(activeProjectId);
       const next = { ...latest, [speaker]: voiceId };
       await window.videoEditor.saveStudioCharacterVoices(activeProjectId, next);
-      setProjectVoiceIds(next);
-      setConfirmed(false);
-      window.dispatchEvent(new Event("character-voices-updated"));
+      if (projectIdentity.current === activeProjectId) {
+        setProjectVoiceIds(next);
+        setConfirmed(false);
+        window.dispatchEvent(new Event("character-voices-updated"));
+      }
     } catch (error) {
-      setWorkspaceMessage("บันทึกเสียงตัวละครของโปรเจกต์ไม่สำเร็จ: " + String(error));
+      if (projectIdentity.current === activeProjectId) setWorkspaceMessage("บันทึกเสียงตัวละครของโปรเจกต์ไม่สำเร็จ: " + String(error));
     } finally { setSavingProjectVoice(false); }
   };
   const resolvedVoiceIds = activeProjectId ? { ...voiceIds, ...projectVoiceIds } : voiceIds;
