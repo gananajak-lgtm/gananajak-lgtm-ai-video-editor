@@ -583,12 +583,35 @@ export default function App() {
   };
   const [theme, setTheme] = useState(() => localStorage.getItem("studio-theme-v1") || "indigo");
   const [fontStyle, setFontStyle] = useState(() => localStorage.getItem("studio-font-v1") || "modern");
+  const paletteOptions = [
+    { id: "default", name: "ค่าเริ่มต้น", background: "#101827", card: "#233047" },
+    { id: "ocean", name: "น้ำเงิน", background: "#101d3b", card: "#234a78" },
+    { id: "purple", name: "ม่วง", background: "#20162f", card: "#483568" },
+    { id: "forest", name: "เขียว", background: "#10261f", card: "#285342" },
+    { id: "cream", name: "ครีม", background: "#f4eee3", card: "#ffffff" },
+    { id: "rose", name: "ชมพู", background: "#301e2a", card: "#694257" }
+  ] as const;
+  type PaletteId = (typeof paletteOptions)[number]["id"];
+  const readPalette = (key: string): PaletteId => {
+    const saved = localStorage.getItem(key);
+    return paletteOptions.some(option => option.id === saved) ? saved as PaletteId : "default";
+  };
+  const [backgroundPalette, setBackgroundPalette] = useState<PaletteId>(() => readPalette("studio-background-v1"));
+  const [cardPalette, setCardPalette] = useState<PaletteId>(() => readPalette("studio-cards-v1"));
+  useEffect(() => {
+    localStorage.setItem("studio-background-v1", backgroundPalette);
+    localStorage.setItem("studio-cards-v1", cardPalette);
+  }, [backgroundPalette, cardPalette]);
+  const backgroundColor = paletteOptions.find(option => option.id === backgroundPalette)!.background;
+  const cardColor = paletteOptions.find(option => option.id === cardPalette)!.card;
+  const cardTextColor = cardPalette === "cream" ? "#192337" : "#f4f7ff";
+
   useEffect(() => { localStorage.setItem("studio-theme-v1", theme); localStorage.setItem("studio-font-v1", fontStyle); }, [theme, fontStyle]);
 
   return (
     <>
       {browserMode && <div className="browserModeBanner"><strong>🌐 Browser Mode</strong><span>เปิดใช้งานจากเว็บได้แล้ว · งาน Render / AI / Publish จะย้ายไปทำผ่าน Backend Worker</span></div>}
-      <div className={`studioLayout studioTheme-${theme} studioFont-${fontStyle}`}>
+      <div className={`studioLayout studioTheme-${theme} studioFont-${fontStyle}`} style={{ "--studio-user-background": backgroundColor, "--studio-user-card": cardColor, "--studio-user-card-text": cardTextColor } as React.CSSProperties}>
       <aside className="studioSidebar" aria-label="เมนูหลัก">
         <div className="studioBrand"><span className="studioBrandIcon">♫</span><div><strong>AI VOICE STUDIO</strong><small>สร้างเสียงพากย์ด้วย ElevenLabs</small></div></div>
         <div className="studioSideLinks">
@@ -643,6 +666,31 @@ export default function App() {
       {activeProductionTab === "settings" && <section className="compactTabContent">
         <h2>ตั้งค่า</h2>
         <ElevenLabsSettingsPanel />
+        <div className="studioPaletteEditor">
+          <h3>🎨 สีพื้นหลังและสีการ์ด</h3>
+          <p>เลือกสีแยกกันได้ ระบบจะจำค่าบนเครื่องนี้และใช้กับทุกโปรเจกต์</p>
+          <div className="studioPaletteSections">
+            {([
+              { title: "พื้นหลังแอป", value: backgroundPalette, change: setBackgroundPalette },
+              { title: "พื้นหลังการ์ด", value: cardPalette, change: setCardPalette }
+            ] as const).map(section => (
+              <fieldset key={section.title} className="studioPaletteFieldset">
+                <legend>{section.title}</legend>
+                <div className="studioPaletteChoices">
+                  {paletteOptions.map(option => (
+                    <button type="button" key={option.id} className={`studioPaletteChoice ${section.value === option.id ? "active" : ""}`}
+                      aria-pressed={section.value === option.id} onClick={() => section.change(option.id)}>
+                      <span className="studioPaletteSample" style={{ background: section.title === "พื้นหลังแอป" ? option.background : option.card }} />
+                      <span>{option.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+            ))}
+          </div>
+          <button type="button" onClick={() => { setBackgroundPalette("default"); setCardPalette("default"); }}>คืนค่าสีเริ่มต้น</button>
+        </div>
+
         <div className="studioThemeControls"><strong>🎨 ธีมแอป</strong><div className="studioThemeSwatches">{(["indigo","ocean","emerald","rose","amber","slate"] as const).map(color => <button key={color} type="button" className={`studioSwatch ${theme === color ? "chosen" : ""}`} data-color={color} aria-label={`เลือกธีม ${color}`} title={color} onClick={() => setTheme(color)} />)}</div><label>รูปแบบตัวอักษร<select value={fontStyle} onChange={event => setFontStyle(event.target.value)}><option value="modern">Modern</option><option value="rounded">Rounded</option><option value="classic">Elegant</option></select></label></div>
       </section>}
       <ProjectToolbar
