@@ -2609,3 +2609,13 @@ label { font-size: 10px; }
 .studioLayout[style*="--studio-user-card-text: #192337"] .studioMain .premiumWorkspaceCard,
 .studioLayout[style*="--studio-user-card-text: #192337"] .studioMain .premiumVoicePanel,
 .studioLayout[style*="--studio-user-card-text: #192337"] .studioMain .compactCharacterCard{color:#192337}
+
+/* Light-card accessibility: readable headings, helper copy and form fields. */
+.studioLayout.studioLightCards .studioMain .panel :is(h2,h3,strong,small,p,.muted),
+.studioLayout.studioLightCards .studioMain .compactTabContent :is(h2,h3,strong,small,p,.muted),
+.studioLayout.studioLightCards .studioMain .premiumWorkspaceCard :is(h2,h3,strong,small,p,.muted),
+.studioLayout.studioLightCards .studioMain .premiumVoicePanel :is(h2,h3,strong,small,p,.muted),
+.studioLayout.studioLightCards .studioMain .compactCharacterCard :is(h2,h3,strong,small,p,.muted){color:#192337}
+.studioLayout.studioLightCards .studioMain .panel :is(input,textarea,select),
+.studioLayout.studioLightCards .studioMain .compactTabContent :is(input,textarea,select){color:#f4f7ff}
+.studioLayout.studioLightCards .studioMain .studioPaletteEditor :is(h2,h3,strong,small,p,.muted){color:#f4f7ff}
