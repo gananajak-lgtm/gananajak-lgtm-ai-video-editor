@@ -105,6 +105,31 @@ export async function saveStudioCharacterVoices(projectId: string, voices: Recor
   finally { if (voiceWriteQueues.get(projectId) === pending) voiceWriteQueues.delete(projectId); }
 }
 
+// Apply a single-character change inside the same per-project write queue.
+// This avoids lost updates when different screens edit different characters.
+export async function patchStudioCharacterVoice(projectId: string, character: string, voiceId: string | null): Promise<Record<string, string>> {
+  if (typeof character !== "string" || !character.trim() || character.length > 150 ||
+      (voiceId !== null && (typeof voiceId !== "string" || voiceId.length > 250))) {
+    throw new Error("Invalid character voice entry");
+  }
+  const previous = voiceWriteQueues.get(projectId) ?? Promise.resolve();
+  let updated: Record<string, string> = {};
+  const pending = previous.catch(() => {}).then(async () => {
+    const latest = await loadStudioCharacterVoices(projectId);
+    updated = { ...latest };
+    if (voiceId === null) delete updated[character];
+    else updated[character] = voiceId;
+    await writeStudioCharacterVoices(projectId, updated);
+  });
+  voiceWriteQueues.set(projectId, pending);
+  try {
+    await pending;
+    return updated;
+  } finally {
+    if (voiceWriteQueues.get(projectId) === pending) voiceWriteQueues.delete(projectId);
+  }
+}
+
 async function writeStudioCharacterVoices(projectId: string, voices: Record<string, string>): Promise<void> {
   if (!voices || typeof voices !== "object" || Array.isArray(voices)) throw new Error("Invalid character voice library");
   const entries = Object.entries(voices);
