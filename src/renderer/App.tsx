@@ -549,12 +549,16 @@ export default function App() {
   };
   useEffect(() => { void refreshStudioProjects().catch(e => setError(String(e))); }, []);
   const addStudioProject = async () => {
-    if (!studioNewTitle.trim() || studioBusy) return;
+    if (!studioNewTitle.trim() || studioBusy || studioScriptBusy) return;
+    if (studioScriptDirty && !window.confirm("บท EP ปัจจุบันยังไม่ได้บันทึก ต้องการสร้างโปรเจกต์ใหม่และทิ้งการแก้ไขหรือไม่?")) return;
     setStudioBusy(true);
     try {
       const created = await window.videoEditor.createStudioProject(studioNewTitle);
       setStudioNewTitle("");
       await refreshStudioProjects();
+      setStudioEpisodeId(null);
+      setStudioScript("");
+      setStudioSavedScript("");
       setStudioSelectedId(created.id);
     } catch(e) { setError(String(e)); }
     finally { setStudioBusy(false); }
