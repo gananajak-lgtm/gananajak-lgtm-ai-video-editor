@@ -82,3 +82,32 @@ export function voicePlanSummary(plan: VoiceProductionPlan) {
     estimatedCharacters: plan.jobs.filter(job => job.state === "ready").reduce((sum, job) => sum + job.text.length, 0)
   };
 }
+
+
+/**
+ * Validate an offline queue before any future paid generation step.
+ * Importing or validating a plan never calls ElevenLabs.
+ */
+export function validateVoiceProductionPlan(plan: VoiceProductionPlan): string[] {
+  const errors: string[] = [];
+  if (plan.schemaVersion !== 1 || plan.provider !== "elevenlabs" || plan.requiresExplicitApproval !== true) {
+    errors.push("รูปแบบคิวสร้างเสียงไม่ถูกต้องหรือไม่มีข้อกำหนดการอนุมัติ");
+  }
+  if (!plan.workspaceId?.trim()) errors.push("ยังไม่ได้เลือก ElevenLabs Workspace");
+  if (!plan.modelId?.trim()) errors.push("ยังไม่ได้ระบุโมเดลเสียง");
+  if (!Array.isArray(plan.jobs) || plan.jobs.length > 10000) {
+    errors.push("จำนวนงานสร้างเสียงไม่ถูกต้อง");
+    return errors;
+  }
+  const seen = new Set<string>();
+  for (const job of plan.jobs) {
+    if (!job.id || seen.has(job.id)) errors.push("พบรหัสงานซ้ำหรือว่าง");
+    seen.add(job.id);
+    if (job.workspaceId !== plan.workspaceId || job.modelId !== plan.modelId) errors.push(`งาน ${job.id} ใช้ Workspace หรือโมเดลไม่ตรงกับคิว`);
+    if (job.state === "blocked" || !job.voiceId?.trim() || !job.text.trim()) errors.push(`งาน ${job.id} ยังไม่พร้อมสร้างเสียง`);
+    if (job.fingerprint !== JSON.stringify([job.text.trim(), job.emotion.trim(), job.voiceId?.trim() || "", job.workspaceId?.trim() || "", job.modelId.trim()])) {
+      errors.push(`งาน ${job.id} มีข้อมูลเปลี่ยนจากรหัสตรวจสอบ`);
+    }
+  }
+  return errors;
+}
