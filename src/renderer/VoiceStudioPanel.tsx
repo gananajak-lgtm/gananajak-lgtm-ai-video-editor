@@ -75,6 +75,7 @@ export default function VoiceStudioPanel({ projectId }: { projectId?: string | n
     return () => { revision++; window.removeEventListener("character-voices-updated", refresh); };
   }, [activeProjectId]);
   const [savingProjectVoice, setSavingProjectVoice] = useState(false);
+  useEffect(() => { setSavingProjectVoice(false); }, [activeProjectId]);
   const saveProjectSpeakerVoice = async (speaker: string, voiceId: string) => {
     if (!activeProjectId || !projectVoicesReady || savingProjectVoice) return;
     setSavingProjectVoice(true);
