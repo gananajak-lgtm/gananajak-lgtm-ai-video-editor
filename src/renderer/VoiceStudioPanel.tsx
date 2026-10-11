@@ -71,7 +71,7 @@ export default function VoiceStudioPanel({ projectId }: { projectId?: string | n
           setConfirmed(false);
         })
         .catch(() => {
-          if (projectIdentity.current === activeProjectId && currentRevision === revision)
+          if (projectIdentity.current === activeProjectId && currentRevision === revision && voiceLoadRevision.current === loadRevision)
             setWorkspaceMessage("รีเฟรชคลังเสียงของโปรเจกต์ไม่สำเร็จ");
         });
     };
