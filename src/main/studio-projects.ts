@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { hasPlausibleMp3Header } from "./studio-mp3-header";
+import { isDecodableMp3 } from "./studio-mp3-decode";
 
 export type StudioEpisode = { id: string; title: string; folder: string; createdAt: string };
 export type StudioProject = { id: string; title: string; folder: string; createdAt: string; episodes: StudioEpisode[] };
@@ -183,6 +184,7 @@ export async function findReusableStudioEpisodeAudio(
     } finally {
       await file.close();
     }
+    if (!(await isDecodableMp3(realFile))) return null;
     return realFile;
   } catch (error) {
     if (["ENOENT", "ENOTDIR", "EACCES"].includes((error as NodeJS.ErrnoException).code ?? "")) return null;
