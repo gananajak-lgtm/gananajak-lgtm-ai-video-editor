@@ -166,10 +166,30 @@ export async function findReusableStudioEpisodeAudio(
   const audioRoot = path.resolve(episode.folder, "audio");
   const candidate = path.resolve(audioRoot, relativePath);
   if (!candidate.startsWith(audioRoot + path.sep) || path.extname(candidate).toLowerCase() !== ".mp3") return null;
-  const { realpath, stat } = await import("node:fs/promises");
+  const { realpath, stat, open } = await import("node:fs/promises");
   try {
     const [realRoot, realFile, details] = await Promise.all([realpath(audioRoot), realpath(candidate), stat(candidate)]);
-    if (!realFile.startsWith(realRoot + path.sep) || !details.isFile() || details.size === 0) return null;
+    if (!realFile.startsWith(realRoot + path.sep) || !details.isFile() || details.size < 4) return null;
+    // Reject empty or obviously corrupt files; an extension alone is not proof of MP3 data.
+    // Accept an ID3v2 header or a valid MPEG audio frame sync/header.
+    const file = await open(realFile, "r");
+    let header: Buffer;
+    try {
+      header = Buffer.alloc(10);
+      const { bytesRead } = await file.read(header, 0, header.length, 0);
+      if (bytesRead < 4) return null;
+      const id3 = bytesRead >= 10 && header.toString("ascii", 0, 3) === "ID3" &&
+        header[3] !== 0xff && header[4] !== 0xff &&
+        [6, 7, 8, 9].every(index => (header[index] & 0x80) === 0);
+      const mpeg = header[0] === 0xff && (header[1] & 0xe0) === 0xe0 &&
+        ((header[1] >> 3) & 0x03) !== 0x01 &&
+        ((header[1] >> 1) & 0x03) !== 0x00 &&
+        ((header[2] >> 4) & 0x0f) !== 0x0f &&
+        ((header[2] >> 2) & 0x03) !== 0x03;
+      if (!id3 && !mpeg) return null;
+    } finally {
+      await file.close();
+    }
     return realFile;
   } catch (error) {
     if (["ENOENT", "ENOTDIR", "EACCES"].includes((error as NodeJS.ErrnoException).code ?? "")) return null;
