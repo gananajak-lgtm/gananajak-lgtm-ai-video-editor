@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { VoiceLine } from "./novel-voice-parser";
-import { buildVoiceProductionPlan, prepareVoiceGeneration, reusableVoiceCache, voiceFingerprint, voicePlanSummary, validateVoiceProductionPlan } from "./voice-production-plan";
+import { authorizeVoiceGeneration, buildVoiceProductionPlan, prepareVoiceGeneration, reusableVoiceCache, voiceApprovalFingerprint, voiceFingerprint, voicePlanSummary, validateVoiceProductionPlan } from "./voice-production-plan";
 
 const line: VoiceLine = { id: "line-1", kind: "dialogue", speaker: "สิงห์", text: "หยุดก่อน", emotion: "กระซิบ", needsReview: false };
 const workspace = "workspace-A";
@@ -117,4 +117,34 @@ test("preflight with all cached lines needs no paid generation", () => {
   assert.equal(preflight.estimatedCharacters, 0);
   assert.equal(preflight.reused.length, 1);
   assert.deepEqual(preflight.errors, []);
+});
+
+test("paid action requires explicit authorization for the exact acknowledged queue", () => {
+  const result = buildVoiceProductionPlan("ตอน 1", [line], { [line.speaker]: voice }, {}, workspace);
+  const acknowledgement = voiceApprovalFingerprint(result);
+  const previewOnly = authorizeVoiceGeneration(result, acknowledgement, false);
+  assert.equal(previewOnly.canGenerate, false);
+  assert.ok(previewOnly.errors.length > 0);
+  const authorized = authorizeVoiceGeneration(result, acknowledgement, true);
+  assert.equal(authorized.canGenerate, true);
+  assert.equal(authorized.pending.length, 1);
+});
+
+test("editing script or changing voice invalidates prior paid acknowledgement", () => {
+  const original = buildVoiceProductionPlan("ตอน 1", [line], { [line.speaker]: voice }, {}, workspace);
+  const acknowledgement = voiceApprovalFingerprint(original);
+  const changedText = buildVoiceProductionPlan("ตอน 1", [{ ...line, text: "อย่าเข้ามา" }], { [line.speaker]: voice }, {}, workspace);
+  const changedVoice = buildVoiceProductionPlan("ตอน 1", [line], { [line.speaker]: "voice-B" }, {}, workspace);
+  for (const changed of [changedText, changedVoice]) {
+    const attempt = authorizeVoiceGeneration(changed, acknowledgement, true);
+    assert.equal(attempt.canGenerate, false);
+    assert.ok(attempt.errors.some(error => error.includes("เปลี่ยน")));
+  }
+});
+
+test("an invalid queue cannot be authorized even with an acknowledgement", () => {
+  const result = buildVoiceProductionPlan("ตอน 1", [line], {}, {}, workspace);
+  const attempt = authorizeVoiceGeneration(result, voiceApprovalFingerprint(result), true);
+  assert.equal(attempt.canGenerate, false);
+  assert.deepEqual(attempt.pending, []);
 });
