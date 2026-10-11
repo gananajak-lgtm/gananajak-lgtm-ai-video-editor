@@ -59,7 +59,7 @@ export default function CharacterVoiceLibrary({ projectId }: { projectId?: strin
       setReadyProjectId(projectId);
     }).catch(error => {
       if (active && voiceDataRevision.current === loadRevision && currentProjectId.current === projectId) setMessage("โหลดคลังเสียงโปรเจกต์ไม่สำเร็จ: " + String(error));
-    }).finally(() => { if (active) setProjectLoading(false); });
+    }).finally(() => { if (active && voiceDataRevision.current === loadRevision && currentProjectId.current === projectId) setProjectLoading(false); });
     return () => { active = false; };
   }, [projectId, projectVersion]);
   useEffect(() => {
