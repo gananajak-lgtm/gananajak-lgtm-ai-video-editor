@@ -4,11 +4,12 @@ import ffmpegPath from "ffmpeg-static";
 /** Decode the entire MP3 stream before accepting a cached asset. No paid API calls. */
 export async function isDecodableMp3(filePath: string): Promise<boolean> {
   if (typeof ffmpegPath !== "string" || !ffmpegPath) return false;
+  const executable: string = ffmpegPath;
   return new Promise(resolve => {
-    const child = spawn(ffmpegPath, [
+    const child = spawn(executable, [
       "-hide_banner", "-nostdin", "-v", "error", "-xerror",
       "-i", filePath, "-map", "0:a:0", "-f", "null", "-"
-    ], { stdio: "ignore", windowsHide: true });
+    ], { stdio: ["ignore", "ignore", "ignore"] as const, windowsHide: true });
     let settled = false;
     const finish = (valid: boolean) => {
       if (settled) return;
