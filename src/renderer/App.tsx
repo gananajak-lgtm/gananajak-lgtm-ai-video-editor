@@ -55,6 +55,16 @@ export default function App() {
   const [transcript, setTranscript] = useState<TranscriptResult | null>(null);
   const [editingPlan, setEditingPlan] = useState<EditingBrainPlan | null>(null);
   const [audioLayers, setAudioLayers] = useState<AudioLayer[]>([]);
+  const [studioVoiceFiles, setStudioVoiceFiles] = useState<Record<string, { fingerprint: string; outputPath: string }>>({});
+  useEffect(() => {
+    let active = true;
+    setStudioVoiceFiles({});
+    if (!studioSelectedId || !studioEpisodeId) return () => { active = false; };
+    const refresh = () => { void window.videoEditor.loadStudioEpisodeVoiceAudio(studioSelectedId, studioEpisodeId).then(entries => { if (active) setStudioVoiceFiles(entries); }).catch(() => { if (active) setStudioVoiceFiles({}); }); };
+    refresh();
+    window.addEventListener("studio-voice-audio-updated", refresh);
+    return () => { active = false; window.removeEventListener("studio-voice-audio-updated", refresh); };
+  }, [studioSelectedId, studioEpisodeId]);
   const [aiSfxEnabled, setAiSfxEnabled] = useState(false);
   const [contentProject, setContentProject] = useState<ContentProject | null>(null);
   const [aiStatus, setAiStatus] = useState<AiSettingsStatus>({
@@ -737,6 +747,7 @@ export default function App() {
   <div className="studioTimelineRuler"><span>00:00</span><span>{timeline ? formatTime(timeline.duration / 4) : "00:15"}</span><span>{timeline ? formatTime(timeline.duration / 2) : "00:30"}</span><span>{timeline ? formatTime(timeline.duration * .75) : "00:45"}</span><span>{timeline ? formatTime(timeline.duration) : "01:00"}</span></div>
   <div className="studioTimelineTrack"><strong>▧ ภาพ</strong><div className="studioTimelineLane">{timeline?.clips.length ? timeline.clips.map((clip, index) => <span key={clip.id} className="studioTimelineClip" style={{ flexGrow: Math.max(.6, clip.duration) }} title={`${fileName(clip.imagePath)} · ${clip.duration.toFixed(1)} วินาที`}>{index + 1}. {fileName(clip.imagePath)}</span>) : <em>เพิ่มภาพและสร้างไทม์ไลน์เพื่อเริ่มตัดต่อ</em>}</div></div>
   <div className="studioTimelineTrack"><strong>♫ เสียงพากย์</strong><div className="studioTimelineLane">{narration ? <span className="studioTimelineAudio">{fileName(narration)}</span> : <em>ยังไม่ได้เลือกไฟล์เสียงพากย์</em>}</div></div>
+  <div className="studioTimelineTrack"><strong>🎙 เสียงตัวละคร</strong><div className="studioTimelineLane">{Object.keys(studioVoiceFiles).length ? <span className="studioTimelineAudio" title={Object.values(studioVoiceFiles).map(entry => entry.outputPath).join("\n")}>มี MP3 ที่ตรวจสอบแล้ว {Object.keys(studioVoiceFiles).length} บรรทัด · รอจัดวางตามเวลา</span> : <em>ยังไม่มี MP3 ของตัวละครในตอนนี้</em>}</div></div>
   <div className="studioTimelineTrack"><strong>▤ คำบรรยาย</strong><div className="studioTimelineLane">{timeline?.subtitles.length ? timeline.subtitles.map((cue, index) => <span key={cue.id} className="studioTimelineSubtitle" title={cue.text}>{index + 1}</span>) : <em>ยังไม่มีคำบรรยาย</em>}</div></div>
   <p className="studioTimelineHint">นี่คือภาพรวมไทม์ไลน์ · เมื่อสร้างไทม์ไลน์แล้ว ใช้แผงแก้ไขช็อตด้านล่างเพื่อลากสลับคลิปและปรับจุดตัด</p>
 </section>

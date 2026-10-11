@@ -358,7 +358,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
           setBatchRunStatus({ done, total: pending.length, failed });
           try {
             const entries = await window.videoEditor.loadStudioEpisodeVoiceAudio(activeProjectId, activeEpisodeId);
-            if (projectIdentity.current === activeProjectId && activeEpisodeIdentityRef.current === currentAudioIdentity) setAudioCache(entries);
+            if (projectIdentity.current === activeProjectId && activeEpisodeIdentityRef.current === currentAudioIdentity) { setAudioCache(entries); window.dispatchEvent(new Event("studio-voice-audio-updated")); }
           } catch { /* Keep the generation result; reload on reopening the episode. */ }
         }
       }
