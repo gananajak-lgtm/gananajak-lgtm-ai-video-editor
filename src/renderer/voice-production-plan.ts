@@ -188,3 +188,29 @@ export function prepareVoiceGeneration(plan: VoiceProductionPlan): VoiceGenerati
     estimatedCharacters: pending.reduce((sum, job) => sum + job.text.length, 0)
   };
 }
+
+/**
+ * Re-check the exact queue at the moment a future paid action is requested.
+ * An acknowledgement alone is not authorization to call a paid provider.
+ */
+export function authorizeVoiceGeneration(
+  plan: VoiceProductionPlan,
+  acknowledgedFingerprint: string | null,
+  explicitPaidAction: boolean
+): VoiceGenerationPreflight {
+  const preflight = prepareVoiceGeneration(plan);
+  if (!preflight.canGenerate || preflight.errors.length) return preflight;
+  if (!explicitPaidAction) {
+    return { ...preflight, canGenerate: false, errors: ["ยังไม่ได้สั่งสร้างเสียงแบบใช้เครดิต"] };
+  }
+  const currentFingerprint = JSON.stringify(preflight.pending.map(job => [job.lineId, job.fingerprint]));
+  if (!acknowledgedFingerprint || acknowledgedFingerprint !== currentFingerprint) {
+    return { ...preflight, canGenerate: false, errors: ["คิวเสียงเปลี่ยนหลังยืนยัน กรุณาตรวจสอบและอนุมัติอีกครั้ง"] };
+  }
+  return preflight;
+}
+
+export function voiceApprovalFingerprint(plan: VoiceProductionPlan): string {
+  const preflight = prepareVoiceGeneration(plan);
+  return JSON.stringify(preflight.pending.map(job => [job.lineId, job.fingerprint]));
+}
