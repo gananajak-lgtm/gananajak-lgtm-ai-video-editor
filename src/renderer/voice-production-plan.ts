@@ -215,6 +215,39 @@ export function voiceApprovalFingerprint(plan: VoiceProductionPlan): string {
   return JSON.stringify(preflight.pending.map(job => [job.lineId, job.fingerprint]));
 }
 
+/**
+ * Deterministic offline transitions for a line-by-line synthesis queue.
+ * The eventual main-process runner must persist verified MP3 files before
+ * marking a job completed; these helpers never perform paid API calls.
+ */
+export function transitionVoiceJob(
+  plan: VoiceProductionPlan,
+  lineId: string,
+  nextState: "queued" | "generating" | "completed" | "failed",
+  outputPath?: string
+): VoiceProductionPlan {
+  const errors = validateVoiceProductionPlan(plan);
+  if (errors.length) throw new Error(errors.join("; "));
+  const index = plan.jobs.findIndex(job => job.lineId === lineId);
+  if (index < 0) throw new Error("ไม่พบบรรทัดเสียงในคิว");
+  const job = plan.jobs[index];
+  const allowed: Record<VoiceJobState, VoiceJobState[]> = {
+    blocked: [], ready: ["queued"], queued: ["generating", "failed"],
+    generating: ["completed", "failed"], completed: [], failed: ["queued"]
+  };
+  if (!allowed[job.state].includes(nextState)) throw new Error("ไม่สามารถเปลี่ยนสถานะคิวเสียงตามลำดับนี้");
+  if (nextState === "completed" && (typeof outputPath !== "string" || !outputPath.trim())) {
+    throw new Error("ต้องมีไฟล์ MP3 ที่ตรวจสอบแล้วก่อนปิดงาน");
+  }
+  if (nextState !== "completed" && outputPath !== undefined) throw new Error("ไฟล์เสียงใช้ได้เฉพาะงานที่สำเร็จ");
+  const updated: VoiceJob = {
+    ...job,
+    state: nextState,
+    ...(nextState === "completed" ? { outputPath } : {})
+  };
+  return { ...plan, jobs: plan.jobs.map((item, i) => i === index ? updated : item) };
+}
+
 /** Offline progress projection for a future per-line synthesis runner. */
 export type VoiceBatchProgress = {
   total: number;
