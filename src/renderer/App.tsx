@@ -55,16 +55,6 @@ export default function App() {
   const [transcript, setTranscript] = useState<TranscriptResult | null>(null);
   const [editingPlan, setEditingPlan] = useState<EditingBrainPlan | null>(null);
   const [audioLayers, setAudioLayers] = useState<AudioLayer[]>([]);
-  const [studioVoiceFiles, setStudioVoiceFiles] = useState<Record<string, { fingerprint: string; outputPath: string }>>({});
-  useEffect(() => {
-    let active = true;
-    setStudioVoiceFiles({});
-    if (!studioSelectedId || !studioEpisodeId) return () => { active = false; };
-    const refresh = () => { void window.videoEditor.loadStudioEpisodeVoiceAudio(studioSelectedId, studioEpisodeId).then(entries => { if (active) setStudioVoiceFiles(entries); }).catch(() => { if (active) setStudioVoiceFiles({}); }); };
-    refresh();
-    window.addEventListener("studio-voice-audio-updated", refresh);
-    return () => { active = false; window.removeEventListener("studio-voice-audio-updated", refresh); };
-  }, [studioSelectedId, studioEpisodeId]);
   const [aiSfxEnabled, setAiSfxEnabled] = useState(false);
   const [contentProject, setContentProject] = useState<ContentProject | null>(null);
   const [aiStatus, setAiStatus] = useState<AiSettingsStatus>({
@@ -506,6 +496,16 @@ export default function App() {
   const [studioNewEpisode, setStudioNewEpisode] = useState("");
   const [studioBusy, setStudioBusy] = useState(false);
   const [studioEpisodeId, setStudioEpisodeId] = useState<string | null>(null);
+  const [studioVoiceFiles, setStudioVoiceFiles] = useState<Record<string, { fingerprint: string; outputPath: string }>>({});
+  useEffect(() => {
+    let active = true;
+    setStudioVoiceFiles({});
+    if (!studioSelectedId || !studioEpisodeId) return () => { active = false; };
+    const refresh = () => { void window.videoEditor.loadStudioEpisodeVoiceAudio(studioSelectedId, studioEpisodeId).then(entries => { if (active) setStudioVoiceFiles(entries); }).catch(() => { if (active) setStudioVoiceFiles({}); }); };
+    refresh();
+    window.addEventListener("studio-voice-audio-updated", refresh);
+    return () => { active = false; window.removeEventListener("studio-voice-audio-updated", refresh); };
+  }, [studioSelectedId, studioEpisodeId]);
   const [studioScript, setStudioScript] = useState("");
   const [studioSavedScript, setStudioSavedScript] = useState("");
   const [studioScriptBusy, setStudioScriptBusy] = useState(false);
