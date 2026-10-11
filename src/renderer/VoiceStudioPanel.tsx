@@ -87,7 +87,7 @@ export default function VoiceStudioPanel({ projectId }: { projectId?: string | n
       }
     } catch (error) {
       if (projectIdentity.current === activeProjectId) setWorkspaceMessage("บันทึกเสียงตัวละครของโปรเจกต์ไม่สำเร็จ: " + String(error));
-    } finally { setSavingProjectVoice(false); }
+    } finally { if (projectIdentity.current === activeProjectId) setSavingProjectVoice(false); }
   };
   // A project must never inherit voice assignments from another workspace or project.
   const resolvedVoiceIds = activeProjectId ? (projectVoicesReady ? projectVoiceIds : {}) : voiceIds;
