@@ -9,6 +9,7 @@ export function readCharacterVoiceLibrary(): Record<string, string> {
   } catch { return {}; }
 }
 export default function CharacterVoiceLibrary({ projectId }: { projectId?: string | null }) {
+  const voiceDataRevision = useRef(0);
   const currentProjectId = useRef(projectId);
   currentProjectId.current = projectId;
   const [projectLoading, setProjectLoading] = useState(false);
@@ -41,6 +42,7 @@ export default function CharacterVoiceLibrary({ projectId }: { projectId?: strin
   };
   useEffect(() => {
     let active = true;
+    const loadRevision = ++voiceDataRevision.current;
     setProjectReady(false);
     setProjectLoading(Boolean(projectId));
     setSelectedCharacter(null);
@@ -51,7 +53,7 @@ export default function CharacterVoiceLibrary({ projectId }: { projectId?: strin
       return () => { active = false; };
     }
     void window.videoEditor.loadStudioCharacterVoices(projectId).then(loaded => {
-      if (!active) return;
+      if (!active || voiceDataRevision.current !== loadRevision) return;
       setEntries(loaded);
       setProjectReady(true);
     }).catch(error => {
@@ -65,8 +67,9 @@ export default function CharacterVoiceLibrary({ projectId }: { projectId?: strin
     let revision = 0;
     const refresh = () => {
       const request = ++revision;
+      const loadRevision = ++voiceDataRevision.current;
       void window.videoEditor.loadStudioCharacterVoices(projectId).then(latest => {
-        if (!active || request !== revision || currentProjectId.current !== projectId) return;
+        if (!active || request !== revision || currentProjectId.current !== projectId || voiceDataRevision.current !== loadRevision) return;
         setEntries(latest);
       }).catch(error => {
         if (active && request === revision && currentProjectId.current === projectId)
@@ -83,6 +86,7 @@ export default function CharacterVoiceLibrary({ projectId }: { projectId?: strin
   const updateEntries = async (nextInput: Record<string, string>) => {
     let next = nextInput;
     if (!projectReady || projectLoading) return false;
+    ++voiceDataRevision.current;
     setProjectLoading(true);
     try {
       if (projectId) {
