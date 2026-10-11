@@ -176,3 +176,70 @@ export async function findReusableStudioEpisodeAudio(
     throw error;
   }
 }
+
+export type StudioVoiceAudioEntry = {
+  fingerprint: string;
+  outputPath: string;
+};
+
+/** Read the per-episode audio manifest. Paths are relative to the episode audio folder. */
+export async function loadStudioEpisodeVoiceAudio(
+  projectId: string,
+  episodeId: string
+): Promise<Record<string, StudioVoiceAudioEntry>> {
+  const project = (await readIndex()).find(item => item.id === projectId);
+  const episode = project?.episodes.find(item => item.id === episodeId);
+  if (!episode) throw new Error("Episode not found");
+  const manifest = path.join(episode.folder, "audio", "voice-manifest.json");
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(await readFile(manifest, "utf8"));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return {};
+    throw error;
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Invalid audio manifest");
+  const entries = Object.entries(parsed);
+  if (entries.length > 10000) throw new Error("Audio manifest too large");
+  const result: Record<string, StudioVoiceAudioEntry> = Object.create(null);
+  for (const [lineId, value] of entries) {
+    if (!lineId || lineId.length > 250 || !value || typeof value !== "object" || Array.isArray(value)) continue;
+    const item = value as Partial<StudioVoiceAudioEntry>;
+    if (typeof item.fingerprint !== "string" || item.fingerprint.length > 10000 ||
+        typeof item.outputPath !== "string" || item.outputPath.length > 500) continue;
+    if (await findReusableStudioEpisodeAudio(projectId, episodeId, item.outputPath)) {
+      result[lineId] = { fingerprint: item.fingerprint, outputPath: item.outputPath };
+    }
+  }
+  return result;
+}
+
+/**
+ * Save verified audio metadata atomically; a missing or external MP3 is never
+ * accepted as a reusable asset. Does not generate audio or spend credits.
+ */
+export async function saveStudioEpisodeVoiceAudio(
+  projectId: string,
+  episodeId: string,
+  entries: Record<string, StudioVoiceAudioEntry>
+): Promise<void> {
+  if (!entries || typeof entries !== "object" || Array.isArray(entries) || Object.keys(entries).length > 10000) {
+    throw new Error("Invalid audio manifest");
+  }
+  const project = (await readIndex()).find(item => item.id === projectId);
+  const episode = project?.episodes.find(item => item.id === episodeId);
+  if (!episode) throw new Error("Episode not found");
+  for (const [lineId, item] of Object.entries(entries)) {
+    if (!lineId || lineId.length > 250 || !item || typeof item.fingerprint !== "string" ||
+        item.fingerprint.length > 10000 || typeof item.outputPath !== "string" ||
+        item.outputPath.length > 500 || !(await findReusableStudioEpisodeAudio(projectId, episodeId, item.outputPath))) {
+      throw new Error("Audio manifest contains missing or invalid MP3");
+    }
+  }
+  const directory = path.join(episode.folder, "audio");
+  await mkdir(directory, { recursive: true });
+  const temp = path.join(directory, "voice-manifest-" + randomUUID() + ".tmp");
+  await writeFile(temp, JSON.stringify(entries, null, 2), { flag: "wx" });
+  const { rename } = await import("node:fs/promises");
+  await rename(temp, path.join(directory, "voice-manifest.json"));
+}
