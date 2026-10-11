@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { VoiceLine } from "./novel-voice-parser";
-import { authorizeVoiceGeneration, buildVoiceProductionPlan, prepareVoiceGeneration, reusableVoiceCache, voiceApprovalFingerprint, voiceBatchProgress, voiceFingerprint, voicePlanSummary, validateVoiceProductionPlan } from "./voice-production-plan";
+import { authorizeVoiceGeneration, buildVoiceProductionPlan, prepareVoiceGeneration, reusableVoiceCache, voiceApprovalFingerprint, voiceBatchProgress, transitionVoiceJob, voiceFingerprint, voicePlanSummary, validateVoiceProductionPlan } from "./voice-production-plan";
 
 const line: VoiceLine = { id: "line-1", kind: "dialogue", speaker: "สิงห์", text: "หยุดก่อน", emotion: "กระซิบ", needsReview: false };
 const workspace = "workspace-A";
@@ -167,4 +167,31 @@ test("batch progress handles empty and fully completed queues", () => {
   const cached = plan(line);
   assert.equal(voiceBatchProgress(cached).percent, 100);
   assert.equal(voiceBatchProgress(cached).remaining, 0);
+});
+
+test("per-line synthesis queue follows ready queued generating completed states", () => {
+  const original = buildVoiceProductionPlan("ตอน 1", [line], { [line.speaker]: voice }, {}, workspace);
+  const queued = transitionVoiceJob(original, line.id, "queued");
+  assert.equal(original.jobs[0].state, "ready");
+  assert.equal(queued.jobs[0].state, "queued");
+  const generating = transitionVoiceJob(queued, line.id, "generating");
+  assert.equal(generating.jobs[0].state, "generating");
+  assert.throws(() => transitionVoiceJob(generating, line.id, "completed"), /MP3/);
+  const completed = transitionVoiceJob(generating, line.id, "completed", "dialogue/line-1.mp3");
+  assert.equal(completed.jobs[0].state, "completed");
+  assert.equal(completed.jobs[0].outputPath, "dialogue/line-1.mp3");
+  assert.deepEqual(validateVoiceProductionPlan(completed), []);
+  assert.equal(voiceBatchProgress(completed).percent, 100);
+});
+
+test("failed voice jobs may be retried but cannot skip synthesis", () => {
+  const original = buildVoiceProductionPlan("ตอน 1", [line], { [line.speaker]: voice }, {}, workspace);
+  assert.throws(() => transitionVoiceJob(original, line.id, "completed", "dialogue/line-1.mp3"), /สถานะ/);
+  assert.throws(() => transitionVoiceJob(original, "missing", "queued"), /ไม่พบ/);
+  const queued = transitionVoiceJob(original, line.id, "queued");
+  const failed = transitionVoiceJob(queued, line.id, "failed");
+  assert.equal(failed.jobs[0].state, "failed");
+  const retry = transitionVoiceJob(failed, line.id, "queued");
+  assert.equal(retry.jobs[0].state, "queued");
+  assert.throws(() => transitionVoiceJob(retry, line.id, "completed", "dialogue/line-1.mp3"), /สถานะ/);
 });
