@@ -9,6 +9,8 @@ export function readCharacterVoiceLibrary(): Record<string, string> {
   } catch { return {}; }
 }
 export default function CharacterVoiceLibrary({ projectId }: { projectId?: string | null }) {
+  const currentProjectId = useRef(projectId);
+  currentProjectId.current = projectId;
   const [projectLoading, setProjectLoading] = useState(false);
   const [projectReady, setProjectReady] = useState(false);
   const [projectVersion, setProjectVersion] = useState(0);
@@ -63,11 +65,13 @@ export default function CharacterVoiceLibrary({ projectId }: { projectId?: strin
     try {
       if (projectId) await window.videoEditor.saveStudioCharacterVoices(projectId, next);
       else localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      setEntries(next);
-      window.dispatchEvent(new Event("character-voices-updated"));
+      if (currentProjectId.current === projectId) {
+        setEntries(next);
+        window.dispatchEvent(new Event("character-voices-updated"));
+      }
     } catch (error) {
-      setMessage("บันทึกคลังเสียงไม่สำเร็จ: " + String(error));
-    } finally { setProjectLoading(false); }
+      if (currentProjectId.current === projectId) setMessage("บันทึกคลังเสียงไม่สำเร็จ: " + String(error));
+    } finally { if (currentProjectId.current === projectId) setProjectLoading(false); }
   };
   const loadVoices = async () => {
     stopPreview(); setLoading(true); setMessage("");
