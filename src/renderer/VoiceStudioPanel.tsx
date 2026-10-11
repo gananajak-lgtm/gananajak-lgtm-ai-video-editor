@@ -55,6 +55,25 @@ export default function VoiceStudioPanel({ projectId }: { projectId?: string | n
     }
     return () => { active = false; };
   }, [activeProjectId]);
+  useEffect(() => {
+    if (!activeProjectId) return;
+    let revision = 0;
+    const refresh = () => {
+      const currentRevision = ++revision;
+      void window.videoEditor.loadStudioCharacterVoices(activeProjectId)
+        .then(voices => {
+          if (projectIdentity.current !== activeProjectId || currentRevision !== revision) return;
+          setProjectVoiceIds(voices);
+          setConfirmed(false);
+        })
+        .catch(() => {
+          if (projectIdentity.current === activeProjectId && currentRevision === revision)
+            setWorkspaceMessage("รีเฟรชคลังเสียงของโปรเจกต์ไม่สำเร็จ");
+        });
+    };
+    window.addEventListener("character-voices-updated", refresh);
+    return () => { revision++; window.removeEventListener("character-voices-updated", refresh); };
+  }, [activeProjectId]);
   const [savingProjectVoice, setSavingProjectVoice] = useState(false);
   const saveProjectSpeakerVoice = async (speaker: string, voiceId: string) => {
     if (!activeProjectId || !projectVoicesReady || savingProjectVoice) return;
