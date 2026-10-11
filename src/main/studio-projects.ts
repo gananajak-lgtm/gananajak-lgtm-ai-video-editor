@@ -77,3 +77,35 @@ export async function saveStudioEpisodeScript(projectId: string, episodeId: stri
   const { rename } = await import("node:fs/promises");
   await rename(temp, path.join(directory, "source.txt"));
 }
+
+export async function loadStudioCharacterVoices(projectId: string): Promise<Record<string, string>> {
+  const project = (await readIndex()).find(item => item.id === projectId);
+  if (!project) throw new Error("Project not found");
+  const file = path.join(project.folder, "characters", "voice-library.json");
+  try {
+    const value: unknown = JSON.parse(await readFile(file, "utf8"));
+    if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid character voice library");
+    return Object.fromEntries(Object.entries(value).filter(([name, id]) =>
+      name.trim().length > 0 && name.length <= 150 && typeof id === "string" && id.length <= 250
+    )) as Record<string, string>;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return {};
+    throw error;
+  }
+}
+
+export async function saveStudioCharacterVoices(projectId: string, voices: Record<string, string>): Promise<void> {
+  if (!voices || typeof voices !== "object" || Array.isArray(voices)) throw new Error("Invalid character voice library");
+  const entries = Object.entries(voices);
+  if (entries.length > 1000 || entries.some(([name, id]) =>
+    !name.trim() || name.length > 150 || typeof id !== "string" || id.length > 250
+  )) throw new Error("Invalid character voice entry");
+  const project = (await readIndex()).find(item => item.id === projectId);
+  if (!project) throw new Error("Project not found");
+  const directory = path.join(project.folder, "characters");
+  await mkdir(directory, { recursive: true });
+  const temp = path.join(directory, "voice-library-" + randomUUID() + ".tmp");
+  await writeFile(temp, JSON.stringify(voices, null, 2), { flag: "wx" });
+  const { rename } = await import("node:fs/promises");
+  await rename(temp, path.join(directory, "voice-library.json"));
+}
