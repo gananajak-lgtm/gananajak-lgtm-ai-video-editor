@@ -2,6 +2,7 @@ import { app } from "electron";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
+import { hasPlausibleMp3Header } from "./studio-mp3-header";
 
 export type StudioEpisode = { id: string; title: string; folder: string; createdAt: string };
 export type StudioProject = { id: string; title: string; folder: string; createdAt: string; episodes: StudioEpisode[] };
@@ -178,15 +179,7 @@ export async function findReusableStudioEpisodeAudio(
       header = Buffer.alloc(10);
       const { bytesRead } = await file.read(header, 0, header.length, 0);
       if (bytesRead < 4) return null;
-      const id3 = bytesRead >= 10 && header.toString("ascii", 0, 3) === "ID3" &&
-        header[3] !== 0xff && header[4] !== 0xff &&
-        [6, 7, 8, 9].every(index => (header[index] & 0x80) === 0);
-      const mpeg = header[0] === 0xff && (header[1] & 0xe0) === 0xe0 &&
-        ((header[1] >> 3) & 0x03) !== 0x01 &&
-        ((header[1] >> 1) & 0x03) !== 0x00 &&
-        ((header[2] >> 4) & 0x0f) !== 0x0f &&
-        ((header[2] >> 2) & 0x03) !== 0x03;
-      if (!id3 && !mpeg) return null;
+      if (!hasPlausibleMp3Header(header.subarray(0, bytesRead))) return null;
     } finally {
       await file.close();
     }
