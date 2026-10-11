@@ -1,3 +1,4 @@
+import { scheduleDialogueClips } from "./dialogue-timeline";
 import { useEffect, useMemo, useState } from "react";
 import type { ContentProject } from "../shared/content-factory";
 import type { AudioLayer, AiSettingsStatus, EditingBrainPlan, FullEpisodeTestReport, ProjectDocument, ProjectLoadResult, ProjectRelinkResult, StudioProject, RenderProgress, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
@@ -523,15 +524,12 @@ export default function App() {
     });
     return () => { active = false; };
   }, [studioSelectedId, studioEpisodeId, studioVoiceFiles]);
-  const studioVoiceSchedule = Object.entries(studioVoiceFiles)
-    .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
-    .reduce<Array<{ lineId: string; path: string; start: number; end: number }>>((schedule, [lineId, entry]) => {
-      const duration = studioVoiceDurations[lineId];
-      if (!Number.isFinite(duration) || duration <= 0) return schedule;
-      const start = schedule.length ? schedule[schedule.length - 1].end : 0;
-      schedule.push({ lineId, path: entry.outputPath, start, end: start + duration });
-      return schedule;
-    }, []);
+  const studioVoiceSchedule = scheduleDialogueClips(
+    Object.entries(studioVoiceFiles)
+      .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
+      .filter(([lineId]) => Number.isFinite(studioVoiceDurations[lineId]) && studioVoiceDurations[lineId] > 0)
+      .map(([lineId, entry]) => ({ lineId, filePath: entry.outputPath, duration: studioVoiceDurations[lineId] }))
+  );
   const [studioScript, setStudioScript] = useState("");
   const [studioSavedScript, setStudioSavedScript] = useState("");
   const [studioScriptBusy, setStudioScriptBusy] = useState(false);
