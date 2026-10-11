@@ -119,7 +119,14 @@ export default function CharacterVoiceLibrary({ projectId }: { projectId?: strin
       }
       return currentProjectId.current === projectId && voiceDataRevision.current === saveRevision;
     } catch (error) {
-      if (currentProjectId.current === projectId && voiceDataRevision.current === saveRevision) setMessage("บันทึกคลังเสียงไม่สำเร็จ: " + String(error));
+      if (currentProjectId.current === projectId && voiceDataRevision.current === saveRevision) {
+        setMessage("บันทึกคลังเสียงไม่สำเร็จ: " + String(error));
+        if (projectId) {
+          // A partial multi-character patch may already be persisted; reload the authoritative map.
+          setReadyProjectId(undefined);
+          setProjectVersion(value => value + 1);
+        }
+      }
       return false;
     } finally { saveInFlight.current = false; if (currentProjectId.current === projectId && voiceDataRevision.current === saveRevision) setProjectLoading(false); }
   };
