@@ -654,7 +654,7 @@ export default function App() {
         onSave={saveProjectFile}
       />
 
-      <div className="compactTabContent" hidden={activeProductionTab !== "accounts" && activeProductionTab !== "voices"}><CharacterVoiceLibrary /></div>
+      <div className="compactTabContent" hidden={activeProductionTab !== "accounts" && activeProductionTab !== "voices"}><CharacterVoiceLibrary projectId={studioSelectedId} /></div>
 
 
       <section className="compactTabContent" hidden={activeProductionTab !== "script"} aria-label="ขั้นตอนที่ 1 ใส่บท แยกบท และเตรียมเสียง">
