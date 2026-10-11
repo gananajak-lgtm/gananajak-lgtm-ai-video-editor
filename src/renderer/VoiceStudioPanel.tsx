@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { parseNovelScript } from "./novel-voice-parser";
 import { readCharacterVoiceLibrary } from "./CharacterVoiceLibrary";
 import type { VoiceLine } from "./novel-voice-parser";
-import { buildVoiceProductionPlan, authorizeVoiceGeneration, prepareVoiceGeneration, reusableVoiceCache, voiceApprovalFingerprint, validateVoiceProductionPlan, voicePlanSummary } from "./voice-production-plan";
+import { buildVoiceProductionPlan, prepareVoiceGeneration, reusableVoiceCache, voiceApprovalFingerprint, validateVoiceProductionPlan, voicePlanSummary } from "./voice-production-plan";
 
 export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?: string | null; episodeId?: string | null }) {
   const activeProjectId = projectId ?? null;
@@ -269,7 +269,6 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
   const [acknowledgedQueue, setAcknowledgedQueue] = useState<string | null>(null);
   const currentQueueFingerprint = useMemo(() => voiceApprovalFingerprint(productionPlan), [productionPlan]);
   const creditApproval = acknowledgedQueue !== null && acknowledgedQueue === currentQueueFingerprint;
-  const paidActionPreflight = useMemo(() => authorizeVoiceGeneration(productionPlan, acknowledgedQueue, false), [productionPlan, acknowledgedQueue]);
   const [queuePreviewOpen, setQueuePreviewOpen] = useState(false);
   useEffect(() => { setAcknowledgedQueue(null); setQueuePreviewOpen(false); }, [productionPlan]);
   const approvalReady = projectVoicesReady && confirmed && !sourceIsStale &&
