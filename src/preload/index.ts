@@ -17,6 +17,8 @@ const api: DesktopApi = {
   listStudioProjects: () => ipcRenderer.invoke("studio:list-projects"),
   createStudioProject: (title) => ipcRenderer.invoke("studio:create-project", title),
   createStudioEpisode: (projectId, title) => ipcRenderer.invoke("studio:create-episode", projectId, title),
+  loadStudioEpisodeScript: (projectId, episodeId) => ipcRenderer.invoke("studio:load-episode-script", projectId, episodeId),
+  saveStudioEpisodeScript: (projectId, episodeId, script) => ipcRenderer.invoke("studio:save-episode-script", projectId, episodeId, script),
   openProject: () => ipcRenderer.invoke("project:open"),
   saveProject: (project, filePath) =>
     ipcRenderer.invoke("project:save", project, filePath),
