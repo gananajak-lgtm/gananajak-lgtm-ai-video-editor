@@ -94,7 +94,18 @@ export async function loadStudioCharacterVoices(projectId: string): Promise<Reco
   }
 }
 
+// Serialize writes per project so overlapping saves cannot rename files out of order.
+const voiceWriteQueues = new Map<string, Promise<void>>();
+
 export async function saveStudioCharacterVoices(projectId: string, voices: Record<string, string>): Promise<void> {
+  const previous = voiceWriteQueues.get(projectId) ?? Promise.resolve();
+  const pending = previous.catch(() => {}).then(() => writeStudioCharacterVoices(projectId, voices));
+  voiceWriteQueues.set(projectId, pending);
+  try { await pending; }
+  finally { if (voiceWriteQueues.get(projectId) === pending) voiceWriteQueues.delete(projectId); }
+}
+
+async function writeStudioCharacterVoices(projectId: string, voices: Record<string, string>): Promise<void> {
   if (!voices || typeof voices !== "object" || Array.isArray(voices)) throw new Error("Invalid character voice library");
   const entries = Object.entries(voices);
   if (entries.length > 1000 || entries.some(([name, id]) =>
