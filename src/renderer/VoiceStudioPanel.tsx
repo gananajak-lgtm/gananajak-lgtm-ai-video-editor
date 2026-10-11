@@ -79,9 +79,7 @@ export default function VoiceStudioPanel({ projectId }: { projectId?: string | n
     if (!activeProjectId || !projectVoicesReady || savingProjectVoice) return;
     setSavingProjectVoice(true);
     try {
-      const latest = await window.videoEditor.loadStudioCharacterVoices(activeProjectId);
-      const next = { ...latest, [speaker]: voiceId };
-      await window.videoEditor.saveStudioCharacterVoices(activeProjectId, next);
+      const next = await window.videoEditor.patchStudioCharacterVoice(activeProjectId, speaker, voiceId);
       if (projectIdentity.current === activeProjectId) {
         setProjectVoiceIds(next);
         setConfirmed(false);
