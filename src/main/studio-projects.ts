@@ -281,3 +281,36 @@ export async function resolveStudioEpisodeVoiceOutput(
   await mkdir(path.dirname(absolutePath), { recursive: true });
   return { absolutePath, relativePath };
 }
+
+/**
+ * Register a newly synthesized and verified MP3 without discarding other lines.
+ * The caller must finish writing and validating the MP3 before invoking this.
+ */
+const voiceManifestQueues = new Map<string, Promise<void>>();
+export async function registerStudioEpisodeVoiceAudio(
+  projectId: string,
+  episodeId: string,
+  lineId: string,
+  fingerprint: string,
+  relativePath: string
+): Promise<void> {
+  if (typeof lineId !== "string" || !lineId.trim() || lineId.length > 250 ||
+      typeof fingerprint !== "string" || !fingerprint || fingerprint.length > 10000) {
+    throw new Error("Invalid voice audio entry");
+  }
+  const key = `${projectId}:${episodeId}`;
+  const previous = voiceManifestQueues.get(key) ?? Promise.resolve();
+  const pending = previous.catch(() => {}).then(async () => {
+    if (!(await findReusableStudioEpisodeAudio(projectId, episodeId, relativePath))) {
+      throw new Error("Generated MP3 must exist and decode before registration");
+    }
+    const existing = await loadStudioEpisodeVoiceAudio(projectId, episodeId);
+    await saveStudioEpisodeVoiceAudio(projectId, episodeId, {
+      ...existing,
+      [lineId]: { fingerprint, outputPath: relativePath }
+    });
+  });
+  voiceManifestQueues.set(key, pending);
+  try { await pending; }
+  finally { if (voiceManifestQueues.get(key) === pending) voiceManifestQueues.delete(key); }
+}
