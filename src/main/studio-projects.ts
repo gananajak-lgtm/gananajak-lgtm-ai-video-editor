@@ -145,3 +145,34 @@ async function writeStudioCharacterVoices(projectId: string, voices: Record<stri
   const { rename } = await import("node:fs/promises");
   await rename(temp, path.join(directory, "voice-library.json"));
 }
+
+/**
+ * Resolve previously generated episode audio without trusting a path from
+ * imported JSON. Only files inside this episode's audio directory qualify.
+ * This never calls a paid voice API.
+ */
+export async function findReusableStudioEpisodeAudio(
+  projectId: string,
+  episodeId: string,
+  relativePath: string
+): Promise<string | null> {
+  if (typeof relativePath !== "string" || !relativePath || path.isAbsolute(relativePath) ||
+      relativePath.includes("\\") || relativePath.split("/").some(part => !part || part === "." || part === "..")) {
+    return null;
+  }
+  const project = (await readIndex()).find(item => item.id === projectId);
+  const episode = project?.episodes.find(item => item.id === episodeId);
+  if (!episode) throw new Error("Episode not found");
+  const audioRoot = path.resolve(episode.folder, "audio");
+  const candidate = path.resolve(audioRoot, relativePath);
+  if (!candidate.startsWith(audioRoot + path.sep) || path.extname(candidate).toLowerCase() !== ".mp3") return null;
+  const { realpath, stat } = await import("node:fs/promises");
+  try {
+    const [realRoot, realFile, details] = await Promise.all([realpath(audioRoot), realpath(candidate), stat(candidate)]);
+    if (!realFile.startsWith(realRoot + path.sep) || !details.isFile() || details.size === 0) return null;
+    return realFile;
+  } catch (error) {
+    if (["ENOENT", "ENOTDIR", "EACCES"].includes((error as NodeJS.ErrnoException).code ?? "")) return null;
+    throw error;
+  }
+}
