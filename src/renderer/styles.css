@@ -2591,3 +2591,21 @@ label { font-size: 10px; }
 .studioPaletteChoice{display:flex;align-items:center;flex-direction:column;gap:6px;padding:8px 4px;font-size:11px;background:#243451}
 .studioPaletteChoice.active{outline:2px solid #90baff;outline-offset:1px}
 .studioPaletteSample{width:100%;height:36px;border-radius:7px;border:1px solid #ffffff40}
+
+/* Extend user-selected palette to the full workspace, without recoloring status alerts. */
+.studioLayout .studioSidebar{background:var(--studio-user-background,#101827);border-right-color:#8290a344}
+.studioLayout .studioMain{background:var(--studio-user-background,#101827)}
+.studioLayout .studioMain .editorMediaPane,
+.studioLayout .studioMain .editorInspectorPane,
+.studioLayout .studioMain .editorPreviewPane{background:var(--studio-user-background,#101827)}
+.studioLayout .studioMain .editorEmptyPreview,
+.studioLayout .studioMain .editorPaneHeading,
+.studioLayout .studioMain .studioTimelineLane,
+.studioLayout .studioMain .track{background:var(--studio-user-card,#233047);color:var(--studio-user-card-text,#f4f7ff)}
+/* Pale cards need dark foregrounds, including nested labels and controls. */
+.studioLayout:has(.studioPaletteChoice.active) .studioPaletteEditor{color:#f4f7ff}
+.studioLayout[style*="--studio-user-card-text: #192337"] .studioMain .panel,
+.studioLayout[style*="--studio-user-card-text: #192337"] .studioMain .compactTabContent,
+.studioLayout[style*="--studio-user-card-text: #192337"] .studioMain .premiumWorkspaceCard,
+.studioLayout[style*="--studio-user-card-text: #192337"] .studioMain .premiumVoicePanel,
+.studioLayout[style*="--studio-user-card-text: #192337"] .studioMain .compactCharacterCard{color:#192337}
