@@ -48,6 +48,11 @@ export default function CharacterVoiceLibrary({ projectId }: { projectId?: strin
     setProjectLoading(Boolean(projectId));
     setSelectedCharacter(null);
     setConfirmDelete(null);
+    setName("");
+    setVoiceId("");
+    setEditId("");
+    setShowAdd(false);
+    stopPreview();
     setMessage("");
     if (!projectId) {
       setEntries(readCharacterVoiceLibrary());
@@ -77,8 +82,10 @@ export default function CharacterVoiceLibrary({ projectId }: { projectId?: strin
         setReadyProjectId(projectId);
         setProjectLoading(false);
       }).catch(error => {
-        if (active && request === revision && currentProjectId.current === projectId && voiceDataRevision.current === loadRevision)
+        if (active && request === revision && currentProjectId.current === projectId && voiceDataRevision.current === loadRevision) {
+          setProjectLoading(false);
           setMessage("รีเฟรชคลังเสียงไม่สำเร็จ: " + String(error));
+        }
       });
     };
     window.addEventListener("character-voices-updated", refresh);
