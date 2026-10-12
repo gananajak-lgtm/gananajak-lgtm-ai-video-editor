@@ -544,7 +544,7 @@ export default function App() {
     const voiceEnd = studioVoiceSchedule[studioVoiceSchedule.length - 1].end;
     if (voiceEnd > timeline.duration + 0.001) {
       const lastClip = timeline.clips[timeline.clips.length - 1];
-      if (!lastClip || lastClip.videoPath || Math.abs(lastClip.start + lastClip.duration - timeline.duration) > 0.05) {
+      if (!lastClip || !lastClip.imagePath || lastClip.videoPath || !Number.isFinite(lastClip.start) || !Number.isFinite(lastClip.duration) || lastClip.duration <= 0 || Math.abs(lastClip.start + lastClip.duration - timeline.duration) > 0.05) {
         setError("เสียงยาวกว่าไทม์ไลน์และไม่สามารถยืดภาพท้ายได้อัตโนมัติ กรุณาปรับภาพหรือระยะเวลาเอง");
         return;
       }
@@ -573,7 +573,7 @@ export default function App() {
           if (!previous || previous !== timeline) return previous;
           const clips = [...previous.clips];
           const last = clips[clips.length - 1];
-          if (!last || last.videoPath) return previous;
+          if (!last || !last.imagePath || last.videoPath || !Number.isFinite(last.start) || !Number.isFinite(last.duration) || last.duration <= 0 || Math.abs(last.start + last.duration - previous.duration) > 0.05) return previous;
           clips[clips.length - 1] = { ...last, duration: voiceEnd - last.start };
           return { ...previous, duration: voiceEnd, clips };
         });
