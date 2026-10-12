@@ -53,6 +53,31 @@ assert.equal(docxDialogue.length, 3);
 assert.deepEqual(docxDialogue.map(line => line.speaker).join(","), "ผู้บรรยาย,ลำดวน,พรานสิง");
 assert.equal(docxDialogue[1].text, "พี่สิงห์");
 assert.equal(docxDialogue[1].needsReview, false);
+// Regression: a completed labeled paragraph must not silently claim the next untagged one.
+const untaggedAfterDialogue = parseNovelScript("[พรานสิง]\\nหยุดก่อน\\n\\nเสียงฝีเท้าดังจากหลังต้นไม้");
+assert.equal(untaggedAfterDialogue.length, 2);
+assert.equal(untaggedAfterDialogue[0].speaker, "พรานสิง");
+assert.equal(untaggedAfterDialogue[1].speaker, "ผู้บรรยาย");
+assert.equal(untaggedAfterDialogue[1].needsReview, true);
+
+// Regression: a label followed by a blank line is still valid for imported DOCX text.
+const separatedTag = parseNovelScript("[พรานอิน]\\n\\nข้าได้ยินแล้ว");
+assert.equal(separatedTag.length, 1);
+assert.equal(separatedTag[0].speaker, "พรานอิน");
+assert.equal(separatedTag[0].needsReview, false);
+
+// Pure timeline pacing: speaker transitions and overrides never overlap audio.
+const { scheduleDialogueClips, dialoguePause, DEFAULT_DIALOGUE_PACING } = loadModule("src/renderer/dialogue-timeline.ts");
+const first = { lineId: "one", filePath: "one.mp3", duration: 2, speaker: "พรานสิง", text: "หยุดก่อน", kind: "dialogue" };
+const second = { lineId: "two", filePath: "two.mp3", duration: 3, speaker: "พรานอิน", text: "ได้ยินแล้ว", kind: "dialogue" };
+assert.equal(dialoguePause(first, second), DEFAULT_DIALOGUE_PACING.speakerChange);
+const scheduled = scheduleDialogueClips([first, second]);
+assert.equal(scheduled[0].end, 2);
+assert.equal(scheduled[1].start, 2 + DEFAULT_DIALOGUE_PACING.speakerChange);
+const overridden = scheduleDialogueClips([{ ...first, pauseAfter: 1.25 }, second]);
+assert.equal(overridden[1].start, 3.25);
+assert.throws(() => scheduleDialogueClips([{ ...first, pauseAfter: -1 }, second]), /pause/i);
+
 const legacyNarration = parseNovelScript("ข้อความไม่มีป้ายกำกับ");
 assert.equal(legacyNarration[0].needsReview, false);
 
