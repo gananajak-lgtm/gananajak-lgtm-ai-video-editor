@@ -1,6 +1,6 @@
 /** Timed MP3 dialogue placement. Pure scheduling; never invokes a paid voice provider. */
-export type DialogueClip = { lineId: string; filePath: string; duration: number; start: number; end: number; speaker?: string; text?: string; kind?: "dialogue" | "narration"; sceneBreak?: boolean };
-export type DialogueSource = { lineId: string; filePath: string; duration: number; speaker?: string; text?: string; kind?: "dialogue" | "narration"; sceneBreak?: boolean; pauseAfter?: number };
+export type DialogueClip = { lineId: string; filePath: string; duration: number; start: number; end: number; speaker?: string; text?: string; kind?: "dialogue" | "narration"; sceneBreak?: boolean; jobId?: string; emotion?: string };
+export type DialogueSource = { lineId: string; filePath: string; duration: number; speaker?: string; text?: string; kind?: "dialogue" | "narration"; sceneBreak?: boolean; pauseAfter?: number; jobId?: string; emotion?: string };
 export type DialoguePacing = { sameSpeaker: number; speakerChange: number; sentenceEnd: number; narrationChange: number; sceneBreak: number };
 export const DEFAULT_DIALOGUE_PACING: DialoguePacing = {
   sameSpeaker: 0.3, speakerChange: 0.6, sentenceEnd: 0.8, narrationChange: 1, sceneBreak: 1.5
@@ -30,6 +30,6 @@ export function scheduleDialogueClips(sources: DialogueSource[], gapSeconds: num
       const gap = source.pauseAfter ?? (pacing ? dialoguePause(source, sources[index + 1], pacing) : gapSeconds as number);
       cursor = end + gap;
     }
-    return { lineId: source.lineId, filePath: source.filePath, duration: source.duration, start, end, ...(source.speaker !== undefined ? { speaker: source.speaker } : {}), ...(source.text !== undefined ? { text: source.text } : {}), ...(source.kind !== undefined ? { kind: source.kind } : {}), ...(source.sceneBreak !== undefined ? { sceneBreak: source.sceneBreak } : {}) };
+    return { lineId: source.lineId, filePath: source.filePath, duration: source.duration, start, end, ...(source.speaker !== undefined ? { speaker: source.speaker } : {}), ...(source.text !== undefined ? { text: source.text } : {}), ...(source.kind !== undefined ? { kind: source.kind } : {}), ...(source.sceneBreak !== undefined ? { sceneBreak: source.sceneBreak } : {}), ...(source.jobId !== undefined ? { jobId: source.jobId } : {}), ...(source.emotion !== undefined ? { emotion: source.emotion } : {}) };
   });
 }
