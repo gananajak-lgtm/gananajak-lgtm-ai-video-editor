@@ -557,7 +557,12 @@ export default function App() {
         fadeIn: 0,
         fadeOut: 0,
         origin: "studio-dialogue" as const,
-        label: clip.lineId
+        label: clip.lineId,
+        voiceLineId: clip.lineId,
+        ...(clip.jobId ? { voiceJobId: clip.jobId } : {}),
+        ...(clip.speaker ? { voiceSpeaker: clip.speaker } : {}),
+        ...(clip.emotion ? { voiceEmotion: clip.emotion } : {}),
+        ...(clip.text ? { voiceText: clip.text } : {})
       })));
       setAudioLayers(previous => [...previous.filter(layer => layer.origin !== "studio-dialogue"), ...imported]);
       setError(null);
