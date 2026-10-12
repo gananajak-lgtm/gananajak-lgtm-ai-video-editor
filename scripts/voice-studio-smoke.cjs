@@ -54,14 +54,14 @@ assert.deepEqual(docxDialogue.map(line => line.speaker).join(","), "ผู้บ
 assert.equal(docxDialogue[1].text, "พี่สิงห์");
 assert.equal(docxDialogue[1].needsReview, false);
 // Regression: a completed labeled paragraph must not silently claim the next untagged one.
-const untaggedAfterDialogue = parseNovelScript("[พรานสิง]\\nหยุดก่อน\\n\\nเสียงฝีเท้าดังจากหลังต้นไม้");
+const untaggedAfterDialogue = parseNovelScript("[พรานสิง]\nหยุดก่อน\n\nเสียงฝีเท้าดังจากหลังต้นไม้");
 assert.equal(untaggedAfterDialogue.length, 2);
 assert.equal(untaggedAfterDialogue[0].speaker, "พรานสิง");
 assert.equal(untaggedAfterDialogue[1].speaker, "ผู้บรรยาย");
 assert.equal(untaggedAfterDialogue[1].needsReview, true);
 
 // Regression: a label followed by a blank line is still valid for imported DOCX text.
-const separatedTag = parseNovelScript("[พรานอิน]\\n\\nข้าได้ยินแล้ว");
+const separatedTag = parseNovelScript("[พรานอิน]\n\nข้าได้ยินแล้ว");
 assert.equal(separatedTag.length, 1);
 assert.equal(separatedTag[0].speaker, "พรานอิน");
 assert.equal(separatedTag[0].needsReview, false);
