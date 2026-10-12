@@ -73,6 +73,10 @@ const second = { lineId: "two", filePath: "two.mp3", duration: 3, speaker: "พ�
 assert.equal(dialoguePause(first, second), DEFAULT_DIALOGUE_PACING.speakerChange);
 const scheduled = scheduleDialogueClips([first, second]);
 assert.equal(scheduled[0].end, 2);
+assert.equal(scheduled[0].speaker, "พรานสิง");
+assert.equal(scheduled[0].text, "หยุดก่อน");
+assert.equal(scheduled[0].kind, "dialogue");
+assert.equal(scheduled[1].speaker, "พรานอิน");
 assert.equal(scheduled[1].start, 2 + DEFAULT_DIALOGUE_PACING.speakerChange);
 const overridden = scheduleDialogueClips([{ ...first, pauseAfter: 1.25 }, second]);
 assert.equal(overridden[1].start, 3.25);
