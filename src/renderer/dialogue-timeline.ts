@@ -14,7 +14,7 @@ export function dialoguePause(previous: DialogueSource, next: DialogueSource, pa
 }
 export function scheduleDialogueClips(sources: DialogueSource[], gapSeconds: number | DialoguePacing = DEFAULT_DIALOGUE_PACING): DialogueClip[] {
   const pacing = typeof gapSeconds === "number" ? null : gapSeconds;
-  const gaps = pacing ? Object.values(pacing) : [gapSeconds];
+  const gaps: number[] = typeof gapSeconds === "number" ? [gapSeconds] : Object.values(gapSeconds);
   if (gaps.some(gap => !Number.isFinite(gap) || gap < 0 || gap > 30)) throw new Error("Invalid dialogue gap");
   const seen = new Set<string>();
   let cursor = 0;
