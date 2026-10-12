@@ -541,9 +541,13 @@ export default function App() {
       setError("กรุณารอให้ตรวจสอบความยาว MP3 ครบทุกบรรทัดก่อนนำเข้า");
       return;
     }
-    if (studioVoiceSchedule[studioVoiceSchedule.length - 1].end > timeline.duration + 0.001) {
-      setError("เสียงตัวละครยาวกว่าไทม์ไลน์ภาพ กรุณาขยายระยะเวลาวิดีโอก่อนนำเข้า");
-      return;
+    const voiceEnd = studioVoiceSchedule[studioVoiceSchedule.length - 1].end;
+    if (voiceEnd > timeline.duration + 0.001) {
+      const lastClip = timeline.clips[timeline.clips.length - 1];
+      if (!lastClip || lastClip.videoPath || Math.abs(lastClip.start + lastClip.duration - timeline.duration) > 0.05) {
+        setError("เสียงยาวกว่าไทม์ไลน์และไม่สามารถยืดภาพท้ายได้อัตโนมัติ กรุณาปรับภาพหรือระยะเวลาเอง");
+        return;
+      }
     }
     try {
       const imported = await Promise.all(studioVoiceSchedule.map(async clip => ({
@@ -564,6 +568,16 @@ export default function App() {
         ...(clip.emotion ? { voiceEmotion: clip.emotion } : {}),
         ...(clip.text ? { voiceText: clip.text } : {})
       })));
+      if (voiceEnd > timeline.duration + 0.001) {
+        setTimeline(previous => {
+          if (!previous || previous !== timeline) return previous;
+          const clips = [...previous.clips];
+          const last = clips[clips.length - 1];
+          if (!last || last.videoPath) return previous;
+          clips[clips.length - 1] = { ...last, duration: voiceEnd - last.start };
+          return { ...previous, duration: voiceEnd, clips };
+        });
+      }
       setAudioLayers(previous => [...previous.filter(layer => layer.origin !== "studio-dialogue"), ...imported]);
       setError(null);
       setNotice("นำเข้าเสียงตัวละคร " + imported.length + " บรรทัดเป็นแทร็กสำหรับเรนเดอร์แล้ว กรุณาบันทึกโปรเจกต์");
