@@ -279,7 +279,7 @@ function createAudioFilter(
       3
     )}:duration=${fixed(
       plan.duration
-    )},asetpts=PTS-STARTPTS,volume=1[narr]`
+    )},asetpts=PTS-STARTPTS,volume=1,apad=whole_dur=${fixed(plan.duration)},atrim=duration=${fixed(plan.duration)}[narr]`
   ];
 
   const labels = ["[narr]"];
@@ -313,7 +313,7 @@ function createAudioFilter(
     filters.push("[narr]anull[aout]");
   } else {
     filters.push(
-      `${labels.join("")}amix=inputs=${labels.length}:duration=first:normalize=0,alimiter=limit=0.95,atrim=duration=${fixed(
+      `${labels.join("")}amix=inputs=${labels.length}:duration=longest:normalize=0,alimiter=limit=0.95,atrim=duration=${fixed(
         plan.duration
       )}[aout]`
     );
