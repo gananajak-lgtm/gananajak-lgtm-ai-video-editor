@@ -27,6 +27,8 @@ export type ProjectDocument = {
   timeline: TimelinePlan | null;
   audioLayers: AudioLayer[];
   aiSfxEnabled?: boolean;
+  /** Explicit still-frame ID to voice line ID mappings for sparse visual holds. */
+  studioFrameAnchors?: Record<string, string>;
   contentProject?: ContentProject | null;
   renderHistory?: FullEpisodeTestReport[];
 };

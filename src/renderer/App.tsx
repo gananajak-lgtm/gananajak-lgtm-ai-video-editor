@@ -94,6 +94,7 @@ export default function App() {
         : null
     );
     setAudioLayers(project.audioLayers);
+    setStudioFrameAnchors(project.studioFrameAnchors ?? {});
     setAiSfxEnabled(project.aiSfxEnabled ?? false);
     setContentProject(project.contentProject ?? null);
     setRenderHistory(project.renderHistory ?? []);
@@ -160,6 +161,7 @@ export default function App() {
       timeline,
       audioLayers,
       aiSfxEnabled,
+      studioFrameAnchors,
       contentProject,
       renderHistory
     }),
@@ -174,6 +176,7 @@ export default function App() {
       timeline,
       audioLayers,
       aiSfxEnabled,
+      studioFrameAnchors,
       contentProject,
       renderHistory
     ]
