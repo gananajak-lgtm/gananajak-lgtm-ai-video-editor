@@ -9,7 +9,7 @@ export function dialoguePause(previous: DialogueSource, next: DialogueSource, pa
   if (next.sceneBreak) return pacing.sceneBreak;
   if (previous.kind && next.kind && previous.kind !== next.kind) return pacing.narrationChange;
   if (previous.speaker && next.speaker && previous.speaker !== next.speaker) return pacing.speakerChange;
-  if (previous.text && /[.!?。！？…]\\s*$/.test(previous.text)) return pacing.sentenceEnd;
+  if (previous.text && /[.!?。！？…]\s*$/.test(previous.text)) return pacing.sentenceEnd;
   return pacing.sameSpeaker;
 }
 export function scheduleDialogueClips(sources: DialogueSource[], gapSeconds: number | DialoguePacing = DEFAULT_DIALOGUE_PACING): DialogueClip[] {
