@@ -68,12 +68,14 @@ assert.equal(separatedTag[0].needsReview, false);
 
 // Pure timeline pacing: speaker transitions and overrides never overlap audio.
 const { scheduleDialogueClips, dialoguePause, DEFAULT_DIALOGUE_PACING } = loadModule("src/renderer/dialogue-timeline.ts");
-const first = { lineId: "one", filePath: "one.mp3", duration: 2, speaker: "พรานสิง", text: "หยุดก่อน", kind: "dialogue" };
+const first = { lineId: "one", filePath: "one.mp3", duration: 2, speaker: "พรานสิง", text: "หยุดก่อน", kind: "dialogue", jobId: "voice-one", emotion: "กระซิบ" };
 const second = { lineId: "two", filePath: "two.mp3", duration: 3, speaker: "พรานอิน", text: "ได้ยินแล้ว", kind: "dialogue" };
 assert.equal(dialoguePause(first, second), DEFAULT_DIALOGUE_PACING.speakerChange);
 const scheduled = scheduleDialogueClips([first, second]);
 assert.equal(scheduled[0].end, 2);
 assert.equal(scheduled[0].speaker, "พรานสิง");
+assert.equal(scheduled[0].jobId, "voice-one");
+assert.equal(scheduled[0].emotion, "กระซิบ");
 assert.equal(scheduled[0].text, "หยุดก่อน");
 assert.equal(scheduled[0].kind, "dialogue");
 assert.equal(scheduled[1].speaker, "พรานอิน");
