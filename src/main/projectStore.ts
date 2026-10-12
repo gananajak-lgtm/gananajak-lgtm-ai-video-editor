@@ -43,7 +43,7 @@ function isProjectDocument(value: unknown): value is ProjectDocument {
   );
 }
 
-async function readProjectFile(filePath: string) {
+export async function readProjectFile(filePath: string) {
   const raw = await fs.readFile(filePath, "utf8");
   const parsed = JSON.parse(raw) as unknown;
 
@@ -109,7 +109,7 @@ async function loadResult(
   };
 }
 
-async function writeProject(filePath: string, project: ProjectDocument) {
+export async function writeProject(filePath: string, project: ProjectDocument) {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, JSON.stringify(project, null, 2), "utf8");
 }
