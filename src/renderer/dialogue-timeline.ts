@@ -1,5 +1,5 @@
 /** Timed MP3 dialogue placement. Pure scheduling; never invokes a paid voice provider. */
-export type DialogueClip = { lineId: string; filePath: string; duration: number; start: number; end: number };
+export type DialogueClip = { lineId: string; filePath: string; duration: number; start: number; end: number; speaker?: string; text?: string; kind?: "dialogue" | "narration"; sceneBreak?: boolean };
 export type DialogueSource = { lineId: string; filePath: string; duration: number; speaker?: string; text?: string; kind?: "dialogue" | "narration"; sceneBreak?: boolean; pauseAfter?: number };
 export type DialoguePacing = { sameSpeaker: number; speakerChange: number; sentenceEnd: number; narrationChange: number; sceneBreak: number };
 export const DEFAULT_DIALOGUE_PACING: DialoguePacing = {
@@ -30,6 +30,6 @@ export function scheduleDialogueClips(sources: DialogueSource[], gapSeconds: num
       const gap = source.pauseAfter ?? (pacing ? dialoguePause(source, sources[index + 1], pacing) : gapSeconds as number);
       cursor = end + gap;
     }
-    return { lineId: source.lineId, filePath: source.filePath, duration: source.duration, start, end };
+    return { lineId: source.lineId, filePath: source.filePath, duration: source.duration, start, end, ...(source.speaker !== undefined ? { speaker: source.speaker } : {}), ...(source.text !== undefined ? { text: source.text } : {}), ...(source.kind !== undefined ? { kind: source.kind } : {}), ...(source.sceneBreak !== undefined ? { sceneBreak: source.sceneBreak } : {}) };
   });
 }
