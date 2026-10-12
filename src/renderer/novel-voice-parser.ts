@@ -38,7 +38,9 @@ export function parseNovelScript(script: string): VoiceLine[] {
   };
   for (const paragraph of script.split(/\r?\n/)) {
     const line = paragraph.trim();
-    if (!line) { continue; }
+    // A blank line ends the tagged passage. Never attribute an unlabelled
+    // paragraph to the previous speaker in strict-label scripts.
+    if (!line) { activeTag = null; continue; }
     const named = line.match(/^\[([^\]\r\n|:]{1,100})(?:\s*\|\s*อารมณ์\s*:\s*([^\]]+))?\]\s*(.*)$/);
     if (named && !/^(บรรยาย|พูด|SFX)$/i.test(named[1].trim())) {
       const name = named[1].trim();
