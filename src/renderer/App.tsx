@@ -54,6 +54,7 @@ export default function App() {
   const [images, setImages] = useState<string[]>([]);
   const [narration, setเสียงบรรยาย] = useState<string | null>(null);
   const [timeline, setTimeline] = useState<TimelinePlan | null>(null);
+  const [studioFrameAnchors, setStudioFrameAnchors] = useState<Record<string, string>>({});
   const [transcript, setTranscript] = useState<TranscriptResult | null>(null);
   const [editingPlan, setEditingPlan] = useState<EditingBrainPlan | null>(null);
   const [audioLayers, setAudioLayers] = useState<AudioLayer[]>([]);
@@ -536,7 +537,7 @@ export default function App() {
       .map(([lineId, entry]) => ({ lineId, filePath: entry.outputPath, duration: studioVoiceDurations[lineId], jobId: entry.jobId, speaker: entry.speaker, emotion: entry.emotion, text: entry.text })),
     Object.values(studioVoiceFiles).every(entry => Boolean(entry.speaker && entry.text)) ? { sameSpeaker: studioDialogueGap, speakerChange: Math.max(studioDialogueGap, 0.6), sentenceEnd: Math.max(studioDialogueGap, 0.8), narrationChange: Math.max(studioDialogueGap, 1), sceneBreak: Math.max(studioDialogueGap, 1.5) } : studioDialogueGap
   );
-  const [studioFrameAnchors, setStudioFrameAnchors] = useState<Record<string, string>>({});
+
   const studioFrameHoldPreview = useMemo(() => {
     if (!timeline?.clips.length || !studioVoiceSchedule.length) return { holds: [], error: null as string | null };
     const anchors = timeline.clips.map((clip, index) => ({
