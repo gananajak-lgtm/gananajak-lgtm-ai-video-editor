@@ -234,7 +234,21 @@ export async function getStudioVoiceAudioDuration(
 export type StudioVoiceAudioEntry = {
   fingerprint: string;
   outputPath: string;
+  jobId?: string;
+  speaker?: string;
+  emotion?: string;
+  text?: string;
 };
+
+/** Ignore malformed optional metadata in old or externally edited manifests. */
+function validVoiceMetadata(item: Partial<StudioVoiceAudioEntry>): Pick<StudioVoiceAudioEntry, "jobId" | "speaker" | "emotion" | "text"> {
+  const result: Pick<StudioVoiceAudioEntry, "jobId" | "speaker" | "emotion" | "text"> = {};
+  for (const [key, max] of [["jobId", 250], ["speaker", 200], ["emotion", 200], ["text", 10000]] as const) {
+    const value = item[key];
+    if (typeof value === "string" && value.trim() && value.length <= max) result[key] = value;
+  }
+  return result;
+}
 
 /** Read the per-episode audio manifest. Paths are relative to the episode audio folder. */
 export async function loadStudioEpisodeVoiceAudio(
@@ -262,7 +276,7 @@ export async function loadStudioEpisodeVoiceAudio(
     if (typeof item.fingerprint !== "string" || item.fingerprint.length > 10000 ||
         typeof item.outputPath !== "string" || item.outputPath.length > 500) continue;
     if (await findReusableStudioEpisodeAudio(projectId, episodeId, item.outputPath)) {
-      result[lineId] = { fingerprint: item.fingerprint, outputPath: item.outputPath };
+      result[lineId] = { fingerprint: item.fingerprint, outputPath: item.outputPath, ...validVoiceMetadata(item) };
     }
   }
   return result;
@@ -331,7 +345,8 @@ export async function registerStudioEpisodeVoiceAudio(
   episodeId: string,
   lineId: string,
   fingerprint: string,
-  relativePath: string
+  relativePath: string,
+  metadata: Pick<StudioVoiceAudioEntry, "jobId" | "speaker" | "emotion" | "text"> = {}
 ): Promise<void> {
   if (typeof lineId !== "string" || !lineId.trim() || lineId.length > 250 ||
       typeof fingerprint !== "string" || !fingerprint || fingerprint.length > 10000) {
@@ -346,7 +361,7 @@ export async function registerStudioEpisodeVoiceAudio(
     const existing = await loadStudioEpisodeVoiceAudio(projectId, episodeId);
     await saveStudioEpisodeVoiceAudio(projectId, episodeId, {
       ...existing,
-      [lineId]: { fingerprint, outputPath: relativePath }
+      [lineId]: { fingerprint, outputPath: relativePath, ...validVoiceMetadata(metadata) }
     });
   });
   voiceManifestQueues.set(key, pending);
