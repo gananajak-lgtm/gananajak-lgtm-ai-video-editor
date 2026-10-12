@@ -95,7 +95,13 @@ export default function App() {
         : null
     );
     setAudioLayers(project.audioLayers);
-    setStudioFrameAnchors(project.studioFrameAnchors ?? {});
+    const savedAnchors = project.studioFrameAnchors;
+    const validClipIds = new Set(project.timeline?.clips.map(clip => clip.id) ?? []);
+    setStudioFrameAnchors(
+      savedAnchors && typeof savedAnchors === "object" && !Array.isArray(savedAnchors)
+        ? Object.fromEntries(Object.entries(savedAnchors).filter(([clipId, lineId]) => validClipIds.has(clipId) && typeof lineId === "string"))
+        : {}
+    );
     setAiSfxEnabled(project.aiSfxEnabled ?? false);
     setContentProject(project.contentProject ?? null);
     setRenderHistory(project.renderHistory ?? []);
@@ -312,6 +318,7 @@ export default function App() {
     if (picked.length) {
       setImages(picked);
       setTimeline(null);
+      setStudioFrameAnchors({});
       setNotice(null);
       setError(null);
     }
