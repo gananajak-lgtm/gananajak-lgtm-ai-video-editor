@@ -13,12 +13,29 @@ test("writes and reopens a real .aivproj file preserving frame anchors", async (
       schemaVersion: 1, id: "test-project", title: "Thai story",
       createdAt: "2026-10-13T00:00:00Z", updatedAt: "2026-10-13T00:00:00Z",
       images: ["/tmp/scene.png"], narration: null, transcript: null,
-      editingPlan: null, timeline: null, audioLayers: [],
+      editingPlan: null,
+      timeline: {
+        duration: 12, narration: "", width: 1080, height: 1920, fps: 30,
+        clips: [
+          { id: "scene-1", imagePath: "/tmp/scene.png", start: 0, duration: 8, motion: "hold" },
+          { id: "scene-2", imagePath: "/tmp/scene-2.png", start: 8, duration: 4, motion: "hold" }
+        ],
+        audioLayers: [], subtitles: [], transitionDuration: 0, quality: "standard"
+      },
+      audioLayers: [{
+        id: "studio-dialogue:line-001", filePath: "/tmp/line-001.mp3",
+        kind: "dialogue", start: 0, duration: 3.2, volume: 1,
+        loop: false, fadeIn: 0, fadeOut: 0, origin: "studio-dialogue",
+        voiceLineId: "line-001"
+      }],
       studioFrameAnchors: { "scene-1": "line-001", "scene-2": "line-008" }
     };
     const file = path.join(directory, "nested", "story.aivproj");
     await writeProject(file, project);
-    assert.deepEqual(await readProjectFile(file), project);
+    const restored = await readProjectFile(file);
+    assert.deepEqual(restored, project);
+    assert.equal(restored.timeline?.clips[1].start, 8);
+    assert.equal(restored.audioLayers[0].voiceLineId, "line-001");
     const legacy = { ...project };
     delete legacy.studioFrameAnchors;
     await writeProject(file, legacy);
