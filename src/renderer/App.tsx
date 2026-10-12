@@ -1,4 +1,5 @@
 import { scheduleDialogueClips } from "./dialogue-timeline";
+import { holdFramesThroughDialogue } from "./visual-hold";
 import { useEffect, useMemo, useState } from "react";
 import type { ContentProject } from "../shared/content-factory";
 import type { AudioLayer, AiSettingsStatus, EditingBrainPlan, FullEpisodeTestReport, ProjectDocument, ProjectLoadResult, ProjectRelinkResult, StudioProject, RenderProgress, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
@@ -532,6 +533,19 @@ export default function App() {
       .map(([lineId, entry]) => ({ lineId, filePath: entry.outputPath, duration: studioVoiceDurations[lineId], jobId: entry.jobId, speaker: entry.speaker, emotion: entry.emotion, text: entry.text })),
     Object.values(studioVoiceFiles).every(entry => Boolean(entry.speaker && entry.text)) ? { sameSpeaker: studioDialogueGap, speakerChange: Math.max(studioDialogueGap, 0.6), sentenceEnd: Math.max(studioDialogueGap, 0.8), narrationChange: Math.max(studioDialogueGap, 1), sceneBreak: Math.max(studioDialogueGap, 1.5) } : studioDialogueGap
   );
+  const [studioFrameAnchors, setStudioFrameAnchors] = useState<Record<string, string>>({});
+  const studioFrameHoldPreview = useMemo(() => {
+    if (!timeline?.clips.length || !studioVoiceSchedule.length) return { holds: [], error: null as string | null };
+    const anchors = timeline.clips.map((clip, index) => ({
+      imageId: clip.id,
+      lineId: studioFrameAnchors[clip.id] ?? (index === 0 ? studioVoiceSchedule[0].lineId : "")
+    })).filter(anchor => anchor.lineId);
+    try {
+      return { holds: holdFramesThroughDialogue(studioVoiceSchedule, anchors), error: null as string | null };
+    } catch (error) {
+      return { holds: [], error: String(error) };
+    }
+  }, [timeline, studioVoiceSchedule, studioFrameAnchors]);
   const importStudioDialogueToTimeline = async () => {
     if (!studioSelectedId || !studioEpisodeId || !timeline) {
       setError("กรุณาเลือกตอนและสร้างไทม์ไลน์ภาพก่อนนำเข้าเสียงตัวละคร");
@@ -825,6 +839,7 @@ export default function App() {
   <div className="studioTimelineTitle"><strong>🎬 ไทม์ไลน์ตัดต่อ</strong><span>{timeline ? `${timeline.clips.length} คลิป · ${formatTime(timeline.duration)}` : "ยังไม่มีคลิปในไทม์ไลน์"}</span></div>
   <div className="studioTimelineRuler"><span>00:00</span><span>{timeline ? formatTime(timeline.duration / 4) : "00:15"}</span><span>{timeline ? formatTime(timeline.duration / 2) : "00:30"}</span><span>{timeline ? formatTime(timeline.duration * .75) : "00:45"}</span><span>{timeline ? formatTime(timeline.duration) : "01:00"}</span></div>
   <div className="studioTimelineTrack"><strong>▧ ภาพ</strong><div className="studioTimelineLane">{timeline?.clips.length ? timeline.clips.map((clip, index) => <span key={clip.id} className="studioTimelineClip" style={{ flexGrow: Math.max(.6, clip.duration) }} title={`${fileName(clip.imagePath)} · ${clip.duration.toFixed(1)} วินาที`}>{index + 1}. {fileName(clip.imagePath)}</span>) : <em>เพิ่มภาพและสร้างไทม์ไลน์เพื่อเริ่มตัดต่อ</em>}</div></div>
+  {timeline?.clips.length && studioVoiceSchedule.length ? <div className="studioVoiceInventory"><strong>🖼 จุดเริ่มภาพตามบรรทัดเสียง (ตัวอย่างก่อนนำไปใช้)</strong><p>กำหนดภาพแต่ละภาพให้เริ่มที่บรรทัดเสียงใด ภาพก่อนหน้าจะค้างไว้จนถึงจุดเริ่มภาพใหม่ ระบบยังไม่เปลี่ยนไทม์ไลน์จริง</p>{timeline.clips.map((clip, index) => <label key={clip.id}>{index + 1}. {fileName(clip.imagePath)} <select value={studioFrameAnchors[clip.id] ?? (index === 0 ? studioVoiceSchedule[0].lineId : "")} onChange={event => setStudioFrameAnchors(previous => ({ ...previous, [clip.id]: event.target.value }))}><option value="">ไม่กำหนดจุดเริ่มภาพ</option>{studioVoiceSchedule.map(line => <option key={line.lineId} value={line.lineId}>{line.lineId} · {formatTime(line.start)}</option>)}</select></label>)}{studioFrameHoldPreview.error ? <p role="alert">{studioFrameHoldPreview.error}</p> : <ol>{studioFrameHoldPreview.holds.map(hold => <li key={hold.imageId}>{fileName(timeline.clips.find(clip => clip.id === hold.imageId)?.imagePath ?? hold.imageId)}: {formatTime(hold.start)}–{formatTime(hold.end)}</li>)}</ol>}</div> : null}
   <div className="studioTimelineTrack"><strong>♫ เสียงพากย์</strong><div className="studioTimelineLane">{narration ? <span className="studioTimelineAudio">{fileName(narration)}</span> : <em>ยังไม่ได้เลือกไฟล์เสียงพากย์</em>}</div></div>
   <div className="studioTimelineTrack"><strong>🎙 เสียงตัวละคร</strong><div className="studioTimelineLane">{Object.keys(studioVoiceFiles).length ? <div className="studioVoiceInventory"><strong>MP3 ที่ตรวจสอบแล้ว {Object.keys(studioVoiceFiles).length} บรรทัด</strong><ol>{Object.entries(studioVoiceFiles).sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true })).map(([lineId, entry]) => <li key={lineId} title={entry.outputPath}><span>{lineId}</span> · <span>{fileName(entry.outputPath)}</span> · <span>{(() => { const slot = studioVoiceSchedule.find(item => item.lineId === lineId); return slot ? `${slot.start.toFixed(2)}–${slot.end.toFixed(2)} วินาที` : "กำลังอ่านระยะเวลา"; })()}</span></li>)}</ol><label>ระยะพักระหว่างเสียง (วินาที) <input type="number" min="0" max="5" step="0.1" value={studioDialogueGap} onChange={event => { const next = Number(event.target.value); if (Number.isFinite(next)) setStudioDialogueGap(Math.max(0, Math.min(5, next))); }} /></label><small>ใช้จังหวะตามผู้พูดและจบประโยคเมื่อ MP3 มีข้อมูลบทครบทุกบรรทัด มิฉะนั้นใช้ระยะพักคงที่เพื่อไม่เดาผู้พูด</small><button type="button" onClick={() => { void importStudioDialogueToTimeline(); }} disabled={!timeline || studioVoiceSchedule.length !== Object.keys(studioVoiceFiles).length}>นำเสียงตัวละครเข้าไทม์ไลน์</button></div> : <em>ยังไม่มี MP3 ของตัวละครในตอนนี้</em>}</div></div>
   <div className="studioTimelineTrack"><strong>▤ คำบรรยาย</strong><div className="studioTimelineLane">{timeline?.subtitles.length ? timeline.subtitles.map((cue, index) => <span key={cue.id} className="studioTimelineSubtitle" title={cue.text}>{index + 1}</span>) : <em>ยังไม่มีคำบรรยาย</em>}</div></div>
