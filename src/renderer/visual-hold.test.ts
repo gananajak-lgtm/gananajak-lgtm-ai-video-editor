@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { holdFramesThroughDialogue } from "./visual-hold";
+import { holdFramesThroughDialogue, restoreFrameAnchors } from "./visual-hold";
 
 const lines = [
   { lineId: "a", start: 0, end: 3 },
@@ -34,4 +34,11 @@ test("rejects overlapping or invalid voice schedules", () => {
 test("returns no holds until a voice schedule and anchors exist", () => {
   assert.deepEqual(holdFramesThroughDialogue([], []), []);
   assert.deepEqual(holdFramesThroughDialogue(lines, []), []);
+});
+
+test("restores only anchors for current image clips from persisted JSON", () => {
+  const stored = JSON.parse(JSON.stringify({ frame1: "line-1", deleted: "line-2", frame2: 123 }));
+  assert.deepEqual(restoreFrameAnchors(stored, ["frame1", "frame2"]), { frame1: "line-1" });
+  assert.deepEqual(restoreFrameAnchors(null, ["frame1"]), {});
+  assert.deepEqual(restoreFrameAnchors(["line-1"], ["0"]), {});
 });

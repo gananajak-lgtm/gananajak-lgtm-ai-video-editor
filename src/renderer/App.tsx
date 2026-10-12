@@ -1,5 +1,5 @@
 import { scheduleDialogueClips } from "./dialogue-timeline";
-import { holdFramesThroughDialogue } from "./visual-hold";
+import { holdFramesThroughDialogue, restoreFrameAnchors } from "./visual-hold";
 import { useEffect, useMemo, useState } from "react";
 import type { ContentProject } from "../shared/content-factory";
 import type { AudioLayer, AiSettingsStatus, EditingBrainPlan, FullEpisodeTestReport, ProjectDocument, ProjectLoadResult, ProjectRelinkResult, StudioProject, RenderProgress, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
@@ -95,13 +95,7 @@ export default function App() {
         : null
     );
     setAudioLayers(project.audioLayers);
-    const savedAnchors = project.studioFrameAnchors;
-    const validClipIds = new Set(project.timeline?.clips.map(clip => clip.id) ?? []);
-    setStudioFrameAnchors(
-      savedAnchors && typeof savedAnchors === "object" && !Array.isArray(savedAnchors)
-        ? Object.fromEntries(Object.entries(savedAnchors).filter(([clipId, lineId]) => validClipIds.has(clipId) && typeof lineId === "string"))
-        : {}
-    );
+    setStudioFrameAnchors(restoreFrameAnchors(project.studioFrameAnchors, project.timeline?.clips.map(clip => clip.id) ?? []));
     setAiSfxEnabled(project.aiSfxEnabled ?? false);
     setContentProject(project.contentProject ?? null);
     setRenderHistory(project.renderHistory ?? []);

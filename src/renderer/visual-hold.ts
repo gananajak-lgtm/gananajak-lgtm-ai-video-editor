@@ -29,3 +29,12 @@ export function holdFramesThroughDialogue(lines: TimedVoiceLine[], anchors: Visu
     return { imageId: anchor.imageId, anchorLineId: anchor.lineId, start: line.start, end };
   });
 }
+
+/** Preserve only string voice anchors belonging to stills in the loaded timeline. */
+export function restoreFrameAnchors(value: unknown, clipIds: readonly string[]): Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const allowed = new Set(clipIds);
+  return Object.fromEntries(
+    Object.entries(value).filter(([id, lineId]) => allowed.has(id) && typeof lineId === "string")
+  );
+}
