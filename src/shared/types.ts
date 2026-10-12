@@ -93,6 +93,12 @@ export type AudioLayer = {
   sourceOffset?: number;
   origin?: AudioLayerOrigin;
   label?: string;
+  /** Original voice line identity; preserved when a studio clip becomes a project layer. */
+  voiceLineId?: string;
+  voiceJobId?: string;
+  voiceSpeaker?: string;
+  voiceEmotion?: string;
+  voiceText?: string;
 };
 
 export type RenderQuality = "draft" | "standard" | "high";
