@@ -15,6 +15,7 @@ export function parseNovelScript(script: string): VoiceLine[] {
   const result: VoiceLine[] = [];
   let activeTag: { speaker: string; emotion: string; kind: VoiceLine["kind"] } | null = null;
   let previousSpeaker: string | null = null;
+  let activeTagHasContent = false;
   const strictLabels = script.split(/\r?\n/).some(line => /^\s*\[[^\]\r\n|:]{1,100}(?:\s*\|\s*อารมณ์\s*:\s*[^\]]+)?\]/.test(line));
   const push = (text: string, speaker: string, emotion: string, kind: VoiceLine["kind"], needsReview = false) => {
     const trimmed = text.trim();
@@ -40,13 +41,14 @@ export function parseNovelScript(script: string): VoiceLine[] {
     const line = paragraph.trim();
     // A blank line ends the tagged passage. Never attribute an unlabelled
     // paragraph to the previous speaker in strict-label scripts.
-    if (!line) { activeTag = null; continue; }
+    if (!line) { if (activeTagHasContent) activeTag = null; continue; }
     const named = line.match(/^\[([^\]\r\n|:]{1,100})(?:\s*\|\s*อารมณ์\s*:\s*([^\]]+))?\]\s*(.*)$/);
     if (named && !/^(บรรยาย|พูด|SFX)$/i.test(named[1].trim())) {
       const name = named[1].trim();
       const kind: VoiceLine["kind"] = name === "ผู้บรรยาย" ? "narration" : "dialogue";
       activeTag = { speaker: kind === "narration" ? narration : name, emotion: named[2]?.trim() || "ปกติ", kind };
       if (kind === "dialogue") previousSpeaker = name;
+      activeTagHasContent = Boolean(named[3]?.trim());
       if (named[3]) push(named[3], activeTag.speaker, activeTag.emotion, kind);
       continue;
     }
@@ -54,6 +56,7 @@ export function parseNovelScript(script: string): VoiceLine[] {
     if (tag) {
       const kind: VoiceLine["kind"] = tag[1].toLowerCase() === "sfx" ? "sfx" : tag[1] === "พูด" ? "dialogue" : "narration";
       activeTag = { kind, speaker: kind === "dialogue" ? (tag[2]?.trim() || "ไม่ทราบผู้พูด") : narration, emotion: tag[3]?.trim() || "ปกติ" };
+      activeTagHasContent = Boolean(tag[4]?.trim());
       if (kind === "dialogue" && tag[2]) previousSpeaker = activeTag.speaker;
       if (kind === "sfx") {
         const cue = [tag[2], tag[4]].filter(Boolean).join(" ").trim();
@@ -63,6 +66,7 @@ export function parseNovelScript(script: string): VoiceLine[] {
       continue;
     }
     if (activeTag) {
+      activeTagHasContent = true;
       push(line, activeTag.speaker, activeTag.emotion, activeTag.kind, activeTag.kind === "dialogue" && activeTag.speaker === "ไม่ทราบผู้พูด");
       continue;
     }
