@@ -42,12 +42,12 @@ assert.equal(labeled[2].emotion, "หวาดระแวง");
 assert.equal(labeled[2].needsReview, false);
 assert.equal(labeled[3].kind, "sfx");
 
-// Blank lines are formatting from DOCX paste, not a speaker reset.
+// A blank line after a completed tagged passage ends attribution; untagged text requires review.
 const spacedNarration = parseNovelScript("[ผู้บรรยาย]\nป่ามืด\n\nข้อความบรรยายต่อเนื่อง");
 assert.equal(spacedNarration.length, 2);
 assert.equal(spacedNarration[0].needsReview, false);
 assert.equal(spacedNarration[1].speaker, "ผู้บรรยาย");
-assert.equal(spacedNarration[1].needsReview, false);
+assert.equal(spacedNarration[1].needsReview, true);
 const docxDialogue = parseNovelScript("[ผู้บรรยาย]\nกลางคืนของหมู่บ้าน\n\n[ลำดวน]\n\nพี่สิงห์\n\n[พรานสิง]\n\nอือ");
 assert.equal(docxDialogue.length, 3);
 assert.deepEqual(docxDialogue.map(line => line.speaker).join(","), "ผู้บรรยาย,ลำดวน,พรานสิง");
