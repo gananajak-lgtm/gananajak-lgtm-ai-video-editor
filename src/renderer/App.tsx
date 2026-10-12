@@ -497,7 +497,7 @@ export default function App() {
   const [studioNewEpisode, setStudioNewEpisode] = useState("");
   const [studioBusy, setStudioBusy] = useState(false);
   const [studioEpisodeId, setStudioEpisodeId] = useState<string | null>(null);
-  const [studioVoiceFiles, setStudioVoiceFiles] = useState<Record<string, { fingerprint: string; outputPath: string }>>({});
+  const [studioVoiceFiles, setStudioVoiceFiles] = useState<Record<string, { fingerprint: string; outputPath: string; jobId?: string; speaker?: string; emotion?: string; text?: string }>>({});
   useEffect(() => {
     let active = true;
     setStudioVoiceFiles({});
@@ -529,7 +529,7 @@ export default function App() {
     Object.entries(studioVoiceFiles)
       .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
       .filter(([lineId]) => Number.isFinite(studioVoiceDurations[lineId]) && studioVoiceDurations[lineId] > 0)
-      .map(([lineId, entry]) => ({ lineId, filePath: entry.outputPath, duration: studioVoiceDurations[lineId] })),
+      .map(([lineId, entry]) => ({ lineId, filePath: entry.outputPath, duration: studioVoiceDurations[lineId], jobId: entry.jobId, speaker: entry.speaker, emotion: entry.emotion, text: entry.text })),
     studioDialogueGap
   );
   const importStudioDialogueToTimeline = async () => {
