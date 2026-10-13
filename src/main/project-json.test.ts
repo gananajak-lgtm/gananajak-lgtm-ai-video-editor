@@ -51,6 +51,28 @@ test("writes and reopens a real .aivproj file preserving frame anchors", async (
   } finally { await fs.rm(directory, { recursive: true, force: true }); }
 });
 
+test("saving one project does not overwrite another or leave temporary files", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "aivproj-isolation-"));
+  try {
+    const makeProject = (id: string): ProjectDocument => ({
+      schemaVersion: 1, id, title: id, createdAt: "2026-10-13T00:00:00Z",
+      updatedAt: "2026-10-13T00:00:00Z", images: [], narration: null,
+      transcript: null, editingPlan: null, timeline: null, audioLayers: []
+    });
+    const firstPath = path.join(directory, "first.aivproj");
+    const secondPath = path.join(directory, "second.aivproj");
+    const first = makeProject("first");
+    const second = makeProject("second");
+    await writeProject(firstPath, first);
+    await writeProject(secondPath, second);
+    const revised = { ...first, title: "ฉบับแก้ไข", updatedAt: "2026-10-13T01:00:00Z" };
+    await writeProject(firstPath, revised);
+    assert.deepEqual(await readProjectFile(firstPath), revised);
+    assert.deepEqual(await readProjectFile(secondPath), second);
+    assert.deepEqual((await fs.readdir(directory)).sort(), ["first.aivproj", "second.aivproj"]);
+  } finally { await fs.rm(directory, { recursive: true, force: true }); }
+});
+
 test("rejects malformed .aivproj documents", async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "aivproj-invalid-"));
   try {
