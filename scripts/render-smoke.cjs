@@ -31,6 +31,10 @@ async function main() {
   const image2 = path.join(root, "frame-2.png");
   const narration = path.join(root, "narration.wav");
   const effect = path.join(root, "effect.wav");
+  const voiceA = path.join(root, "voice-a.wav");
+  const voiceB = path.join(root, "voice-b.wav");
+  const music = path.join(root, "music.wav");
+  const storyOutput = path.join(root, "story-smoke.mp4");
   const output = path.join(root, "smoke.mp4");
 
   try {
@@ -65,6 +69,13 @@ async function main() {
       "-ac", "2",
       effect
     ]);
+
+    for (const [file, frequency, duration] of [
+      [voiceA, 330, 0.8], [voiceB, 550, 0.8], [music, 110, 4]
+    ]) {
+      run(["-y", "-f", "lavfi", "-i", `sine=frequency=${frequency}:duration=${duration}`,
+        "-ac", "2", file]);
+    }
 
     const fullPlan = {
       duration: 3,
@@ -193,6 +204,29 @@ async function main() {
       !fs.existsSync(report.reportPath)
     ) {
       throw new Error("Post-render verification did not validate the smoke output.");
+    }
+
+    // End-to-end novel-style export: two speakers, a deliberate pause, SFX, music and two held frames.
+    const storyPlan = {
+      duration: 4, narration, width: 360, height: 640, fps: 24,
+      clips: [
+        { id: "story-scene-1", imagePath: image1, start: 0, duration: 2, motion: "hold" },
+        { id: "story-scene-2", imagePath: image2, start: 2, duration: 2, motion: "hold" }
+      ],
+      audioLayers: [
+        { id: "speaker-a", filePath: voiceA, kind: "dialogue", start: 0.3, duration: 0.8, volume: 0.7, loop: false, fadeIn: 0, fadeOut: 0, origin: "studio-dialogue", voiceLineId: "line-1", voiceSpeaker: "พรานสิง" },
+        { id: "speaker-b", filePath: voiceB, kind: "dialogue", start: 2.2, duration: 0.8, volume: 0.7, loop: false, fadeIn: 0, fadeOut: 0, origin: "studio-dialogue", voiceLineId: "line-2", voiceSpeaker: "พรานอิน" },
+        { id: "story-effect", filePath: effect, kind: "sfx", start: 1.5, duration: 0.8, volume: 0.15, loop: false, fadeIn: 0, fadeOut: 0, origin: "manual" },
+        { id: "background-music", filePath: music, kind: "music", start: 0, duration: 4, volume: 0.08, loop: false, fadeIn: 0, fadeOut: 0.2, origin: "manual" }
+      ],
+      subtitles: [], transitionDuration: 0, quality: "draft"
+    };
+    await renderTimeline(storyPlan, storyOutput, () => {});
+    const storyReport = await verifyRenderedOutput(storyPlan, storyOutput);
+    if (!storyReport.passed || Math.abs(storyReport.actualDuration - 4) > 0.3 ||
+        storyReport.width !== 360 || storyReport.height !== 640 ||
+        fs.statSync(storyOutput).size < 1000) {
+      throw new Error("Multi-speaker story MP4 failed post-render verification.");
     }
 
     console.log(
