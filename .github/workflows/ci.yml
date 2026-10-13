@@ -63,6 +63,22 @@ jobs:
             if ($installer.Length -lt 1000000) { throw "Installer unexpectedly small: $($installer.Name)" }
             Write-Host "Installer built: $($installer.Name) ($($installer.Length) bytes)"
           }
+      - name: Generate Windows installer SHA-256 manifest
+        shell: pwsh
+        run: |
+          $installers = @(Get-ChildItem -Path release -Filter "Gananajak-AI-Video-Editor-Setup-*.exe" -File)
+          $lines = foreach ($installer in $installers) {
+            $hash = (Get-FileHash -Path $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($installer.Name)"
+          }
+          $lines | Set-Content -Path release/SHA256SUMS.txt -Encoding ascii
+      - name: Upload Windows installer checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: Gananajak-AI-Video-Editor-Windows-SHA256
+          path: release/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 7
       - name: Upload Windows installer for acceptance testing
         uses: actions/upload-artifact@v4
         with:
