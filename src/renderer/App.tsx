@@ -43,7 +43,7 @@ export default function App() {
   const [projectId, setProjectId] = useState(() => `project-${Date.now()}`);
   const episodeEditorRef = useRef<{ projectId: string; episodeId: string } | null>(null);
   const autosaveGenerationRef = useRef(0);
-  const queueEpisodeSaveRef = useRef<ReturnType<typeof createSerializedSaveQueue<{ projectId: string; episodeId: string; document: ProjectDocument }>> | null>(null);
+  const queueEpisodeSaveRef = useRef<((value: { projectId: string; episodeId: string; document: ProjectDocument }) => Promise<void>) | null>(null);
   if (!queueEpisodeSaveRef.current) {
     queueEpisodeSaveRef.current = createSerializedSaveQueue(({ projectId, episodeId, document }) =>
       window.videoEditor.saveStudioEpisodeEditor(projectId, episodeId, document));
