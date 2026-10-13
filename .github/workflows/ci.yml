@@ -54,13 +54,6 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
       - name: Windows FFmpeg MP4 smoke
         run: npm run smoke:render
-      - name: Upload Windows installer for acceptance testing
-        uses: actions/upload-artifact@v4
-        with:
-          name: Gananajak-AI-Video-Editor-Windows-Setup
-          path: release/Gananajak-AI-Video-Editor-Setup-*.exe
-          if-no-files-found: error
-          retention-days: 7
       - name: Verify Windows installer exists
         shell: pwsh
         run: |
@@ -70,3 +63,10 @@ jobs:
             if ($installer.Length -lt 1000000) { throw "Installer unexpectedly small: $($installer.Name)" }
             Write-Host "Installer built: $($installer.Name) ($($installer.Length) bytes)"
           }
+      - name: Upload Windows installer for acceptance testing
+        uses: actions/upload-artifact@v4
+        with:
+          name: Gananajak-AI-Video-Editor-Windows-Setup
+          path: release/Gananajak-AI-Video-Editor-Setup-*.exe
+          if-no-files-found: error
+          retention-days: 7
