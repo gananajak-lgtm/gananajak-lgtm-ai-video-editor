@@ -788,9 +788,6 @@ export default function App() {
     setStudioBusy(true);
     try {
       const previous = episodeEditorRef.current;
-      // Invalidate delayed autosave callbacks before awaiting disk writes.
-      // A callback from the outgoing EP must not race with the incoming load.
-      ++autosaveGenerationRef.current;
       if (previous) {
         if (projectDocument.id !== "episode-" + previous.episodeId) {
           throw new Error("ข้อมูลไทม์ไลน์ไม่ตรงกับ EP เดิม ยกเลิกการสลับตอนเพื่อป้องกันการบันทึกผิด EP");
@@ -799,6 +796,9 @@ export default function App() {
         // otherwise a pending debounce could make the screen revert to old data.
         await queueEpisodeSave(previous.projectId, previous.episodeId, projectDocument);
       }
+      // Previous document is flushed. Now invalidate any pending debounce
+      // before reading the next EP; its callback must not write during load.
+      ++autosaveGenerationRef.current;
       const stored = await window.videoEditor.loadStudioEpisodeEditor(studioSelectedId, episodeId);
       // Complete all fallible reads before mutating the active editor state.
       const episodeScript = await window.videoEditor.loadStudioEpisodeScript(studioSelectedId, episodeId);
