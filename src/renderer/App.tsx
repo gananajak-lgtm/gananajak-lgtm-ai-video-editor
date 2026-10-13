@@ -796,12 +796,12 @@ export default function App() {
         // otherwise a pending debounce could make the screen revert to old data.
         await queueEpisodeSave(previous.projectId, previous.episodeId, projectDocument);
       }
-      // Previous document is flushed. Now invalidate any pending debounce
-      // before reading the next EP; its callback must not write during load.
-      ++autosaveGenerationRef.current;
-      const stored = await window.videoEditor.loadStudioEpisodeEditor(studioSelectedId, episodeId);
       // Complete all fallible reads before mutating the active editor state.
+      // Keep autosave alive if either read fails and we stay on the old EP.
+      const stored = await window.videoEditor.loadStudioEpisodeEditor(studioSelectedId, episodeId);
       const episodeScript = await window.videoEditor.loadStudioEpisodeScript(studioSelectedId, episodeId);
+      // Both reads succeeded; retire outgoing timers before changing scope.
+      ++autosaveGenerationRef.current;
       if (stored) {
         // Older episode files may use a different document id; normalize it
         // when restoring so the autosave scope guard remains reliable.
