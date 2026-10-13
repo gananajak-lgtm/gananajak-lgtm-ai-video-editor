@@ -927,8 +927,9 @@ export default function App() {
 
         <div className="studioThemeControls"><strong>🎨 ธีมแอป</strong><div className="studioThemeSwatches">{(["indigo","ocean","emerald","rose","amber","slate"] as const).map(color => <button key={color} type="button" className={`studioSwatch ${theme === color ? "chosen" : ""}`} data-color={color} aria-label={`เลือกธีม ${color}`} title={color} onClick={() => setTheme(color)} />)}</div><label>รูปแบบตัวอักษร<select value={fontStyle} onChange={event => setFontStyle(event.target.value)}><option value="modern">Modern</option><option value="rounded">Rounded</option><option value="classic">Elegant</option></select></label></div>
       </section>}
+      {activeProductionTab === "editor" && episodeEditorScope && <p>🎬 โหมดไทม์ไลน์ EP: เปิดและบันทึกจากรายการตอนใน AI Voice Studio โดยตรง ไม่ใช้ไฟล์ .aivproj ส่วนกลาง</p>}
       {activeProductionTab === "editor" && studioSelectedId && studioEpisodeId && <button type="button" disabled={studioBusy} onClick={() => { void saveEpisodeEditor(); }}>💾 บันทึกไทม์ไลน์ EP</button>}
-      {activeProductionTab === "editor" && <ProjectToolbar
+      {activeProductionTab === "editor" && !episodeEditorScope && <ProjectToolbar
         title={projectTitle}
         projectPath={projectPath}
         autosaveState={autosaveState}
