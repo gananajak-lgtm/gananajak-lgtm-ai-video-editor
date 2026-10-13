@@ -248,6 +248,11 @@ export default function App() {
     try {
       const loaded = await window.videoEditor.openProject();
       if (loaded) {
+        // Standalone .aivproj files must never inherit the previously attached
+        // Studio episode autosave destination.
+        episodeEditorRef.current = null;
+        setEpisodeEditorScope(null);
+        ++autosaveGenerationRef.current;
         applyLoadedProject(loaded);
         setAutosaveState("saved");
       }
