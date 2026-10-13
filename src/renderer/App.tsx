@@ -782,6 +782,8 @@ export default function App() {
         await queueEpisodeSave(previous.projectId, previous.episodeId, projectDocument);
       }
       const stored = await window.videoEditor.loadStudioEpisodeEditor(studioSelectedId, episodeId);
+      // Complete all fallible reads before mutating the active editor state.
+      const episodeScript = await window.videoEditor.loadStudioEpisodeScript(studioSelectedId, episodeId);
       if (stored) {
         // Older episode files may use a different document id; normalize it
         // when restoring so the autosave scope guard remains reliable.
@@ -805,7 +807,6 @@ export default function App() {
       // The editor switch already confirmed unsaved-script changes above.
       // Load the target script directly: openStudioEpisode may silently return
       // while busy or prompt again, leaving a mismatched script/editor pair.
-      const episodeScript = await window.videoEditor.loadStudioEpisodeScript(studioSelectedId, episodeId);
       setStudioEpisodeId(episodeId);
       setStudioScript(episodeScript);
       setStudioSavedScript(episodeScript);
