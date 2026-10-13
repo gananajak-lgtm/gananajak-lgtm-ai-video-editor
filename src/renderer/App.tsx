@@ -609,6 +609,16 @@ export default function App() {
       setError("พบเสียง Studio ที่ไม่ตรงกับบทพูดปัจจุบัน กรุณาตรวจสอบและลบแทร็กเก่าก่อนนำเข้าใหม่ เพื่อป้องกันเสียงที่จัดเวลาไว้สูญหาย");
       return;
     }
+    if (existingStudioLines.length > 0 && (
+      existingStudioLines.length !== studioVoiceSchedule.length ||
+      existingStudioLines.some(layer => {
+        const current = studioVoiceSchedule.find(clip => clip.lineId === layer.voiceLineId);
+        return !current || Math.abs(layer.start - current.start) > 0.05 || Math.abs(layer.duration - current.duration) > 0.05;
+      })
+    )) {
+      setError("เวลาหรือจำนวนบรรทัดเสียง Studio เปลี่ยนจากที่วางไว้บนไทม์ไลน์ กรุณาตรวจสอบแทร็กเดิมก่อนนำเข้าใหม่ เพื่อไม่ให้ตำแหน่งเสียงที่แก้ไขไว้ถูกแทนที่");
+      return;
+    }
     const voiceEnd = studioVoiceSchedule[studioVoiceSchedule.length - 1].end;
     if (voiceEnd > timeline.duration + 0.001) {
       const lastClip = timeline.clips[timeline.clips.length - 1];
