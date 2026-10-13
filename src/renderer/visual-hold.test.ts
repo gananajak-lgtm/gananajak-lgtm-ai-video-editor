@@ -22,6 +22,7 @@ test("holds a still across subsequent voice lines and their pauses", () => {
 test("rejects unknown, duplicate and out-of-order scene anchors", () => {
   assert.throws(() => holdFramesThroughDialogue(lines, [{ imageId: "x", lineId: "missing" }]));
   assert.throws(() => holdFramesThroughDialogue(lines, [{ imageId: "x", lineId: "a" }, { imageId: "y", lineId: "a" }]));
+  assert.throws(() => holdFramesThroughDialogue(lines, [{ imageId: "x", lineId: "a" }, { imageId: "x", lineId: "c" }]));
   assert.throws(() => holdFramesThroughDialogue(lines, [{ imageId: "x", lineId: "c" }]));
   assert.throws(() => holdFramesThroughDialogue(lines, [{ imageId: "x", lineId: "a" }, { imageId: "y", lineId: "b" }, { imageId: "z", lineId: "a" }]));
 });

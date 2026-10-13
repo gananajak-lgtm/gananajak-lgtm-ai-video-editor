@@ -15,9 +15,11 @@ export function holdFramesThroughDialogue(lines: TimedVoiceLine[], anchors: Visu
   }
   const index = new Map(lines.map((line, i) => [line.lineId, i]));
   let lastIndex = -1;
+  const seenImages = new Set<string>();
   const ordered = anchors.map(anchor => {
     const i = index.get(anchor.lineId);
-    if (!anchor.imageId || i === undefined || i <= lastIndex) throw new Error("Image anchors must follow voice line order");
+    if (!anchor.imageId || seenImages.has(anchor.imageId) || i === undefined || i <= lastIndex) throw new Error("Image anchors must be unique and follow voice line order");
+    seenImages.add(anchor.imageId);
     lastIndex = i;
     return { anchor, line: lines[i] };
   });
