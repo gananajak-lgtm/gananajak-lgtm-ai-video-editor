@@ -604,6 +604,11 @@ export default function App() {
       setError("ไทม์ไลน์มีเสียง Studio อยู่ในแทร็กเสียงภายในแล้ว กรุณาตรวจสอบและนำแทร็กซ้ำออกก่อนนำเข้าใหม่ เพื่อป้องกันเสียงพูดซ้อนกัน");
       return;
     }
+    const existingStudioLines = audioLayers.filter(layer => layer.origin === "studio-dialogue");
+    if (existingStudioLines.length > 0 && existingStudioLines.some(layer => !layer.voiceLineId || !studioVoiceSchedule.some(clip => clip.lineId === layer.voiceLineId))) {
+      setError("พบเสียง Studio ที่ไม่ตรงกับบทพูดปัจจุบัน กรุณาตรวจสอบและลบแทร็กเก่าก่อนนำเข้าใหม่ เพื่อป้องกันเสียงที่จัดเวลาไว้สูญหาย");
+      return;
+    }
     const voiceEnd = studioVoiceSchedule[studioVoiceSchedule.length - 1].end;
     if (voiceEnd > timeline.duration + 0.001) {
       const lastClip = timeline.clips[timeline.clips.length - 1];
