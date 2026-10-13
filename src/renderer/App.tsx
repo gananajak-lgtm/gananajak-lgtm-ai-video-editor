@@ -818,10 +818,15 @@ export default function App() {
     finally { setStudioBusy(false); }
   };
   const saveEpisodeEditor = async () => {
-    if (!studioSelectedId || !studioEpisodeId || studioBusy) return;
+    const target = episodeEditorRef.current;
+    if (!target || studioBusy) return;
+    if (projectDocument.id !== "episode-" + target.episodeId) {
+      setError("ไทม์ไลน์ยังไม่ตรงกับ EP ที่เปิดอยู่ กรุณาเปิด EP ใหม่จากรายการตอนก่อนบันทึก");
+      return;
+    }
     setStudioBusy(true);
     try {
-      await queueEpisodeSave(studioSelectedId, studioEpisodeId, projectDocument);
+      await queueEpisodeSave(target.projectId, target.episodeId, projectDocument);
       setNotice("บันทึกไทม์ไลน์ของ EP เรียบร้อยแล้ว");
     } catch (error) { setError(String(error)); }
     finally { setStudioBusy(false); }
