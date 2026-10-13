@@ -1,5 +1,5 @@
 import { app } from "electron";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile, rename } from "node:fs/promises";
 import { readProjectFile, writeProject } from "./project-json";
 import type { ProjectDocument } from "../shared/types";
 import path from "node:path";
@@ -55,6 +55,32 @@ export async function createStudioEpisode(projectId: string, title: string) {
   project.episodes.push(episode);
   await writeIndex(projects);
   return episode;
+}
+
+// Deleted projects/episodes are moved to a local recovery folder, never erased.
+export async function deleteStudioProject(projectId: string): Promise<void> {
+  const projects = await readIndex();
+  const project = projects.find(item => item.id === projectId);
+  if (!project) throw new Error("ไม่พบโปรเจกต์");
+  const archive = path.join(root(), ".trash", "projects", randomUUID());
+  await mkdir(path.dirname(archive), { recursive: true });
+  await rename(path.join(root(), project.id), archive);
+  try { await writeIndex(projects.filter(item => item.id !== projectId)); }
+  catch (error) { await rename(archive, path.join(root(), project.id)); throw error; }
+}
+
+export async function deleteStudioEpisode(projectId: string, episodeId: string): Promise<void> {
+  const projects = await readIndex();
+  const project = projects.find(item => item.id === projectId);
+  const episode = project?.episodes.find(item => item.id === episodeId);
+  if (!project || !episode) throw new Error("ไม่พบตอนที่ต้องการลบ");
+  const original = path.join(root(), project.id, "episodes", episode.id);
+  const archive = path.join(root(), ".trash", "episodes", randomUUID());
+  await mkdir(path.dirname(archive), { recursive: true });
+  await rename(original, archive);
+  project.episodes = project.episodes.filter(item => item.id !== episodeId);
+  try { await writeIndex(projects); }
+  catch (error) { await rename(archive, original); throw error; }
 }
 
 // Episode editor documents are stored inside the existing episode directory, never
