@@ -3,16 +3,16 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const ffmpegPath = require("ffmpeg-static");
-const { renderTimeline } = require("../dist-electron/main/video/render.js");
+const { renderTimeline } = require("../dist-electron/src/main/video/render.js");
 const {
   createPreviewTimeline
-} = require("../dist-electron/main/video/previewPlan.js");
+} = require("../dist-electron/src/main/video/previewPlan.js");
 const {
   buildQcSampleSpecs
-} = require("../dist-electron/main/video/qcPack.js");
+} = require("../dist-electron/src/main/video/qcPack.js");
 const {
   verifyRenderedOutput
-} = require("../dist-electron/main/video/renderVerification.js");
+} = require("../dist-electron/src/main/video/renderVerification.js");
 
 function run(args) {
   const result = spawnSync(ffmpegPath, args, {
