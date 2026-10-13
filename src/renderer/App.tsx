@@ -213,9 +213,14 @@ export default function App() {
   useEffect(() => {
     if (!sessionReady || !hasProjectContent) return;
 
+    const target = episodeEditorScope;
+    // Bind each scheduled snapshot to its original editor scope. A timer from
+    // another episode must never write its stale document into the new episode.
+    if (target && projectDocument.id !== "episode-" + target.episodeId) return;
     setAutosaveState("saving");
     const timer = window.setTimeout(() => {
-      const target = episodeEditorRef.current;
+      if (episodeEditorRef.current?.episodeId !== target?.episodeId ||
+          episodeEditorRef.current?.projectId !== target?.projectId) return;
       const save = target
         ? queueEpisodeSave(target.projectId, target.episodeId, projectDocument)
         : window.videoEditor.autosaveProject(projectDocument);
@@ -778,7 +783,9 @@ export default function App() {
       }
       const stored = await window.videoEditor.loadStudioEpisodeEditor(studioSelectedId, episodeId);
       if (stored) {
-        applyLoadedProject({ project: stored, filePath: null, missingMedia: [] });
+        // Older episode files may use a different document id; normalize it
+        // when restoring so the autosave scope guard remains reliable.
+        applyLoadedProject({ project: { ...stored, id: "episode-" + episodeId }, filePath: null, missingMedia: [] });
       } else {
         setProjectId("episode-" + episodeId);
         setProjectTitle((selectedStudioProject?.title ?? "โปรเจกต์") + " · " + (selectedStudioProject?.episodes.find(ep => ep.id === episodeId)?.title ?? "EP"));
