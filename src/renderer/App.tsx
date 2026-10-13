@@ -747,7 +747,8 @@ export default function App() {
       setStudioNewEpisode("");
       await refreshStudioProjects();
       await openStudioEpisode(created.id);
-      setNotice("เพิ่มตอนใหม่และเปิดบท EP แล้ว");
+      setActiveProductionTab("dashboard");
+      setNotice("เพิ่มตอนใหม่แล้ว · เปิดบท EP ด้านล่างเพื่อเขียนบท หรือเลือกสร้างเสียงตอนนี้");
     } catch(e) { setError(String(e)); }
     finally { setStudioBusy(false); }
   };
@@ -871,14 +872,14 @@ export default function App() {
 
         <div className="studioThemeControls"><strong>🎨 ธีมแอป</strong><div className="studioThemeSwatches">{(["indigo","ocean","emerald","rose","amber","slate"] as const).map(color => <button key={color} type="button" className={`studioSwatch ${theme === color ? "chosen" : ""}`} data-color={color} aria-label={`เลือกธีม ${color}`} title={color} onClick={() => setTheme(color)} />)}</div><label>รูปแบบตัวอักษร<select value={fontStyle} onChange={event => setFontStyle(event.target.value)}><option value="modern">Modern</option><option value="rounded">Rounded</option><option value="classic">Elegant</option></select></label></div>
       </section>}
-      <ProjectToolbar
+      {activeProductionTab === "editor" && <ProjectToolbar
         title={projectTitle}
         projectPath={projectPath}
         autosaveState={autosaveState}
         onTitleChange={setProjectTitle}
         onOpen={openProjectFile}
         onSave={saveProjectFile}
-      />
+      />}
 
       <div className="compactTabContent" hidden={activeProductionTab !== "accounts" && activeProductionTab !== "voices"}><CharacterVoiceLibrary projectId={studioSelectedId} /></div>
 
