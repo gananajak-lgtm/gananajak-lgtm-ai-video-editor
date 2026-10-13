@@ -788,6 +788,9 @@ export default function App() {
     setStudioBusy(true);
     try {
       const previous = episodeEditorRef.current;
+      // Invalidate delayed autosave callbacks before awaiting disk writes.
+      // A callback from the outgoing EP must not race with the incoming load.
+      ++autosaveGenerationRef.current;
       if (previous) {
         if (projectDocument.id !== "episode-" + previous.episodeId) {
           throw new Error("ข้อมูลไทม์ไลน์ไม่ตรงกับ EP เดิม ยกเลิกการสลับตอนเพื่อป้องกันการบันทึกผิด EP");
