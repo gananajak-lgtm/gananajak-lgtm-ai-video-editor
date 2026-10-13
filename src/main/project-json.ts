@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 import type { ProjectDocument } from "../shared/types";
 
 export function isProjectDocument(value: unknown): value is ProjectDocument {
@@ -20,5 +21,12 @@ export async function readProjectFile(filePath: string): Promise<ProjectDocument
 
 export async function writeProject(filePath: string, project: ProjectDocument): Promise<void> {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, JSON.stringify(project, null, 2), "utf8");
+  // Write beside the destination so interrupted saves do not truncate the previous project.
+  const temporaryPath = path.join(path.dirname(filePath), `.${path.basename(filePath)}-${randomUUID()}.tmp`);
+  try {
+    await fs.writeFile(temporaryPath, JSON.stringify(project, null, 2), { encoding: "utf8", flag: "wx" });
+    await fs.rename(temporaryPath, filePath);
+  } finally {
+    await fs.rm(temporaryPath, { force: true });
+  }
 }
