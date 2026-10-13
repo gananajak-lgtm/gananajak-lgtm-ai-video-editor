@@ -295,6 +295,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
         projectId: activeProjectId, episodeId: activeEpisodeId,
         lineId: next.lineId, fingerprint: next.fingerprint,
         text: next.text, voiceId: next.voiceId, modelId: next.modelId,
+        jobId: next.id, speaker: next.speaker, emotion: next.emotion,
         approved: true
       });
       const entries = await window.videoEditor.loadStudioEpisodeVoiceAudio(activeProjectId, activeEpisodeId);
@@ -348,6 +349,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
             projectId: activeProjectId, episodeId: activeEpisodeId,
             lineId: job.lineId, fingerprint: job.fingerprint,
             text: job.text, voiceId: job.voiceId!, modelId: job.modelId,
+            jobId: job.id, speaker: job.speaker, emotion: job.emotion,
             approved: true
           });
           done++;
