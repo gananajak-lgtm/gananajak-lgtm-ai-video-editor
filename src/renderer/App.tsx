@@ -779,6 +779,9 @@ export default function App() {
     try {
       const previous = episodeEditorRef.current;
       if (previous && (previous.projectId !== studioSelectedId || previous.episodeId !== episodeId)) {
+        if (projectDocument.id !== "episode-" + previous.episodeId) {
+          throw new Error("ข้อมูลไทม์ไลน์ไม่ตรงกับ EP เดิม ยกเลิกการสลับตอนเพื่อป้องกันการบันทึกผิด EP");
+        }
         await queueEpisodeSave(previous.projectId, previous.episodeId, projectDocument);
       }
       const stored = await window.videoEditor.loadStudioEpisodeEditor(studioSelectedId, episodeId);
