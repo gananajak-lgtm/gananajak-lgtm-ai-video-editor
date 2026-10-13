@@ -139,7 +139,12 @@ export default function App() {
       .then(([status, autosave]) => {
         if (cancelled) return;
         setAiStatus(status);
-        if (autosave) applyLoadedProject(autosave);
+        if (autosave) {
+          // The global autosave belongs only to the standalone editor. It is
+          // never interpreted as an episode timeline; those load explicitly.
+          applyLoadedProject(autosave);
+          setNotice("กู้คืนงานตัดต่อทั่วไปแล้ว · หากต้องการไทม์ไลน์ของ EP ให้เปิดจากรายการตอนใน AI Voice Studio");
+        }
       })
       .catch((startupError) => {
         if (cancelled) return;
