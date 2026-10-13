@@ -600,6 +600,10 @@ export default function App() {
       setError("กรุณารอให้ตรวจสอบความยาว MP3 ครบทุกบรรทัดก่อนนำเข้า");
       return;
     }
+    if (timeline.audioLayers.some(layer => layer.origin === "studio-dialogue")) {
+      setError("ไทม์ไลน์มีเสียง Studio อยู่ในแทร็กเสียงภายในแล้ว กรุณาตรวจสอบและนำแทร็กซ้ำออกก่อนนำเข้าใหม่ เพื่อป้องกันเสียงพูดซ้อนกัน");
+      return;
+    }
     const voiceEnd = studioVoiceSchedule[studioVoiceSchedule.length - 1].end;
     if (voiceEnd > timeline.duration + 0.001) {
       const lastClip = timeline.clips[timeline.clips.length - 1];
