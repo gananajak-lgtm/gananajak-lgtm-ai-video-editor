@@ -378,6 +378,16 @@ export default function App() {
     setNotice("นำภาพออกแล้ว · ต้องสร้างไทม์ไลน์ใหม่เพื่อให้ช็อตตรงกับรายการภาพ");
   };
 
+  const removeNarration = () => {
+    if (!narration || !window.confirm(`นำเสียงบรรยาย “${fileName(narration)}” ออกจากโปรเจกต์?\\nไฟล์เสียงต้นฉบับจะยังอยู่`)) return;
+    setเสียงบรรยาย(null);
+    setTranscript(null);
+    setEditingPlan(null);
+    setTimeline(null);
+    setStudioFrameAnchors({});
+    setNotice("นำเสียงบรรยายออกแล้ว · ข้อมูลไทม์ไลน์ที่อ้างอิงเสียงเดิมถูกรีเซ็ต");
+  };
+
   const chooseเสียงบรรยาย = async () => {
     const picked = await window.videoEditor.selectNarration();
     if (picked) {
@@ -1117,7 +1127,7 @@ export default function App() {
               <span className="step">02</span>
               <h3>เสียงบรรยาย</h3>
             </div>
-            <button onClick={chooseเสียงบรรยาย}>เลือกเสียง</button>
+            <div style={{display:"flex",gap:8}}><button onClick={chooseเสียงบรรยาย}>เลือกเสียง</button>{narration && <button type="button" className="removeButton" onClick={removeNarration}>🗑️ ลบเสียง</button>}</div>
           </div>
           <p className="muted">
             {narration ? fileName(narration) : "ยังไม่ได้เลือกเสียงบรรยาย"}
