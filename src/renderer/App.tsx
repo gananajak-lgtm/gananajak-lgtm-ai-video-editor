@@ -788,10 +788,12 @@ export default function App() {
     setStudioBusy(true);
     try {
       const previous = episodeEditorRef.current;
-      if (previous && (previous.projectId !== studioSelectedId || previous.episodeId !== episodeId)) {
+      if (previous) {
         if (projectDocument.id !== "episode-" + previous.episodeId) {
           throw new Error("ข้อมูลไทม์ไลน์ไม่ตรงกับ EP เดิม ยกเลิกการสลับตอนเพื่อป้องกันการบันทึกผิด EP");
         }
+        // Reopening the same EP must also flush edits before reading from disk;
+        // otherwise a pending debounce could make the screen revert to old data.
         await queueEpisodeSave(previous.projectId, previous.episodeId, projectDocument);
       }
       const stored = await window.videoEditor.loadStudioEpisodeEditor(studioSelectedId, episodeId);
