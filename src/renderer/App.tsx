@@ -743,9 +743,11 @@ export default function App() {
     if (!studioSelectedId || !studioNewEpisode.trim() || studioBusy) return;
     setStudioBusy(true);
     try {
-      await window.videoEditor.createStudioEpisode(studioSelectedId, studioNewEpisode);
+      const created = await window.videoEditor.createStudioEpisode(studioSelectedId, studioNewEpisode);
       setStudioNewEpisode("");
       await refreshStudioProjects();
+      await openStudioEpisode(created.id);
+      setNotice("เพิ่มตอนใหม่และเปิดบท EP แล้ว");
     } catch(e) { setError(String(e)); }
     finally { setStudioBusy(false); }
   };
@@ -820,10 +822,10 @@ export default function App() {
           <button onClick={leaveStudioProject}>← กลับไปโปรเจกต์ทั้งหมด</button>
           <h3>คลังเสียงตัวละคร</h3>
           <p>คลังตัวละครของเรื่องนี้: {selectedStudioProject.folder}/characters</p>
-          <p>ระบบเชื่อมคลังเสียงเข้ากับโปรเจกต์กำลังพัฒนา</p>
+          <p>โปรเจกต์เรื่องและตอน (EP) อยู่ใน AI Voice Studio · ปุ่ม “เปิดโปรเจกต์” ของหน้าตัดต่อใช้เปิดไฟล์ .aivproj คนละประเภท ไม่ใช่การเปิดตอน</p>
           <h3>ตอนทั้งหมด (EP)</h3>
-          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}><input placeholder="ชื่อตอน เช่น EP01" value={studioNewEpisode} onChange={e=>setStudioNewEpisode(e.target.value)} /><button disabled={studioBusy || !studioNewEpisode.trim()} onClick={addStudioEpisode}>+ เพิ่ม EP</button></div>
-          {selectedStudioProject.episodes.map(ep => <div key={ep.id} className="studioProjectRow"><strong>{ep.title}</strong><small>{ep.folder}</small><button type="button" disabled={studioScriptBusy} onClick={() => void openStudioEpisode(ep.id)}>{studioEpisodeId === ep.id ? "เปิดอยู่" : "เปิดบท EP"}</button></div>)}
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}><input aria-label="ชื่อตอนใหม่" placeholder="พิมพ์ชื่อตอน เช่น EP02" value={studioNewEpisode} onChange={e=>setStudioNewEpisode(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); void addStudioEpisode(); } }} /><button type="button" disabled={studioBusy || studioScriptBusy || !studioNewEpisode.trim()} onClick={() => void addStudioEpisode()}>+ เพิ่ม EP</button></div><p>พิมพ์ชื่อตอนก่อนกดเพิ่ม EP · ระบบจะเปิดบทตอนใหม่ให้ทันที</p>
+          {selectedStudioProject.episodes.map(ep => <div key={ep.id} className="studioProjectRow"><strong>{ep.title}</strong><small>{ep.folder}</small><button type="button" disabled={studioScriptBusy} onClick={() => void openStudioEpisode(ep.id)}>{studioEpisodeId === ep.id ? "เปิดอยู่" : "เปิดบท EP"}</button><button type="button" disabled={studioScriptBusy} onClick={() => { void openStudioEpisode(ep.id).then(() => setActiveProductionTab("script")); }}>สร้างเสียงตอนนี้ →</button></div>)}
           {studioEpisodeId && <section aria-label="แก้ไขบท EP">
             <h3>บทละคร: {selectedStudioProject.episodes.find(ep => ep.id === studioEpisodeId)?.title}</h3>
             <p>{studioScriptDirty ? "● มีการแก้ไขที่ยังไม่ได้บันทึก" : "บันทึกแล้ว"}</p>
