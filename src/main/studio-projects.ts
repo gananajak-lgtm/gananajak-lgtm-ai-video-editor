@@ -391,6 +391,25 @@ export async function resolveStudioEpisodeVoiceOutput(
  * The caller must finish writing and validating the MP3 before invoking this.
  */
 const voiceManifestQueues = new Map<string, Promise<void>>();
+/** Remove one generated line from the active manifest without deleting its MP3.
+ * Serializes with registrations so an in-flight synthesis cannot overwrite
+ * the updated manifest through a stale read.
+ */
+export async function removeStudioEpisodeVoiceAudio(projectId: string, episodeId: string, lineId: string): Promise<void> {
+  if (typeof lineId !== "string" || !lineId.trim() || lineId.length > 250) throw new Error("Invalid voice line ID");
+  const key = `${projectId}:${episodeId}`;
+  const previous = voiceManifestQueues.get(key) ?? Promise.resolve();
+  const pending = previous.catch(() => {}).then(async () => {
+    const existing = await loadStudioEpisodeVoiceAudio(projectId, episodeId);
+    if (!Object.prototype.hasOwnProperty.call(existing, lineId)) throw new Error("ไม่พบเสียงบรรทัดนี้");
+    delete existing[lineId];
+    await saveStudioEpisodeVoiceAudio(projectId, episodeId, existing);
+  });
+  voiceManifestQueues.set(key, pending);
+  try { await pending; }
+  finally { if (voiceManifestQueues.get(key) === pending) voiceManifestQueues.delete(key); }
+}
+
 export async function registerStudioEpisodeVoiceAudio(
   projectId: string,
   episodeId: string,
