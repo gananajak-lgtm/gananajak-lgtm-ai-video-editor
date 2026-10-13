@@ -319,6 +319,7 @@ export type DesktopApi = {
   saveStudioEpisodeScript: (projectId: string, episodeId: string, script: string) => Promise<void>;
   generateStudioVoiceLine: (request: { projectId: string; episodeId: string; lineId: string; fingerprint: string; text: string; voiceId: string; modelId: string; approved: boolean; jobId?: string; speaker?: string; emotion?: string }) => Promise<{ outputPath: string }>;
   loadStudioEpisodeVoiceAudio: (projectId: string, episodeId: string) => Promise<Record<string, { fingerprint: string; outputPath: string; jobId?: string; speaker?: string; emotion?: string; text?: string }>>;
+  removeStudioEpisodeVoiceAudio: (projectId: string, episodeId: string, lineId: string) => Promise<void>;
   getStudioVoiceAudioDuration: (projectId: string, episodeId: string, relativePath: string) => Promise<number>;
   resolveStudioVoiceAudio: (projectId: string, episodeId: string, relativePath: string) => Promise<string>;
   loadStudioCharacterVoices: (projectId: string) => Promise<Record<string, string>>;
