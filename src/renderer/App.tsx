@@ -369,6 +369,15 @@ export default function App() {
     }
   };
 
+  const removeImportedImage = (imagePath: string) => {
+    if (!window.confirm(`นำภาพ “${fileName(imagePath)}” ออกจากรายการภาพที่เลือก?\\nไฟล์ต้นฉบับจะยังอยู่`)) return;
+    setImages(current => current.filter(image => image !== imagePath));
+    // Generated timing/shot mapping may refer to the removed image.
+    setTimeline(null);
+    setStudioFrameAnchors({});
+    setNotice("นำภาพออกแล้ว · ต้องสร้างไทม์ไลน์ใหม่เพื่อให้ช็อตตรงกับรายการภาพ");
+  };
+
   const chooseเสียงบรรยาย = async () => {
     const picked = await window.videoEditor.selectNarration();
     if (picked) {
@@ -1091,15 +1100,14 @@ export default function App() {
           </div>
           <p className="muted">{summary}</p>
           <div className="mediaList">
-            {images.slice(0, 8).map((image, index) => (
+            {images.map((image, index) => (
               <div className="mediaRow" key={image}>
                 <span>{String(index + 1).padStart(2, "0")}</span>
                 <strong>{fileName(image)}</strong>
+                <button type="button" className="removeButton" onClick={() => removeImportedImage(image)}>🗑️ ลบ</button>
               </div>
             ))}
-            {images.length > 8 && (
-              <div className="mediaRow more">+ {images.length - 8} more</div>
-            )}
+
           </div>
         </article>
 
