@@ -619,6 +619,15 @@ export default function App() {
       setError("เวลาหรือจำนวนบรรทัดเสียง Studio เปลี่ยนจากที่วางไว้บนไทม์ไลน์ กรุณาตรวจสอบแทร็กเดิมก่อนนำเข้าใหม่ เพื่อไม่ให้ตำแหน่งเสียงที่แก้ไขไว้ถูกแทนที่");
       return;
     }
+    if (existingStudioLines.length > 0 && existingStudioLines.some(layer => {
+      const current = studioVoiceSchedule.find(clip => clip.lineId === layer.voiceLineId);
+      return !current || (layer.voiceJobId && current.jobId && layer.voiceJobId !== current.jobId) ||
+        (layer.voiceText && current.text && layer.voiceText !== current.text) ||
+        (layer.voiceSpeaker && current.speaker && layer.voiceSpeaker !== current.speaker);
+    })) {
+      setError("เสียง Studio ชุดใหม่มีข้อความ ผู้พูด หรือรหัสงานเสียงต่างจากที่นำเข้าไว้ กรุณาตรวจสอบก่อนแทนที่ เพื่อป้องกันการสูญเสียเสียงฉบับที่เลือกไว้");
+      return;
+    }
     const voiceEnd = studioVoiceSchedule[studioVoiceSchedule.length - 1].end;
     if (voiceEnd > timeline.duration + 0.001) {
       const lastClip = timeline.clips[timeline.clips.length - 1];
