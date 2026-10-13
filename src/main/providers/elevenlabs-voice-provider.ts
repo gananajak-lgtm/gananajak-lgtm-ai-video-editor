@@ -20,7 +20,8 @@ async function generateStudioVoiceLineUnchecked(
   fingerprint: string,
   text: string,
   voiceId: string,
-  modelId = "eleven_multilingual_v2"
+  modelId = "eleven_multilingual_v2",
+  metadata: { jobId?: string; speaker?: string; emotion?: string } = {}
 ): Promise<{ outputPath: string }> {
   if (!text.trim() || text.length > 5000 || !/^[a-zA-Z0-9_-]{1,100}$/.test(voiceId) ||
       !/^[a-zA-Z0-9_-]{1,100}$/.test(modelId)) {
@@ -48,7 +49,7 @@ async function generateStudioVoiceLineUnchecked(
     await writeFile(temporaryPath, audio, { flag: "wx" });
     if (!(await isDecodableMp3(temporaryPath))) throw new Error("ElevenLabs returned an undecodable MP3");
     await rename(temporaryPath, destination.absolutePath);
-    await registerStudioEpisodeVoiceAudio(projectId, episodeId, lineId, fingerprint, destination.relativePath);
+    await registerStudioEpisodeVoiceAudio(projectId, episodeId, lineId, fingerprint, destination.relativePath, { ...metadata, text });
     return { outputPath: destination.relativePath };
   } finally {
     await rm(temporaryPath, { force: true });
@@ -60,7 +61,8 @@ const studioVoiceRequests = new Map<string, Promise<{ outputPath: string }>>();
 export async function generateStudioVoiceLine(
   projectId: string, episodeId: string, lineId: string,
   fingerprint: string, text: string, voiceId: string,
-  modelId = "eleven_multilingual_v2"
+  modelId = "eleven_multilingual_v2",
+  metadata: { jobId?: string; speaker?: string; emotion?: string } = {}
 ): Promise<{ outputPath: string }> {
   if (!projectId || !episodeId || !lineId || !fingerprint) throw new Error("Missing voice request identity");
   const key = JSON.stringify([projectId, episodeId, lineId]);
@@ -68,7 +70,7 @@ export async function generateStudioVoiceLine(
   if (active) {
     throw new Error("Voice generation is already running for this line");
   }
-  const request = generateStudioVoiceLineUnchecked(projectId, episodeId, lineId, fingerprint, text, voiceId, modelId);
+  const request = generateStudioVoiceLineUnchecked(projectId, episodeId, lineId, fingerprint, text, voiceId, modelId, metadata);
   studioVoiceRequests.set(key, request);
   try { return await request; }
   finally { if (studioVoiceRequests.get(key) === request) studioVoiceRequests.delete(key); }
