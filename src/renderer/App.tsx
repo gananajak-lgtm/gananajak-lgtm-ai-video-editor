@@ -567,7 +567,7 @@ export default function App() {
       return;
     }
     const holds = studioFrameHoldPreview.holds;
-    if (timeline.subtitles.length > 0 || narration || [...audioLayers, ...timeline.audioLayers].some(layer => layer.origin !== "studio-dialogue")) {
+    if (timeline.subtitles.length > 0 || narration || [...audioLayers, ...timeline.audioLayers].some(layer => layer.origin !== "studio-dialogue") || (timeline.narration && timeline.narration.trim().length > 0)) {
       setError("ไทม์ไลน์นี้มีเสียงบรรยาย คำบรรยาย หรือแทร็กเสียงอื่นที่กำหนดเวลาไว้แล้ว กรุณาปรับจุดเวลาให้ตรงก่อนใช้การค้างภาพอัตโนมัติ");
       return;
     }
