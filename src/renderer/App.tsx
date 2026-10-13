@@ -1,4 +1,4 @@
-import { createSerializedSaveQueue } from "./serialized-save-queue";
+import { createSerializedSaveQueue } from "../shared/serialized-save-queue";
 import { scheduleDialogueClips } from "./dialogue-timeline";
 import { holdFramesThroughDialogue, restoreFrameAnchors } from "./visual-hold";
 import { useEffect, useMemo, useRef, useState } from "react";
