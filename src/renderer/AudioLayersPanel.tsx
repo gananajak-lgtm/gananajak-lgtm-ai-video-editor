@@ -36,7 +36,9 @@ export default function AudioLayersPanel({ layers, onChange }: Props) {
   };
 
   const removeLayer = (id: string) => {
-    onChange(layers.filter((layer) => layer.id !== id));
+    const layer = layers.find((item) => item.id === id);
+    if (!layer || !window.confirm(`ลบแทร็กเสียง “${fileName(layer.filePath)}” ออกจากโปรเจกต์?\\nไฟล์เสียงต้นฉบับจะไม่ถูกลบ`)) return;
+    onChange(layers.filter((item) => item.id !== id));
   };
 
   return (
