@@ -268,6 +268,7 @@ ipcMain.handle("studio:generate-voice-line", async (_event, request: {
     request.fingerprint, request.text, request.voiceId, request.modelId,
     { jobId: request.jobId, speaker: request.speaker, emotion: request.emotion });
 });
+ipcMain.handle("studio:remove-voice-audio", (_event, projectId: string, episodeId: string, lineId: string) => removeStudioEpisodeVoiceAudio(projectId, episodeId, lineId));
 ipcMain.handle("studio:load-voice-audio", (_event, projectId: string, episodeId: string) => loadStudioEpisodeVoiceAudio(projectId, episodeId));
   ipcMain.handle("studio:voice-audio-duration", (_event, projectId: string, episodeId: string, relativePath: string) => getStudioVoiceAudioDuration(projectId, episodeId, relativePath));
   ipcMain.handle("studio:resolve-voice-audio", async (_event, projectId: string, episodeId: string, relativePath: string) => {
