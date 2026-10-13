@@ -42,6 +42,7 @@ export default function App() {
   const [projectId, setProjectId] = useState(() => `project-${Date.now()}`);
   const episodeEditorRef = useRef<{ projectId: string; episodeId: string } | null>(null);
   const autosaveQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const autosaveGenerationRef = useRef(0);
   const queueEpisodeSave = (projectId: string, episodeId: string, document: ProjectDocument) => {
     const queued = autosaveQueueRef.current.catch(() => undefined).then(() => window.videoEditor.saveStudioEpisodeEditor(projectId, episodeId, document));
     autosaveQueueRef.current = queued;
@@ -211,6 +212,7 @@ export default function App() {
     audioLayers.length > 0;
 
   useEffect(() => {
+    const generation = ++autosaveGenerationRef.current;
     if (!sessionReady || !hasProjectContent) return;
 
     const target = episodeEditorScope;
@@ -219,15 +221,23 @@ export default function App() {
     if (target && projectDocument.id !== "episode-" + target.episodeId) return;
     setAutosaveState("saving");
     const timer = window.setTimeout(() => {
-      if (episodeEditorRef.current?.episodeId !== target?.episodeId ||
+      if (autosaveGenerationRef.current !== generation ||
+          episodeEditorRef.current?.episodeId !== target?.episodeId ||
           episodeEditorRef.current?.projectId !== target?.projectId) return;
       const save = target
         ? queueEpisodeSave(target.projectId, target.episodeId, projectDocument)
         : window.videoEditor.autosaveProject(projectDocument);
-      void save.then(() => setAutosaveState("saved")).catch(() => setAutosaveState("error"));
+      void save.then(() => {
+        if (autosaveGenerationRef.current === generation) setAutosaveState("saved");
+      }).catch(() => {
+        if (autosaveGenerationRef.current === generation) setAutosaveState("error");
+      });
     }, 800);
 
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      if (autosaveGenerationRef.current === generation) ++autosaveGenerationRef.current;
+    };
   }, [sessionReady, hasProjectContent, projectDocument, episodeEditorScope]);
 
   const openProjectFile = async () => {
