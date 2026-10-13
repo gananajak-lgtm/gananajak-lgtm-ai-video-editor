@@ -37,3 +37,4 @@ jobs:
         env:
           META_BROKER_TEST_DATABASE_URL: postgresql://broker:broker@127.0.0.1:5432/broker_test
       - run: npm run build
+      - run: npm run smoke:render
