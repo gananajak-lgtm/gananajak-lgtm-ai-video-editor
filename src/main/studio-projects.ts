@@ -1,5 +1,7 @@
 import { app } from "electron";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { readProjectFile, writeProject } from "./project-json";
+import type { ProjectDocument } from "../shared/types";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { hasPlausibleMp3Header } from "./studio-mp3-header";
@@ -53,6 +55,29 @@ export async function createStudioEpisode(projectId: string, title: string) {
   project.episodes.push(episode);
   await writeIndex(projects);
   return episode;
+}
+
+// Episode editor documents are stored inside the existing episode directory, never
+// in the global editor autosave. Resolve the path from the trusted Studio index.
+async function episodeEditorPath(projectId: string, episodeId: string): Promise<string> {
+  const project = (await readIndex()).find(item => item.id === projectId);
+  const episode = project?.episodes.find(item => item.id === episodeId);
+  if (!episode) throw new Error("Episode not found");
+  return path.join(root(), project!.id, "episodes", episode.id, "timeline", "editor.aivproj");
+}
+
+export async function loadStudioEpisodeEditor(projectId: string, episodeId: string): Promise<ProjectDocument | null> {
+  const filePath = await episodeEditorPath(projectId, episodeId);
+  try { return await readProjectFile(filePath); }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+export async function saveStudioEpisodeEditor(projectId: string, episodeId: string, document: ProjectDocument): Promise<void> {
+  const filePath = await episodeEditorPath(projectId, episodeId);
+  await writeProject(filePath, document);
 }
 
 export async function loadStudioEpisodeScript(projectId: string, episodeId: string): Promise<string> {
