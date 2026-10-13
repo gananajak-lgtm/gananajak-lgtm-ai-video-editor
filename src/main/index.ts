@@ -1,5 +1,5 @@
 import { generateStudioVoiceLine } from "./providers/elevenlabs-voice-provider";
-import { listStudioProjects, createStudioProject, createStudioEpisode, loadStudioEpisodeEditor, saveStudioEpisodeEditor, loadStudioEpisodeScript, saveStudioEpisodeScript, loadStudioCharacterVoices, saveStudioCharacterVoices, patchStudioCharacterVoice, loadStudioEpisodeVoiceAudio, getStudioVoiceAudioDuration, findReusableStudioEpisodeAudio } from "./studio-projects";
+import { listStudioProjects, createStudioProject, createStudioEpisode, deleteStudioProject, deleteStudioEpisode, loadStudioEpisodeEditor, saveStudioEpisodeEditor, loadStudioEpisodeScript, saveStudioEpisodeScript, loadStudioCharacterVoices, saveStudioCharacterVoices, patchStudioCharacterVoice, loadStudioEpisodeVoiceAudio, getStudioVoiceAudioDuration, findReusableStudioEpisodeAudio } from "./studio-projects";
 import { checkProviderConnection } from "./provider-connection";
 import { createMetaBrokerSession, exchangeMetaBrokerSession, validateMetaBrokerConfig } from "./meta-auth-broker";
 import { explainAffiliateProduct } from "./affiliate-product-search";
@@ -248,6 +248,8 @@ ipcMain.handle("media:select-audio-layers", async () => {
 ipcMain.handle("studio:list-projects", () => listStudioProjects());
 ipcMain.handle("studio:create-project", (_event, title: string) => createStudioProject(title));
 ipcMain.handle("studio:create-episode", (_event, projectId: string, title: string) => createStudioEpisode(projectId, title));
+ipcMain.handle("studio:delete-project", (_event, projectId: string) => deleteStudioProject(projectId));
+ipcMain.handle("studio:delete-episode", (_event, projectId: string, episodeId: string) => deleteStudioEpisode(projectId, episodeId));
 ipcMain.handle("studio:load-episode-editor", (_event, projectId: string, episodeId: string) => loadStudioEpisodeEditor(projectId, episodeId));
 ipcMain.handle("studio:save-episode-editor", (_event, projectId: string, episodeId: string, document: ProjectDocument) => saveStudioEpisodeEditor(projectId, episodeId, document));
 ipcMain.handle("studio:load-episode-script", (_event, projectId: string, episodeId: string) => loadStudioEpisodeScript(projectId, episodeId));
