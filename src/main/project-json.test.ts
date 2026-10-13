@@ -81,3 +81,32 @@ test("rejects malformed .aivproj documents", async () => {
     await assert.rejects(readProjectFile(file), /invalid/);
   } finally { await fs.rm(directory, { recursive: true, force: true }); }
 });
+
+test("episode timelines survive EP1 → EP2 → EP1 and application-style reopen", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "studio-episode-isolation-"));
+  try {
+    const episodePath = (episode: string) => path.join(directory, "studio-projects", "story-1", "episodes", episode, "timeline", "editor.aivproj");
+    const document = (episode: string, version: number): ProjectDocument => ({
+      schemaVersion: 1, id: "episode-" + episode,
+      title: "พิภพเร้นลับ " + episode + " revision " + version,
+      createdAt: "2026-10-13T00:00:00Z", updatedAt: "2026-10-13T00:00:00Z",
+      images: ["/media/" + episode + "-scene-" + version + ".png"],
+      narration: null, transcript: null, editingPlan: null, timeline: null,
+      audioLayers: [], studioFrameAnchors: { "shot-1": episode + "-line-" + version }
+    });
+    const first = episodePath("ep1");
+    const second = episodePath("ep2");
+    await writeProject(first, document("ep1", 1));
+    await writeProject(second, document("ep2", 1));
+    assert.equal((await readProjectFile(first)).title, "พิภพเร้นลับ ep1 revision 1");
+    await writeProject(first, document("ep1", 2));
+    assert.deepEqual(await readProjectFile(second), document("ep2", 1));
+    // Reopen both files from disk as after closing and restarting the app.
+    assert.deepEqual(await readProjectFile(first), document("ep1", 2));
+    assert.deepEqual(await readProjectFile(second), document("ep2", 1));
+    assert.equal((await readProjectFile(first)).studioFrameAnchors?.["shot-1"], "ep1-line-2");
+    assert.equal((await readProjectFile(second)).studioFrameAnchors?.["shot-1"], "ep2-line-1");
+    assert.deepEqual(await fs.readdir(path.dirname(first)), ["editor.aivproj"]);
+    assert.deepEqual(await fs.readdir(path.dirname(second)), ["editor.aivproj"]);
+  } finally { await fs.rm(directory, { recursive: true, force: true }); }
+});
