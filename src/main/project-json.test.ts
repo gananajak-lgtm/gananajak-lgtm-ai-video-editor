@@ -26,7 +26,8 @@ test("writes and reopens a real .aivproj file preserving frame anchors", async (
         id: "studio-dialogue:line-001", filePath: "/tmp/line-001.mp3",
         kind: "dialogue", start: 0, duration: 3.2, volume: 1,
         loop: false, fadeIn: 0, fadeOut: 0, origin: "studio-dialogue",
-        voiceLineId: "line-001"
+        voiceLineId: "line-001", voiceJobId: "voice-line-001",
+        voiceSpeaker: "พรานสิง", voiceEmotion: "กระซิบ", voiceText: "อย่าส่งเสียง",
       }],
       studioFrameAnchors: { "scene-1": "line-001", "scene-2": "line-008" }
     };
@@ -36,6 +37,13 @@ test("writes and reopens a real .aivproj file preserving frame anchors", async (
     assert.deepEqual(restored, project);
     assert.equal(restored.timeline?.clips[1].start, 8);
     assert.equal(restored.audioLayers[0].voiceLineId, "line-001");
+    assert.equal(restored.audioLayers[0].voiceJobId, "voice-line-001");
+    assert.equal(restored.audioLayers[0].voiceSpeaker, "พรานสิง");
+    assert.equal(restored.audioLayers[0].voiceEmotion, "กระซิบ");
+    assert.equal(restored.audioLayers[0].voiceText, "อย่าส่งเสียง");
+    assert.equal(restored.audioLayers[0].start, 0);
+    assert.equal(restored.audioLayers[0].duration, 3.2);
+    assert.deepEqual(restored.studioFrameAnchors, { "scene-1": "line-001", "scene-2": "line-008" });
     const legacy = { ...project };
     delete legacy.studioFrameAnchors;
     await writeProject(file, legacy);
