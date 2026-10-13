@@ -95,7 +95,13 @@ export default function App() {
         : null
     );
     setAudioLayers(project.audioLayers);
-    setStudioFrameAnchors(restoreFrameAnchors(project.studioFrameAnchors, project.timeline?.clips.map(clip => clip.id) ?? []));
+    setStudioFrameAnchors(restoreFrameAnchors(
+      project.studioFrameAnchors,
+      project.timeline?.clips.map(clip => clip.id) ?? [],
+      project.audioLayers.some(layer => layer.origin === "studio-dialogue" && Boolean(layer.voiceLineId))
+        ? project.audioLayers.filter(layer => layer.origin === "studio-dialogue" && Boolean(layer.voiceLineId)).map(layer => layer.voiceLineId!)
+        : undefined
+    ));
     setAiSfxEnabled(project.aiSfxEnabled ?? false);
     setContentProject(project.contentProject ?? null);
     setRenderHistory(project.renderHistory ?? []);
