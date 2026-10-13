@@ -248,6 +248,15 @@ export default function App() {
     try {
       const loaded = await window.videoEditor.openProject();
       if (loaded) {
+        const previous = episodeEditorRef.current;
+        if (previous) {
+          if (projectDocument.id !== "episode-" + previous.episodeId) {
+            throw new Error("ข้อมูลไทม์ไลน์ไม่ตรงกับ EP เดิม ยกเลิกการเปิดไฟล์เพื่อป้องกันข้อมูลสูญหาย");
+          }
+          // The file picker completed successfully. Flush the outgoing EP
+          // before detaching its autosave destination.
+          await queueEpisodeSave(previous.projectId, previous.episodeId, projectDocument);
+        }
         // Standalone .aivproj files must never inherit the previously attached
         // Studio episode autosave destination.
         episodeEditorRef.current = null;
