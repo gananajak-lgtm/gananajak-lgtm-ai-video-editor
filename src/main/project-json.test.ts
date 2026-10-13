@@ -134,3 +134,33 @@ test("corrupt target episode does not modify a valid existing episode", async ()
     assert.equal(await fs.readFile(secondPath, "utf8"), "{ invalid json");
   } finally { await fs.rm(directory, { recursive: true, force: true }); }
 });
+
+test("parallel episode saves use isolated atomic files and leave no temp artifacts", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "studio-episode-parallel-"));
+  try {
+    const makeDocument = (episode: string, revision: number): ProjectDocument => ({
+      schemaVersion: 1, id: "episode-" + episode,
+      title: episode + " revision " + revision,
+      createdAt: "2026-10-13T00:00:00Z", updatedAt: "2026-10-13T00:00:00Z",
+      images: ["/media/" + episode + "-" + revision + ".png"],
+      narration: null, transcript: null, editingPlan: null, timeline: null,
+      audioLayers: [], studioFrameAnchors: { "shot-1": episode + "-" + revision }
+    });
+    const first = path.join(directory, "ep1", "timeline", "editor.aivproj");
+    const second = path.join(directory, "ep2", "timeline", "editor.aivproj");
+    await Promise.all([
+      writeProject(first, makeDocument("ep1", 1)),
+      writeProject(second, makeDocument("ep2", 1))
+    ]);
+    assert.deepEqual(await readProjectFile(first), makeDocument("ep1", 1));
+    assert.deepEqual(await readProjectFile(second), makeDocument("ep2", 1));
+    await Promise.all([
+      writeProject(first, makeDocument("ep1", 2)),
+      writeProject(second, makeDocument("ep2", 2))
+    ]);
+    assert.deepEqual(await readProjectFile(first), makeDocument("ep1", 2));
+    assert.deepEqual(await readProjectFile(second), makeDocument("ep2", 2));
+    assert.deepEqual(await fs.readdir(path.dirname(first)), ["editor.aivproj"]);
+    assert.deepEqual(await fs.readdir(path.dirname(second)), ["editor.aivproj"]);
+  } finally { await fs.rm(directory, { recursive: true, force: true }); }
+});
