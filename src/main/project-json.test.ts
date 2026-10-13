@@ -164,3 +164,31 @@ test("parallel episode saves use isolated atomic files and leave no temp artifac
     assert.deepEqual(await fs.readdir(path.dirname(second)), ["editor.aivproj"]);
   } finally { await fs.rm(directory, { recursive: true, force: true }); }
 });
+
+test("serialized autosaves persist the newest same-EP snapshot to disk", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "studio-episode-queued-"));
+  try {
+    const { createSerializedSaveQueue } = await import("../shared/serialized-save-queue");
+    const file = path.join(directory, "ep1", "timeline", "editor.aivproj");
+    const makeDocument = (revision: number): ProjectDocument => ({
+      schemaVersion: 1, id: "episode-ep1", title: "พิภพเร้นลับ EP1 revision " + revision,
+      createdAt: "2026-10-13T00:00:00Z", updatedAt: "2026-10-13T00:00:00Z",
+      images: ["/media/ep1-" + revision + ".png"], narration: null,
+      transcript: null, editingPlan: null, timeline: null, audioLayers: [],
+      studioFrameAnchors: { "shot-1": "line-" + revision }
+    });
+    let releaseFirst: (() => void) | undefined;
+    const gate = new Promise<void>(resolve => { releaseFirst = resolve; });
+    const save = createSerializedSaveQueue(async (revision: number) => {
+      if (revision === 1) await gate;
+      await writeProject(file, makeDocument(revision));
+    });
+    const first = save(1);
+    const second = save(2);
+    await Promise.resolve();
+    releaseFirst!();
+    await Promise.all([first, second]);
+    assert.deepEqual(await readProjectFile(file), makeDocument(2));
+    assert.deepEqual(await fs.readdir(path.dirname(file)), ["editor.aivproj"]);
+  } finally { await fs.rm(directory, { recursive: true, force: true }); }
+});
