@@ -41,6 +41,12 @@ function formatTime(seconds: number) {
 export default function App() {
   const [projectId, setProjectId] = useState(() => `project-${Date.now()}`);
   const episodeEditorRef = useRef<{ projectId: string; episodeId: string } | null>(null);
+  const autosaveQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const queueEpisodeSave = (projectId: string, episodeId: string, document: ProjectDocument) => {
+    const queued = autosaveQueueRef.current.catch(() => undefined).then(() => window.videoEditor.saveStudioEpisodeEditor(projectId, episodeId, document));
+    autosaveQueueRef.current = queued;
+    return queued;
+  };
   const [episodeEditorScope, setEpisodeEditorScope] = useState<{ projectId: string; episodeId: string } | null>(null);
   const [projectTitle, setProjectTitle] = useState("เรื่องไม่มีชื่อ");
   const [projectCreatedAt, setProjectCreatedAt] = useState(
@@ -206,7 +212,7 @@ export default function App() {
     const timer = window.setTimeout(() => {
       const target = episodeEditorRef.current;
       const save = target
-        ? window.videoEditor.saveStudioEpisodeEditor(target.projectId, target.episodeId, projectDocument)
+        ? queueEpisodeSave(target.projectId, target.episodeId, projectDocument)
         : window.videoEditor.autosaveProject(projectDocument);
       void save.then(() => setAutosaveState("saved")).catch(() => setAutosaveState("error"));
     }, 800);
@@ -763,7 +769,7 @@ export default function App() {
     try {
       const previous = episodeEditorRef.current;
       if (previous && (previous.projectId !== studioSelectedId || previous.episodeId !== episodeId)) {
-        await window.videoEditor.saveStudioEpisodeEditor(previous.projectId, previous.episodeId, projectDocument);
+        await queueEpisodeSave(previous.projectId, previous.episodeId, projectDocument);
       }
       const stored = await window.videoEditor.loadStudioEpisodeEditor(studioSelectedId, episodeId);
       if (stored) {
@@ -796,7 +802,7 @@ export default function App() {
     if (!studioSelectedId || !studioEpisodeId || studioBusy) return;
     setStudioBusy(true);
     try {
-      await window.videoEditor.saveStudioEpisodeEditor(studioSelectedId, studioEpisodeId, projectDocument);
+      await queueEpisodeSave(studioSelectedId, studioEpisodeId, projectDocument);
       setNotice("บันทึกไทม์ไลน์ของ EP เรียบร้อยแล้ว");
     } catch (error) { setError(String(error)); }
     finally { setStudioBusy(false); }
