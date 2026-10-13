@@ -43,3 +43,10 @@ test("restores only anchors for current image clips from persisted JSON", () => 
   assert.deepEqual(restoreFrameAnchors(null, ["frame1"]), {});
   assert.deepEqual(restoreFrameAnchors(["line-1"], ["0"]), {});
 });
+
+
+test("drops restored anchors pointing to deleted voice lines when a voice-line catalog is available", () => {
+  const stored = { frame1: "line-1", frame2: "deleted-line", frame3: "" };
+  assert.deepEqual(restoreFrameAnchors(stored, ["frame1", "frame2", "frame3"], ["line-1"]), { frame1: "line-1" });
+  assert.deepEqual(restoreFrameAnchors(stored, ["frame1", "frame2", "frame3"]), { frame1: "line-1", frame2: "deleted-line" });
+});

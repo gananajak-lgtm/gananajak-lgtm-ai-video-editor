@@ -33,10 +33,11 @@ export function holdFramesThroughDialogue(lines: TimedVoiceLine[], anchors: Visu
 }
 
 /** Preserve only string voice anchors belonging to stills in the loaded timeline. */
-export function restoreFrameAnchors(value: unknown, clipIds: readonly string[]): Record<string, string> {
+export function restoreFrameAnchors(value: unknown, clipIds: readonly string[], lineIds?: readonly string[]): Record<string, string> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   const allowed = new Set(clipIds);
+  const validLines = lineIds ? new Set(lineIds) : null;
   return Object.fromEntries(
-    Object.entries(value).filter(([id, lineId]) => allowed.has(id) && typeof lineId === "string")
+    Object.entries(value).filter(([id, lineId]) => allowed.has(id) && typeof lineId === "string" && lineId.length > 0 && (!validLines || validLines.has(lineId)))
   );
 }
