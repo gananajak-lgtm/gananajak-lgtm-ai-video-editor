@@ -802,9 +802,15 @@ export default function App() {
         setRenderHistory([]);
         setMissingMedia([]);
       }
+      // The editor switch already confirmed unsaved-script changes above.
+      // Load the target script directly: openStudioEpisode may silently return
+      // while busy or prompt again, leaving a mismatched script/editor pair.
+      const episodeScript = await window.videoEditor.loadStudioEpisodeScript(studioSelectedId, episodeId);
+      setStudioEpisodeId(episodeId);
+      setStudioScript(episodeScript);
+      setStudioSavedScript(episodeScript);
       episodeEditorRef.current = { projectId: studioSelectedId, episodeId };
       setEpisodeEditorScope({ projectId: studioSelectedId, episodeId });
-      await openStudioEpisode(episodeId);
       setActiveProductionTab("editor");
       setNotice("เปิดไทม์ไลน์เฉพาะ EP แล้ว · ใช้ปุ่มบันทึกไทม์ไลน์ EP เพื่อเก็บงานของตอนนี้");
     } catch (error) { setError(String(error)); }
