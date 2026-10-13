@@ -1,3 +1,4 @@
+import { createSerializedSaveQueue } from "./serialized-save-queue";
 import { scheduleDialogueClips } from "./dialogue-timeline";
 import { holdFramesThroughDialogue, restoreFrameAnchors } from "./visual-hold";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -41,13 +42,14 @@ function formatTime(seconds: number) {
 export default function App() {
   const [projectId, setProjectId] = useState(() => `project-${Date.now()}`);
   const episodeEditorRef = useRef<{ projectId: string; episodeId: string } | null>(null);
-  const autosaveQueueRef = useRef<Promise<void>>(Promise.resolve());
   const autosaveGenerationRef = useRef(0);
-  const queueEpisodeSave = (projectId: string, episodeId: string, document: ProjectDocument) => {
-    const queued = autosaveQueueRef.current.catch(() => undefined).then(() => window.videoEditor.saveStudioEpisodeEditor(projectId, episodeId, document));
-    autosaveQueueRef.current = queued;
-    return queued;
-  };
+  const queueEpisodeSaveRef = useRef<ReturnType<typeof createSerializedSaveQueue<{ projectId: string; episodeId: string; document: ProjectDocument }>> | null>(null);
+  if (!queueEpisodeSaveRef.current) {
+    queueEpisodeSaveRef.current = createSerializedSaveQueue(({ projectId, episodeId, document }) =>
+      window.videoEditor.saveStudioEpisodeEditor(projectId, episodeId, document));
+  }
+  const queueEpisodeSave = (projectId: string, episodeId: string, document: ProjectDocument) =>
+    queueEpisodeSaveRef.current!({ projectId, episodeId, document });
   const [episodeEditorScope, setEpisodeEditorScope] = useState<{ projectId: string; episodeId: string } | null>(null);
   const [projectTitle, setProjectTitle] = useState("เรื่องไม่มีชื่อ");
   const [projectCreatedAt, setProjectCreatedAt] = useState(
