@@ -1,6 +1,6 @@
 import { scheduleDialogueClips } from "./dialogue-timeline";
 import { holdFramesThroughDialogue, restoreFrameAnchors } from "./visual-hold";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ContentProject } from "../shared/content-factory";
 import type { AudioLayer, AiSettingsStatus, EditingBrainPlan, FullEpisodeTestReport, ProjectDocument, ProjectLoadResult, ProjectRelinkResult, StudioProject, RenderProgress, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
 import AudioLayersPanel from "./AudioLayersPanel";
@@ -40,6 +40,8 @@ function formatTime(seconds: number) {
 
 export default function App() {
   const [projectId, setProjectId] = useState(() => `project-${Date.now()}`);
+  const episodeEditorRef = useRef<{ projectId: string; episodeId: string } | null>(null);
+  const [episodeEditorScope, setEpisodeEditorScope] = useState<{ projectId: string; episodeId: string } | null>(null);
   const [projectTitle, setProjectTitle] = useState("เรื่องไม่มีชื่อ");
   const [projectCreatedAt, setProjectCreatedAt] = useState(
     () => new Date().toISOString()
@@ -202,14 +204,15 @@ export default function App() {
 
     setAutosaveState("saving");
     const timer = window.setTimeout(() => {
-      void window.videoEditor
-        .autosaveProject(projectDocument)
-        .then(() => setAutosaveState("saved"))
-        .catch(() => setAutosaveState("error"));
+      const target = episodeEditorRef.current;
+      const save = target
+        ? window.videoEditor.saveStudioEpisodeEditor(target.projectId, target.episodeId, projectDocument)
+        : window.videoEditor.autosaveProject(projectDocument);
+      void save.then(() => setAutosaveState("saved")).catch(() => setAutosaveState("error"));
     }, 800);
 
     return () => window.clearTimeout(timer);
-  }, [sessionReady, hasProjectContent, projectDocument]);
+  }, [sessionReady, hasProjectContent, projectDocument, episodeEditorScope]);
 
   const openProjectFile = async () => {
     setError(null);
@@ -754,10 +757,14 @@ export default function App() {
   };
   const openEpisodeEditor = async (episodeId: string) => {
     if (!studioSelectedId || studioBusy || studioScriptBusy) return;
-    if (hasProjectContent && !window.confirm("กำลังเปลี่ยนไปยังไทม์ไลน์ของ EP อื่น กรุณาบันทึกงานตัดต่อปัจจุบันก่อน ดำเนินการต่อหรือไม่?")) return;
+    if (hasProjectContent && !episodeEditorRef.current && !window.confirm("ไทม์ไลน์เดิมยังไม่ได้เชื่อมกับ EP กรุณาบันทึกไฟล์ .aivproj ก่อนเปลี่ยนตอน ต้องการดำเนินการต่อหรือไม่?")) return;
     if (studioScriptDirty && !window.confirm("บท EP ที่แก้ไขยังไม่ได้บันทึก ต้องการเปลี่ยนตอนหรือไม่?")) return;
     setStudioBusy(true);
     try {
+      const previous = episodeEditorRef.current;
+      if (previous && (previous.projectId !== studioSelectedId || previous.episodeId !== episodeId)) {
+        await window.videoEditor.saveStudioEpisodeEditor(previous.projectId, previous.episodeId, projectDocument);
+      }
       const stored = await window.videoEditor.loadStudioEpisodeEditor(studioSelectedId, episodeId);
       if (stored) {
         applyLoadedProject({ project: stored, filePath: null, missingMedia: [] });
@@ -777,6 +784,8 @@ export default function App() {
         setRenderHistory([]);
         setMissingMedia([]);
       }
+      episodeEditorRef.current = { projectId: studioSelectedId, episodeId };
+      setEpisodeEditorScope({ projectId: studioSelectedId, episodeId });
       await openStudioEpisode(episodeId);
       setActiveProductionTab("editor");
       setNotice("เปิดไทม์ไลน์เฉพาะ EP แล้ว · ใช้ปุ่มบันทึกไทม์ไลน์ EP เพื่อเก็บงานของตอนนี้");
