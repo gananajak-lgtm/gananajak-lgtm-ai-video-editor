@@ -797,6 +797,48 @@ export default function App() {
     } catch(e) { setError(String(e)); }
     finally { setStudioBusy(false); }
   };
+  const deleteEpisode = async (episodeId: string, title: string) => {
+    if (!studioSelectedId || studioBusy || studioScriptBusy) return;
+    if (episodeEditorRef.current?.projectId === studioSelectedId &&
+        episodeEditorRef.current.episodeId === episodeId) {
+      setError("กรุณาปิดไทม์ไลน์ EP นี้ก่อนลบ เพื่อป้องกัน Autosave เขียนข้อมูลกลับเข้าโฟลเดอร์ที่ลบ");
+      return;
+    }
+    if (!window.confirm(`ย้ายตอน “${title}” พร้อมบท เสียง ภาพ วิดีโอ และไทม์ไลน์ไปโฟลเดอร์สำรอง?\nการลบนี้จะนำ EP ออกจากรายการ`)) return;
+    setStudioBusy(true);
+    try {
+      await window.videoEditor.deleteStudioEpisode(studioSelectedId, episodeId);
+      if (studioEpisodeId === episodeId) {
+        setStudioEpisodeId(null);
+        setStudioScript("");
+        setStudioSavedScript("");
+      }
+      await refreshStudioProjects();
+      setNotice(`ลบตอน “${title}” จากรายการแล้ว (เก็บไฟล์ไว้ใน .trash)`);
+    } catch (error) { setError(String(error)); }
+    finally { setStudioBusy(false); }
+  };
+  const deleteProject = async (projectId: string, title: string) => {
+    if (studioBusy || studioScriptBusy) return;
+    if (episodeEditorRef.current?.projectId === projectId) {
+      setError("กรุณาปิดไทม์ไลน์ของโปรเจกต์นี้ก่อนลบ เพื่อป้องกัน Autosave เขียนไฟล์กลับ");
+      return;
+    }
+    if (!window.confirm(`ย้ายโปรเจกต์ “${title}” และทุก EP ไปโฟลเดอร์สำรอง?\nโปรเจกต์จะหายจากรายการ แต่ไฟล์ยังถูกเก็บไว้ใน .trash`)) return;
+    setStudioBusy(true);
+    try {
+      await window.videoEditor.deleteStudioProject(projectId);
+      if (studioSelectedId === projectId) {
+        setStudioSelectedId(null);
+        setStudioEpisodeId(null);
+        setStudioScript("");
+        setStudioSavedScript("");
+      }
+      await refreshStudioProjects();
+      setNotice(`ลบโปรเจกต์ “${title}” จากรายการแล้ว (เก็บไฟล์ไว้ใน .trash)`);
+    } catch (error) { setError(String(error)); }
+    finally { setStudioBusy(false); }
+  };
   const openEpisodeEditor = async (episodeId: string) => {
     if (!studioSelectedId || studioBusy || studioScriptBusy) return;
     if (hasProjectContent && !episodeEditorRef.current && !window.confirm("ไทม์ไลน์เดิมยังไม่ได้เชื่อมกับ EP กรุณาบันทึกไฟล์ .aivproj ก่อนเปลี่ยนตอน ต้องการดำเนินการต่อหรือไม่?")) return;
@@ -939,7 +981,7 @@ export default function App() {
           <p>โปรเจกต์เรื่องและตอน (EP) อยู่ใน AI Voice Studio · ปุ่ม “เปิดโปรเจกต์” ของหน้าตัดต่อใช้เปิดไฟล์ .aivproj คนละประเภท ไม่ใช่การเปิดตอน</p>
           <h3>ตอนทั้งหมด (EP)</h3>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}><input aria-label="ชื่อตอนใหม่" placeholder="พิมพ์ชื่อตอน เช่น EP02" value={studioNewEpisode} onChange={e=>setStudioNewEpisode(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); void addStudioEpisode(); } }} /><button type="button" disabled={studioBusy || studioScriptBusy || !studioNewEpisode.trim()} onClick={() => void addStudioEpisode()}>+ เพิ่ม EP</button></div><p>พิมพ์ชื่อตอนก่อนกดเพิ่ม EP · ระบบจะเปิดบทตอนใหม่ให้ทันที</p>
-          {selectedStudioProject.episodes.map(ep => <div key={ep.id} className="studioProjectRow"><strong>{ep.title}</strong><small>{ep.folder}</small><button type="button" disabled={studioScriptBusy} onClick={() => void openStudioEpisode(ep.id)}>{studioEpisodeId === ep.id ? "เปิดอยู่" : "เปิดบท EP"}</button><button type="button" disabled={studioScriptBusy} onClick={() => { void openStudioEpisode(ep.id).then(() => setActiveProductionTab("script")); }}>สร้างเสียงตอนนี้ →</button><button type="button" disabled={studioBusy || studioScriptBusy} onClick={() => { void openEpisodeEditor(ep.id); }}>🎬 เปิดไทม์ไลน์ EP</button></div>)}
+          {selectedStudioProject.episodes.map(ep => <div key={ep.id} className="studioProjectRow"><strong>{ep.title}</strong><small>{ep.folder}</small><button type="button" disabled={studioScriptBusy} onClick={() => void openStudioEpisode(ep.id)}>{studioEpisodeId === ep.id ? "เปิดอยู่" : "เปิดบท EP"}</button><button type="button" disabled={studioScriptBusy} onClick={() => { void openStudioEpisode(ep.id).then(() => setActiveProductionTab("script")); }}>สร้างเสียงตอนนี้ →</button><button type="button" disabled={studioBusy || studioScriptBusy} onClick={() => { void openEpisodeEditor(ep.id); }}>🎬 เปิดไทม์ไลน์ EP</button><button type="button" disabled={studioBusy || studioScriptBusy} onClick={() => { void deleteEpisode(ep.id, ep.title); }}>🗑️ ลบ EP</button></div>)}
           {studioEpisodeId && <section aria-label="แก้ไขบท EP">
             <h3>บทละคร: {selectedStudioProject.episodes.find(ep => ep.id === studioEpisodeId)?.title}</h3>
             <p>{studioScriptDirty ? "● มีการแก้ไขที่ยังไม่ได้บันทึก" : "บันทึกแล้ว"}</p>
@@ -952,7 +994,7 @@ export default function App() {
         </> : <>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}><input placeholder="ชื่อเรื่องใหม่" value={studioNewTitle} onChange={e=>setStudioNewTitle(e.target.value)} /><button disabled={studioBusy || !studioNewTitle.trim()} onClick={addStudioProject}>+ เพิ่มโปรเจกต์</button></div>
           {studioProjects.length === 0 && <p>ยังไม่มีโปรเจกต์ในระบบใหม่ · งานเก่าของคุณยังอยู่ในระบบเดิม</p>}
-          {studioProjects.map(p => <button key={p.id} className="studioProjectRow" onClick={() => setStudioSelectedId(p.id)}><strong>{p.title}</strong><small>{p.episodes.length} EP · เปิดโปรเจกต์ →</small></button>)}
+          {studioProjects.map(p => <div key={p.id} className="studioProjectRow"><button type="button" onClick={() => setStudioSelectedId(p.id)}><strong>{p.title}</strong><small>{p.episodes.length} EP · เปิดโปรเจกต์ →</small></button><button type="button" disabled={studioBusy || studioScriptBusy} onClick={() => { void deleteProject(p.id, p.title); }}>🗑️ ลบโปรเจกต์</button></div>)}
         </>}
       </section>}
       {activeProductionTab === "settings" && <section className="compactTabContent">
