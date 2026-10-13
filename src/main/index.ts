@@ -253,6 +253,7 @@ ipcMain.handle("studio:save-episode-script", (_event, projectId: string, episode
 ipcMain.handle("studio:generate-voice-line", async (_event, request: {
   projectId: string; episodeId: string; lineId: string; fingerprint: string;
   text: string; voiceId: string; modelId: string; approved: boolean;
+  jobId?: string; speaker?: string; emotion?: string;
 }) => {
   if (!request || request.approved !== true) throw new Error("Explicit paid generation approval required");
   if (typeof request.projectId !== "string" || typeof request.episodeId !== "string" ||
@@ -260,7 +261,8 @@ ipcMain.handle("studio:generate-voice-line", async (_event, request: {
       typeof request.text !== "string" || typeof request.voiceId !== "string" ||
       typeof request.modelId !== "string") throw new Error("Invalid voice request");
   return generateStudioVoiceLine(request.projectId, request.episodeId, request.lineId,
-    request.fingerprint, request.text, request.voiceId, request.modelId);
+    request.fingerprint, request.text, request.voiceId, request.modelId,
+    { jobId: request.jobId, speaker: request.speaker, emotion: request.emotion });
 });
 ipcMain.handle("studio:load-voice-audio", (_event, projectId: string, episodeId: string) => loadStudioEpisodeVoiceAudio(projectId, episodeId));
   ipcMain.handle("studio:voice-audio-duration", (_event, projectId: string, episodeId: string, relativePath: string) => getStudioVoiceAudioDuration(projectId, episodeId, relativePath));
