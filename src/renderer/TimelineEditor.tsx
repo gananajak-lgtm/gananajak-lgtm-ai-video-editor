@@ -157,6 +157,15 @@ export default function TimelineEditor({ plan, onChange }: Props) {
     setSelectedClipIndex(to);
   };
 
+  const removeSelectedClip = () => {
+    const clip = plan.clips[selectedClipIndex];
+    if (!clip) return;
+    if (!window.confirm(`ลบช็อต “${fileName(clip.imagePath)}” ออกจากไทม์ไลน์?\\nความยาวภาพจะสั้นลง แต่ไฟล์ต้นฉบับจะไม่ถูกลบ`)) return;
+    const clips = rebuildStarts(plan.clips.filter((_, index) => index !== selectedClipIndex));
+    onChange({ ...plan, clips });
+    setSelectedClipIndex(Math.max(0, Math.min(selectedClipIndex, clips.length - 1)));
+  };
+
   const splitAtPlayhead = () => {
     const index = plan.clips.findIndex((clip) =>
       playheadSeconds > clip.start + MIN_CLIP_SECONDS &&
@@ -321,6 +330,9 @@ export default function TimelineEditor({ plan, onChange }: Props) {
             <div className="inspectorControls">
               <button onClick={() => replaceImage(selectedClipIndex)}>
                 Replace image
+              </button>
+              <button type="button" className="removeButton" onClick={removeSelectedClip}>
+                🗑️ ลบช็อตที่เลือก
               </button>
 
               <label>
