@@ -110,3 +110,27 @@ test("episode timelines survive EP1 → EP2 → EP1 and application-style reopen
     assert.deepEqual(await fs.readdir(path.dirname(second)), ["editor.aivproj"]);
   } finally { await fs.rm(directory, { recursive: true, force: true }); }
 });
+
+test("corrupt target episode does not modify a valid existing episode", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "studio-episode-corrupt-"));
+  try {
+    const firstPath = path.join(directory, "episodes", "ep1", "timeline", "editor.aivproj");
+    const secondPath = path.join(directory, "episodes", "ep2", "timeline", "editor.aivproj");
+    const first: ProjectDocument = {
+      schemaVersion: 1, id: "episode-ep1", title: "พิภพเร้นลับ EP1",
+      createdAt: "2026-10-13T00:00:00Z", updatedAt: "2026-10-13T00:00:00Z",
+      images: ["/media/ep1.png"], narration: null, transcript: null,
+      editingPlan: null, timeline: null, audioLayers: [],
+      studioFrameAnchors: { "shot-1": "line-1" }
+    };
+    await writeProject(firstPath, first);
+    await fs.mkdir(path.dirname(secondPath), { recursive: true });
+    await fs.writeFile(secondPath, "{ invalid json", "utf8");
+    await assert.rejects(readProjectFile(secondPath));
+    assert.deepEqual(await readProjectFile(firstPath), first);
+    const revised = { ...first, title: "พิภพเร้นลับ EP1 แก้ไขล่าสุด" };
+    await writeProject(firstPath, revised);
+    assert.deepEqual(await readProjectFile(firstPath), revised);
+    assert.equal(await fs.readFile(secondPath, "utf8"), "{ invalid json");
+  } finally { await fs.rm(directory, { recursive: true, force: true }); }
+});
