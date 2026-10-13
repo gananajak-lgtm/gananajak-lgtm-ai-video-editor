@@ -38,3 +38,26 @@ jobs:
           META_BROKER_TEST_DATABASE_URL: postgresql://broker:broker@127.0.0.1:5432/broker_test
       - run: npm run build
       - run: npm run smoke:render
+
+  windows-package:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm run dist:win
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - name: Verify Windows installer exists
+        shell: pwsh
+        run: |
+          $installers = @(Get-ChildItem -Path release -Filter "Gananajak-AI-Video-Editor-Setup-*.exe" -File)
+          if ($installers.Count -eq 0) { throw "Windows installer was not generated" }
+          foreach ($installer in $installers) {
+            if ($installer.Length -lt 1000000) { throw "Installer unexpectedly small: $($installer.Name)" }
+            Write-Host "Installer built: $($installer.Name) ($($installer.Length) bytes)"
+          }
