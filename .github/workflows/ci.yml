@@ -52,6 +52,8 @@ jobs:
       - run: npm run dist:win
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - name: Windows FFmpeg MP4 smoke
+        run: npm run smoke:render
       - name: Verify Windows installer exists
         shell: pwsh
         run: |
