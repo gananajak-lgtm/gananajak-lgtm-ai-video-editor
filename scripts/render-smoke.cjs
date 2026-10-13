@@ -229,6 +229,36 @@ async function main() {
       throw new Error("Multi-speaker story MP4 failed post-render verification.");
     }
 
+    // Decode the encoded AAC output and confirm that each speaker's distinct
+    // frequency is present only inside that speaker's scheduled time window.
+    const pcm = path.join(root, "story-audio.f32le");
+    run(["-y", "-i", storyOutput, "-map", "0:a:0", "-vn", "-ac", "1",
+      "-ar", "8000", "-f", "f32le", pcm]);
+    const pcmBytes = fs.readFileSync(pcm);
+    const samples = new Float32Array(pcmBytes.buffer.slice(
+      pcmBytes.byteOffset, pcmBytes.byteOffset + pcmBytes.byteLength
+    ));
+    function toneMagnitude(startSeconds, frequency) {
+      const start = Math.round(startSeconds * 8000);
+      const length = 1600;
+      let cosine = 0;
+      let sine = 0;
+      for (let n = 0; n < length; n += 1) {
+        const angle = 2 * Math.PI * frequency * n / 8000;
+        cosine += samples[start + n] * Math.cos(angle);
+        sine += samples[start + n] * Math.sin(angle);
+      }
+      return Math.hypot(cosine, sine) / length;
+    }
+    const speakerAActive = toneMagnitude(0.5, 330);
+    const speakerAQuiet = toneMagnitude(1.2, 330);
+    const speakerBActive = toneMagnitude(2.4, 550);
+    const speakerBQuiet = toneMagnitude(1.2, 550);
+    if (!(speakerAActive > 0.01 && speakerAActive > speakerAQuiet * 5 &&
+          speakerBActive > 0.01 && speakerBActive > speakerBQuiet * 5)) {
+      throw new Error("Encoded MP4 dialogue timing or speaker separation failed.");
+    }
+
     console.log(
       `render smoke test passed (${stat.size} bytes, ${progressEvents.length} progress events, ${report.frameCount ?? "n/a"} frames)`
     );
