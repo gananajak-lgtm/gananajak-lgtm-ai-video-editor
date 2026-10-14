@@ -29,6 +29,12 @@ async function main() {
       /EP อื่น/,
       "a persisted document belonging to another episode must be rejected"
     );
+    // Wrong-episode identity must reject before a target is adopted.
+    const wrongEpisode = "ep2";
+    assert.throws(
+      () => assertStudioEpisodeIdentity("episode-ep1", wrongEpisode),
+      /EP อื่น/
+    );
     const project = await studio.createStudioProject("พิภพเร้นลับ");
     const episode = await studio.createStudioEpisode(project.id, "EP 1");
     const script = "พรานสิง: อย่าส่งเสียง";
