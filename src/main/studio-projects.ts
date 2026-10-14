@@ -87,6 +87,25 @@ export async function deleteStudioEpisode(projectId: string, episodeId: string):
   catch (error) { await rename(archive, original); throw error; }
 }
 
+function validArchivedId(value: unknown): value is string {
+  return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+function validArchivedProject(value: unknown): value is StudioProject {
+  if (!value || typeof value !== "object") return false;
+  const project = value as StudioProject;
+  return validArchivedId(project.id) && typeof project.title === "string" &&
+    project.title.length > 0 && project.folder === path.join(root(), project.id) &&
+    Array.isArray(project.episodes) && project.episodes.every(episode =>
+      validArchivedId(episode.id) &&
+      episode.folder === path.join(root(), project.id, "episodes", episode.id));
+}
+function validArchivedEpisode(value: unknown, projectId: unknown): value is StudioEpisode {
+  if (!validArchivedId(projectId) || !value || typeof value !== "object") return false;
+  const episode = value as StudioEpisode;
+  return validArchivedId(episode.id) && typeof episode.title === "string" &&
+    episode.title.length > 0 &&
+    episode.folder === path.join(root(), projectId, "episodes", episode.id);
+}
 export type StudioTrashEntry = { archiveId: string; kind: "project" | "episode"; title: string; projectId: string; episodeId?: string };
 export async function listStudioTrash(): Promise<StudioTrashEntry[]> {
   const result: StudioTrashEntry[] = [];
@@ -99,9 +118,9 @@ export async function listStudioTrash(): Promise<StudioTrashEntry[]> {
       if (!/^[0-9a-f-]{36}$/i.test(archiveId)) continue;
       try {
         const data = JSON.parse(await readFile(path.join(directory, archiveId, ".studio-deleted.json"), "utf8"));
-        if (kind === "projects" && data.kind === "project" && data.project?.id && data.project?.title)
+        if (kind === "projects" && data.kind === "project" && validArchivedProject(data.project))
           result.push({ archiveId, kind: "project", title: data.project.title, projectId: data.project.id });
-        if (kind === "episodes" && data.kind === "episode" && data.projectId && data.episode?.id && data.episode?.title)
+        if (kind === "episodes" && data.kind === "episode" && validArchivedEpisode(data.episode, data.projectId))
           result.push({ archiveId, kind: "episode", title: data.episode.title, projectId: data.projectId, episodeId: data.episode.id });
       } catch { /* Legacy trash without metadata cannot be safely restored by UI. */ }
     }
@@ -115,7 +134,7 @@ export async function restoreStudioTrash(kind: "project" | "episode", archiveId:
   const projects = await readIndex();
   if (kind === "project" && data.kind === "project") {
     const project = data.project as StudioProject;
-    if (!project?.id || projects.some(item => item.id === project.id)) throw new Error("โปรเจกต์นี้มีอยู่แล้ว");
+    if (!validArchivedProject(project) || projects.some(item => item.id === project.id)) throw new Error("โปรเจกต์นี้มีอยู่แล้ว");
     const original = path.join(root(), project.id);
     try { await access(original); throw new Error("โฟลเดอร์โปรเจกต์มีอยู่แล้ว"); }
     catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
@@ -125,7 +144,7 @@ export async function restoreStudioTrash(kind: "project" | "episode", archiveId:
   } else if (kind === "episode" && data.kind === "episode") {
     const project = projects.find(item => item.id === data.projectId);
     const episode = data.episode as StudioEpisode;
-    if (!project || !episode?.id || project.episodes.some(item => item.id === episode.id)) throw new Error("ไม่พบโปรเจกต์ต้นทาง หรือ EP มีอยู่แล้ว");
+    if (!project || !validArchivedEpisode(episode, data.projectId) || project.episodes.some(item => item.id === episode.id)) throw new Error("ไม่พบโปรเจกต์ต้นทาง หรือ EP มีอยู่แล้ว");
     const original = path.join(root(), project.id, "episodes", episode.id);
     try { await access(original); throw new Error("โฟลเดอร์ EP มีอยู่แล้ว"); }
     catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
