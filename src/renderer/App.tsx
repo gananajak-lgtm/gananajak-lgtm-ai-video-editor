@@ -921,8 +921,12 @@ export default function App() {
       // Both reads succeeded; retire outgoing timers before changing scope.
       ++autosaveGenerationRef.current;
       if (stored) {
-        // Older episode files may use a different document id; normalize it
-        // when restoring so the autosave scope guard remains reliable.
+        // Legacy standalone-style document IDs can be normalized, but a file
+        // already claiming a DIFFERENT EP must never be silently reassigned.
+        // That would show and later autosave the wrong episode's material.
+        if (stored.id.startsWith("episode-") && stored.id !== "episode-" + episodeId) {
+          throw new Error("ไฟล์ไทม์ไลน์เป็นข้อมูลของ EP อื่น ยกเลิกการเปิดเพื่อป้องกันบันทึกข้อมูลทับผิดตอน");
+        }
         applyLoadedProject({ project: { ...stored, id: "episode-" + episodeId }, filePath: null, missingMedia: [] });
       } else {
         setProjectId("episode-" + episodeId);
