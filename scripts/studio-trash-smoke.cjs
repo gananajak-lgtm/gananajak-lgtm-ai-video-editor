@@ -53,7 +53,29 @@ async function main() {
     assert.deepEqual(await studio.loadStudioEpisodeEditor(project.id, episode.id), editor);
     await assert.rejects(fs.access(path.join(project.folder, ".studio-deleted.json")));
     assert.equal((await studio.listStudioTrash()).length, 0);
-    console.log("Studio create/delete/restore disk round-trip passed.");
+
+    // A restored project must not replace or change an unrelated project's data.
+    const other = await studio.createStudioProject("อีกเรื่องหนึ่ง");
+    const otherEpisode = await studio.createStudioEpisode(other.id, "EP 2");
+    const otherScript = "ตัวละครอื่น: บทของอีกโปรเจกต์";
+    await studio.saveStudioEpisodeScript(other.id, otherEpisode.id, otherScript);
+    await studio.deleteStudioProject(project.id);
+    assert.equal((await studio.listStudioProjects()).length, 1);
+    assert.equal(await studio.loadStudioEpisodeScript(other.id, otherEpisode.id), otherScript);
+    const secondTrash = (await studio.listStudioTrash()).find(item => item.kind === "project" && item.projectId === project.id);
+    assert.ok(secondTrash, "deleted original must remain independently restorable");
+    await studio.restoreStudioTrash("project", secondTrash.archiveId);
+    assert.equal((await studio.listStudioProjects()).length, 2);
+    assert.equal(await studio.loadStudioEpisodeScript(project.id, episode.id), script);
+    assert.equal(await studio.loadStudioEpisodeScript(other.id, otherEpisode.id), otherScript);
+    assert.deepEqual(await studio.loadStudioEpisodeEditor(project.id, episode.id), editor);
+    await assert.rejects(
+      studio.restoreStudioTrash("project", secondTrash.archiveId),
+      /ENOENT/,
+      "restoring the same trash entry twice must not duplicate a project"
+    );
+    assert.equal((await studio.listStudioProjects()).length, 2);
+    console.log("Studio create/delete/restore and cross-project isolation passed.");
   } finally {
     await fs.rm(userData, { recursive: true, force: true });
   }
