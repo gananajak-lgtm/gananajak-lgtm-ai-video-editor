@@ -568,6 +568,7 @@ export default function App() {
   };
 
   const [studioProjects, setStudioProjects] = useState<StudioProject[]>([]);
+  const [studioTrash, setStudioTrash] = useState<Array<{ archiveId: string; kind: "project" | "episode"; title: string; projectId: string; episodeId?: string }>>([]);
   const [studioSelectedId, setStudioSelectedId] = useState<string | null>(null);
   const [studioNewTitle, setStudioNewTitle] = useState("");
   const [studioNewEpisode, setStudioNewEpisode] = useState("");
@@ -786,8 +787,19 @@ export default function App() {
   };
   const refreshStudioProjects = async () => {
     setStudioProjects(await window.videoEditor.listStudioProjects());
+    setStudioTrash(await window.videoEditor.listStudioTrash());
   };
   useEffect(() => { void refreshStudioProjects().catch(e => setError(String(e))); }, []);
+  const restoreDeletedStudioItem = async (kind: "project" | "episode", archiveId: string, title: string) => {
+    if (studioBusy || studioScriptBusy || !window.confirm(`กู้คืน “${title}” จากถังสำรอง?`)) return;
+    setStudioBusy(true);
+    try {
+      await window.videoEditor.restoreStudioTrash(kind, archiveId);
+      await refreshStudioProjects();
+      setNotice(`กู้คืน “${title}” สำเร็จ`);
+    } catch (error) { setError(String(error)); }
+    finally { setStudioBusy(false); }
+  };
   const addStudioProject = async () => {
     if (!studioNewTitle.trim() || studioBusy || studioScriptBusy) return;
     if (studioScriptDirty && !window.confirm("บท EP ปัจจุบันยังไม่ได้บันทึก ต้องการสร้างโปรเจกต์ใหม่และทิ้งการแก้ไขหรือไม่?")) return;
@@ -1043,6 +1055,13 @@ export default function App() {
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}><input placeholder="ชื่อเรื่องใหม่" value={studioNewTitle} onChange={e=>setStudioNewTitle(e.target.value)} /><button disabled={studioBusy || !studioNewTitle.trim()} onClick={addStudioProject}>+ เพิ่มโปรเจกต์</button></div>
           {studioProjects.length === 0 && <p>ยังไม่มีโปรเจกต์ในระบบใหม่ · งานเก่าของคุณยังอยู่ในระบบเดิม</p>}
           {studioProjects.map(p => <div key={p.id} className="studioProjectRow"><button type="button" onClick={() => setStudioSelectedId(p.id)}><strong>{p.title}</strong><small>{p.episodes.length} EP · เปิดโปรเจกต์ →</small></button><button type="button" disabled={studioBusy || studioScriptBusy} onClick={() => { void deleteProject(p.id, p.title); }}>🗑️ ลบโปรเจกต์</button></div>)}
+          <details><summary>🗑️ ถังสำรองโปรเจกต์และ EP ({studioTrash.length})</summary>
+            <p>กู้คืนรายการที่ลบหลังอัปเดตนี้ได้ · รายการเก่าที่ไม่มีข้อมูลกำกับอาจไม่ปรากฏ</p>
+            {studioTrash.length === 0 ? <p>ไม่มีรายการที่กู้คืนได้</p> : studioTrash.map(item =>
+              <div className="studioProjectRow" key={item.archiveId}><strong>{item.kind === "project" ? "โปรเจกต์" : "EP"}: {item.title}</strong>
+                <button type="button" disabled={studioBusy || studioScriptBusy} onClick={() => { void restoreDeletedStudioItem(item.kind, item.archiveId, item.title); }}>↩️ กู้คืน</button>
+              </div>)}
+          </details>
         </>}
       </section>}
       {activeProductionTab === "settings" && <section className="compactTabContent">
