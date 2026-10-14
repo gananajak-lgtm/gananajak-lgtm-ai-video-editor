@@ -1,5 +1,5 @@
 import { app } from "electron";
-import { mkdir, readFile, writeFile, rename } from "node:fs/promises";
+import { mkdir, readFile, writeFile, rename, readdir, access } from "node:fs/promises";
 import { readProjectFile, writeProject } from "./project-json";
 import type { ProjectDocument } from "../shared/types";
 import path from "node:path";
@@ -65,6 +65,8 @@ export async function deleteStudioProject(projectId: string): Promise<void> {
   const archive = path.join(root(), ".trash", "projects", randomUUID());
   await mkdir(path.dirname(archive), { recursive: true });
   await rename(path.join(root(), project.id), archive);
+  try { await writeFile(path.join(archive, ".studio-deleted.json"), JSON.stringify({ kind: "project", project }), { flag: "wx" }); }
+  catch (error) { await rename(archive, path.join(root(), project.id)); throw error; }
   try { await writeIndex(projects.filter(item => item.id !== projectId)); }
   catch (error) { await rename(archive, path.join(root(), project.id)); throw error; }
 }
@@ -78,9 +80,61 @@ export async function deleteStudioEpisode(projectId: string, episodeId: string):
   const archive = path.join(root(), ".trash", "episodes", randomUUID());
   await mkdir(path.dirname(archive), { recursive: true });
   await rename(original, archive);
+  try { await writeFile(path.join(archive, ".studio-deleted.json"), JSON.stringify({ kind: "episode", projectId, episode }), { flag: "wx" }); }
+  catch (error) { await rename(archive, original); throw error; }
   project.episodes = project.episodes.filter(item => item.id !== episodeId);
   try { await writeIndex(projects); }
   catch (error) { await rename(archive, original); throw error; }
+}
+
+export type StudioTrashEntry = { archiveId: string; kind: "project" | "episode"; title: string; projectId: string; episodeId?: string };
+export async function listStudioTrash(): Promise<StudioTrashEntry[]> {
+  const result: StudioTrashEntry[] = [];
+  for (const kind of ["projects", "episodes"] as const) {
+    const directory = path.join(root(), ".trash", kind);
+    let ids: string[];
+    try { ids = await readdir(directory); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") continue; throw error; }
+    for (const archiveId of ids) {
+      if (!/^[0-9a-f-]{36}$/i.test(archiveId)) continue;
+      try {
+        const data = JSON.parse(await readFile(path.join(directory, archiveId, ".studio-deleted.json"), "utf8"));
+        if (kind === "projects" && data.kind === "project" && data.project?.id && data.project?.title)
+          result.push({ archiveId, kind: "project", title: data.project.title, projectId: data.project.id });
+        if (kind === "episodes" && data.kind === "episode" && data.projectId && data.episode?.id && data.episode?.title)
+          result.push({ archiveId, kind: "episode", title: data.episode.title, projectId: data.projectId, episodeId: data.episode.id });
+      } catch { /* Legacy trash without metadata cannot be safely restored by UI. */ }
+    }
+  }
+  return result;
+}
+export async function restoreStudioTrash(kind: "project" | "episode", archiveId: string): Promise<void> {
+  if ((kind !== "project" && kind !== "episode") || !/^[0-9a-f-]{36}$/i.test(archiveId)) throw new Error("Invalid trash entry");
+  const archive = path.join(root(), ".trash", kind === "project" ? "projects" : "episodes", archiveId);
+  const data = JSON.parse(await readFile(path.join(archive, ".studio-deleted.json"), "utf8"));
+  const projects = await readIndex();
+  if (kind === "project" && data.kind === "project") {
+    const project = data.project as StudioProject;
+    if (!project?.id || projects.some(item => item.id === project.id)) throw new Error("โปรเจกต์นี้มีอยู่แล้ว");
+    const original = path.join(root(), project.id);
+    try { await access(original); throw new Error("โฟลเดอร์โปรเจกต์มีอยู่แล้ว"); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
+    await rename(archive, original);
+    try { await writeIndex([...projects, project]); }
+    catch (error) { await rename(original, archive); throw error; }
+  } else if (kind === "episode" && data.kind === "episode") {
+    const project = projects.find(item => item.id === data.projectId);
+    const episode = data.episode as StudioEpisode;
+    if (!project || !episode?.id || project.episodes.some(item => item.id === episode.id)) throw new Error("ไม่พบโปรเจกต์ต้นทาง หรือ EP มีอยู่แล้ว");
+    const original = path.join(root(), project.id, "episodes", episode.id);
+    try { await access(original); throw new Error("โฟลเดอร์ EP มีอยู่แล้ว"); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
+    await mkdir(path.dirname(original), { recursive: true });
+    await rename(archive, original);
+    project.episodes.push(episode);
+    try { await writeIndex(projects); }
+    catch (error) { await rename(original, archive); throw error; }
+  } else throw new Error("Trash entry type mismatch");
 }
 
 // Episode editor documents are stored inside the existing episode directory, never
