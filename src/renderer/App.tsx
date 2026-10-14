@@ -918,15 +918,15 @@ export default function App() {
       // Keep autosave alive if either read fails and we stay on the old EP.
       const stored = await window.videoEditor.loadStudioEpisodeEditor(studioSelectedId, episodeId);
       const episodeScript = await window.videoEditor.loadStudioEpisodeScript(studioSelectedId, episodeId);
-      // Both reads succeeded; retire outgoing timers before changing scope.
+      // Validate the target's persisted identity before retiring the outgoing
+      // autosave generation. A corrupt/wrong-EP target must leave the old
+      // editor's pending autosave intact.
+      if (stored?.id.startsWith("episode-") && stored.id !== "episode-" + episodeId) {
+        throw new Error("ไฟล์ไทม์ไลน์เป็นข้อมูลของ EP อื่น ยกเลิกการเปิดเพื่อป้องกันบันทึกข้อมูลทับผิดตอน");
+      }
+      // Both reads and identity validation succeeded; now switch scope.
       ++autosaveGenerationRef.current;
       if (stored) {
-        // Legacy standalone-style document IDs can be normalized, but a file
-        // already claiming a DIFFERENT EP must never be silently reassigned.
-        // That would show and later autosave the wrong episode's material.
-        if (stored.id.startsWith("episode-") && stored.id !== "episode-" + episodeId) {
-          throw new Error("ไฟล์ไทม์ไลน์เป็นข้อมูลของ EP อื่น ยกเลิกการเปิดเพื่อป้องกันบันทึกข้อมูลทับผิดตอน");
-        }
         applyLoadedProject({ project: { ...stored, id: "episode-" + episodeId }, filePath: null, missingMedia: [] });
       } else {
         setProjectId("episode-" + episodeId);
