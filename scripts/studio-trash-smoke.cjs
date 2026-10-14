@@ -19,6 +19,16 @@ async function main() {
     Module._load = originalLoad;
   }
   try {
+    const { assertStudioEpisodeIdentity } = require("../dist-electron/src/shared/studio-episode-identity.js");
+    const episodeId = "ep-expected";
+    assert.doesNotThrow(() => assertStudioEpisodeIdentity("episode-" + episodeId, episodeId));
+    assert.doesNotThrow(() => assertStudioEpisodeIdentity("legacy-document", episodeId));
+    assert.doesNotThrow(() => assertStudioEpisodeIdentity(undefined, episodeId));
+    assert.throws(
+      () => assertStudioEpisodeIdentity("episode-ep-other", episodeId),
+      /EP อื่น/,
+      "a persisted document belonging to another episode must be rejected"
+    );
     const project = await studio.createStudioProject("พิภพเร้นลับ");
     const episode = await studio.createStudioEpisode(project.id, "EP 1");
     const script = "พรานสิง: อย่าส่งเสียง";
