@@ -1,3 +1,4 @@
+import { assertStudioEpisodeIdentity } from "../shared/studio-episode-identity";
 import { createSerializedSaveQueue } from "../shared/serialized-save-queue";
 import { scheduleDialogueClips } from "./dialogue-timeline";
 import { holdFramesThroughDialogue, restoreFrameAnchors } from "./visual-hold";
@@ -921,9 +922,7 @@ export default function App() {
       // Validate the target's persisted identity before retiring the outgoing
       // autosave generation. A corrupt/wrong-EP target must leave the old
       // editor's pending autosave intact.
-      if (stored?.id.startsWith("episode-") && stored.id !== "episode-" + episodeId) {
-        throw new Error("ไฟล์ไทม์ไลน์เป็นข้อมูลของ EP อื่น ยกเลิกการเปิดเพื่อป้องกันบันทึกข้อมูลทับผิดตอน");
-      }
+      assertStudioEpisodeIdentity(stored?.id, episodeId);
       // Both reads and identity validation succeeded; now switch scope.
       ++autosaveGenerationRef.current;
       if (stored) {
