@@ -192,3 +192,37 @@ test("serialized autosaves persist the newest same-EP snapshot to disk", async (
     assert.deepEqual(await fs.readdir(path.dirname(file)), ["editor.aivproj"]);
   } finally { await fs.rm(directory, { recursive: true, force: true }); }
 });
+
+test("EP1 → EP2 → EP1 saves preserve newest snapshots even with a pending old EP1 write", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "studio-ep-switch-queue-"));
+  try {
+    const { createSerializedSaveQueue } = await import("../shared/serialized-save-queue");
+    const fileFor = (episode: string) => path.join(directory, episode, "timeline", "editor.aivproj");
+    const makeDocument = (episode: string, revision: number): ProjectDocument => ({
+      schemaVersion: 1, id: "episode-" + episode,
+      title: episode + " revision " + revision,
+      createdAt: "2026-10-14T00:00:00Z", updatedAt: "2026-10-14T00:00:00Z",
+      images: ["/media/" + episode + "-" + revision + ".png"],
+      narration: null, transcript: null, editingPlan: null, timeline: null,
+      audioLayers: [], studioFrameAnchors: { "shot-1": episode + "-line-" + revision }
+    });
+    let releaseFirst: (() => void) | undefined;
+    const gate = new Promise<void>(resolve => { releaseFirst = resolve; });
+    const save = createSerializedSaveQueue(async ({ episode, revision }: { episode: string; revision: number }) => {
+      if (episode === "ep1" && revision === 1) await gate;
+      await writeProject(fileFor(episode), makeDocument(episode, revision));
+    });
+    const first = save({ episode: "ep1", revision: 1 });
+    const second = save({ episode: "ep2", revision: 1 });
+    const third = save({ episode: "ep1", revision: 2 });
+    await Promise.resolve();
+    releaseFirst!();
+    await Promise.all([first, second, third]);
+    assert.deepEqual(await readProjectFile(fileFor("ep1")), makeDocument("ep1", 2));
+    assert.deepEqual(await readProjectFile(fileFor("ep2")), makeDocument("ep2", 1));
+    assert.deepEqual(await fs.readdir(path.dirname(fileFor("ep1"))), ["editor.aivproj"]);
+    assert.deepEqual(await fs.readdir(path.dirname(fileFor("ep2"))), ["editor.aivproj"]);
+  } finally {
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+});
