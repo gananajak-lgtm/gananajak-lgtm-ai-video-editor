@@ -817,7 +817,8 @@ export default function App() {
     finally { setStudioBusy(false); }
   };
   const addStudioEpisode = async () => {
-    if (!studioSelectedId || !studioNewEpisode.trim() || studioBusy) return;
+    if (!studioSelectedId || !studioNewEpisode.trim() || studioBusy || studioScriptBusy) return;
+    if (studioScriptDirty && !window.confirm("บท EP ปัจจุบันยังไม่ได้บันทึก ต้องการสร้างตอนใหม่และทิ้งการแก้ไขหรือไม่?")) return;
     setStudioBusy(true);
     try {
       const created = await window.videoEditor.createStudioEpisode(studioSelectedId, studioNewEpisode);
