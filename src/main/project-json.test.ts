@@ -226,3 +226,33 @@ test("EP1 → EP2 → EP1 saves preserve newest snapshots even with a pending ol
     await fs.rm(directory, { recursive: true, force: true });
   }
 });
+
+test("two Studio projects keep same-named EP timelines isolated across reopen", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "studio-two-projects-"));
+  try {
+    const makeDocument = (project: string, revision: number): ProjectDocument => ({
+      schemaVersion: 1, id: "episode-" + project + "-ep1",
+      title: project + " EP1 revision " + revision,
+      createdAt: "2026-10-14T00:00:00Z", updatedAt: "2026-10-14T00:00:00Z",
+      images: ["/media/" + project + "/shot-" + revision + ".png"],
+      narration: null, transcript: null, editingPlan: null, timeline: null,
+      audioLayers: [], studioFrameAnchors: { "shot-1": project + "-line-" + revision }
+    });
+    const episodePath = (project: string) => path.join(directory, "studio-projects", project,
+      "episodes", "ep1", "timeline", "editor.aivproj");
+    const first = episodePath("phiphop");
+    const second = episodePath("other-story");
+    await writeProject(first, makeDocument("phiphop", 1));
+    await writeProject(second, makeDocument("other-story", 1));
+    await writeProject(first, makeDocument("phiphop", 2));
+    assert.deepEqual(await readProjectFile(first), makeDocument("phiphop", 2));
+    assert.deepEqual(await readProjectFile(second), makeDocument("other-story", 1));
+    await writeProject(second, makeDocument("other-story", 2));
+    assert.deepEqual(await readProjectFile(first), makeDocument("phiphop", 2));
+    assert.deepEqual(await readProjectFile(second), makeDocument("other-story", 2));
+    assert.deepEqual(await fs.readdir(path.dirname(first)), ["editor.aivproj"]);
+    assert.deepEqual(await fs.readdir(path.dirname(second)), ["editor.aivproj"]);
+  } finally {
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+});
