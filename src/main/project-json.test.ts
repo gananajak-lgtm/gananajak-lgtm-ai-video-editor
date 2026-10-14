@@ -256,3 +256,27 @@ test("two Studio projects keep same-named EP timelines isolated across reopen", 
     await fs.rm(directory, { recursive: true, force: true });
   }
 });
+
+test("wrong-episode saved file is rejected without changing the original EP", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "studio-wrong-ep-"));
+  try {
+    const { assertStudioEpisodeIdentity } = await import("../shared/studio-episode-identity");
+    const document = (episode: string): ProjectDocument => ({
+      schemaVersion: 1, id: "episode-" + episode, title: episode,
+      createdAt: "2026-10-14T00:00:00Z", updatedAt: "2026-10-14T00:00:00Z",
+      images: [], narration: null, transcript: null, editingPlan: null,
+      timeline: null, audioLayers: []
+    });
+    const original = path.join(directory, "ep1", "timeline", "editor.aivproj");
+    const wrongTarget = path.join(directory, "ep2", "timeline", "editor.aivproj");
+    await writeProject(original, document("ep1"));
+    // Simulate an accidentally copied EP1 file into the EP2 folder.
+    await writeProject(wrongTarget, document("ep1"));
+    const loaded = await readProjectFile(wrongTarget);
+    assert.throws(() => assertStudioEpisodeIdentity(loaded.id, "ep2"), /EP อื่น/);
+    assert.deepEqual(await readProjectFile(original), document("ep1"));
+    assert.deepEqual(await readProjectFile(wrongTarget), document("ep1"));
+  } finally {
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+});
