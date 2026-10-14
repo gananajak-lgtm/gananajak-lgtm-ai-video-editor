@@ -822,8 +822,14 @@ export default function App() {
     try {
       const created = await window.videoEditor.createStudioEpisode(studioSelectedId, studioNewEpisode);
       setStudioNewEpisode("");
+      // openStudioEpisode is guarded by studioBusy, which is still true here.
+      // Load the newly created episode directly so the script selector and
+      // editor never remain pointed at the previous episode.
+      const createdScript = await window.videoEditor.loadStudioEpisodeScript(studioSelectedId, created.id);
       await refreshStudioProjects();
-      await openStudioEpisode(created.id);
+      setStudioEpisodeId(created.id);
+      setStudioScript(createdScript);
+      setStudioSavedScript(createdScript);
       setActiveProductionTab("dashboard");
       setNotice("เพิ่มตอนใหม่แล้ว · เปิดบท EP ด้านล่างเพื่อเขียนบท หรือเลือกสร้างเสียงตอนนี้");
     } catch(e) { setError(String(e)); }
