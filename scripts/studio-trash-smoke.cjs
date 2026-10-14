@@ -75,7 +75,28 @@ async function main() {
       "restoring the same trash entry twice must not duplicate a project"
     );
     assert.equal((await studio.listStudioProjects()).length, 2);
-    console.log("Studio create/delete/restore and cross-project isolation passed.");
+    // Tampered archive metadata must not redirect restored files to another folder.
+    await studio.deleteStudioEpisode(other.id, otherEpisode.id);
+    const tampered = (await studio.listStudioTrash()).find(item =>
+      item.kind === "episode" && item.episodeId === otherEpisode.id
+    );
+    assert.ok(tampered, "deleted second episode must appear in trash");
+    const metadataPath = path.join(
+      userData, "studio-projects", ".trash", "episodes", tampered.archiveId, ".studio-deleted.json"
+    );
+    const originalMetadata = await fs.readFile(metadataPath, "utf8");
+    const metadata = JSON.parse(originalMetadata);
+    metadata.episode.folder = path.join(userData, "unexpected-folder");
+    await fs.writeFile(metadataPath, JSON.stringify(metadata), "utf8");
+    assert.ok(!(await studio.listStudioTrash()).some(item => item.archiveId === tampered.archiveId));
+    await assert.rejects(studio.restoreStudioTrash("episode", tampered.archiveId));
+    assert.equal((await studio.listStudioProjects()).length, 2);
+    assert.equal((await studio.listStudioProjects()).find(item => item.id === other.id).episodes.length, 0);
+    await fs.writeFile(metadataPath, originalMetadata, "utf8");
+    await studio.restoreStudioTrash("episode", tampered.archiveId);
+    assert.equal(await studio.loadStudioEpisodeScript(other.id, otherEpisode.id), otherScript);
+    assert.equal(await studio.loadStudioEpisodeScript(project.id, episode.id), script);
+    console.log("Studio recovery, cross-project isolation and tamper rejection passed.");
   } finally {
     await fs.rm(userData, { recursive: true, force: true });
   }
