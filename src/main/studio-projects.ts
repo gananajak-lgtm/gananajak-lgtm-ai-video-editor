@@ -1,5 +1,5 @@
 import { app } from "electron";
-import { mkdir, readFile, writeFile, rename, readdir, access } from "node:fs/promises";
+import { mkdir, readFile, writeFile, rename, readdir, access, unlink } from "node:fs/promises";
 import { readProjectFile, writeProject } from "./project-json";
 import type { ProjectDocument } from "../shared/types";
 import path from "node:path";
@@ -23,9 +23,13 @@ async function readIndex(): Promise<StudioProject[]> {
 async function writeIndex(projects: StudioProject[]) {
   await mkdir(root(), { recursive: true });
   const temp = path.join(root(), `projects-${randomUUID()}.tmp`);
-  await writeFile(temp, JSON.stringify(projects, null, 2), { flag: "wx" });
-  const { rename } = await import("node:fs/promises");
-  await rename(temp, indexPath());
+  try {
+    await writeFile(temp, JSON.stringify(projects, null, 2), { flag: "wx" });
+    await rename(temp, indexPath());
+  } catch (error) {
+    await unlink(temp).catch(() => {});
+    throw error;
+  }
 }
 function requireTitle(title: string) {
   const value = title.trim();
@@ -68,7 +72,11 @@ export async function deleteStudioProject(projectId: string): Promise<void> {
   try { await writeFile(path.join(archive, ".studio-deleted.json"), JSON.stringify({ kind: "project", project }), { flag: "wx" }); }
   catch (error) { await rename(archive, path.join(root(), project.id)); throw error; }
   try { await writeIndex(projects.filter(item => item.id !== projectId)); }
-  catch (error) { await rename(archive, path.join(root(), project.id)); throw error; }
+  catch (error) {
+    await rename(archive, path.join(root(), project.id));
+    await unlink(path.join(root(), project.id, ".studio-deleted.json"));
+    throw error;
+  }
 }
 
 export async function deleteStudioEpisode(projectId: string, episodeId: string): Promise<void> {
@@ -84,7 +92,11 @@ export async function deleteStudioEpisode(projectId: string, episodeId: string):
   catch (error) { await rename(archive, original); throw error; }
   project.episodes = project.episodes.filter(item => item.id !== episodeId);
   try { await writeIndex(projects); }
-  catch (error) { await rename(archive, original); throw error; }
+  catch (error) {
+    await rename(archive, original);
+    await unlink(path.join(original, ".studio-deleted.json"));
+    throw error;
+  }
 }
 
 function validArchivedId(value: unknown): value is string {
@@ -141,6 +153,7 @@ export async function restoreStudioTrash(kind: "project" | "episode", archiveId:
     await rename(archive, original);
     try { await writeIndex([...projects, project]); }
     catch (error) { await rename(original, archive); throw error; }
+    await unlink(path.join(original, ".studio-deleted.json")).catch(() => {});
   } else if (kind === "episode" && data.kind === "episode") {
     const project = projects.find(item => item.id === data.projectId);
     const episode = data.episode as StudioEpisode;
@@ -153,6 +166,7 @@ export async function restoreStudioTrash(kind: "project" | "episode", archiveId:
     project.episodes.push(episode);
     try { await writeIndex(projects); }
     catch (error) { await rename(original, archive); throw error; }
+    await unlink(path.join(original, ".studio-deleted.json")).catch(() => {});
   } else throw new Error("Trash entry type mismatch");
 }
 
