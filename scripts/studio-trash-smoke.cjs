@@ -57,6 +57,16 @@ async function main() {
       "legacy identity must be normalized by the editor before saving"
     );
     assert.deepEqual(await studio.loadStudioEpisodeEditor(project.id, episode.id), editor);
+    // Nonexistent destinations must fail without creating an orphan timeline.
+    const unknownEpisodeId = "00000000-0000-4000-8000-000000000001";
+    await assert.rejects(
+      studio.saveStudioEpisodeEditor(project.id, unknownEpisodeId, { ...editor, id: "episode-" + unknownEpisodeId }),
+      /Episode not found/
+    );
+    await assert.rejects(
+      fs.access(path.join(project.folder, "episodes", unknownEpisodeId, "timeline", "editor.aivproj"))
+    );
+    assert.deepEqual(await studio.loadStudioEpisodeEditor(project.id, episode.id), editor);
 
 
     // Exercise the production Studio API with two episodes: save, switch,
