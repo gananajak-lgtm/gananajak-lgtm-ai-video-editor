@@ -59,6 +59,25 @@ async function main() {
     assert.deepEqual(await studio.loadStudioEpisodeEditor(project.id, episode.id), editor);
 
 
+    // Exercise the production Studio API with two episodes: save, switch,
+    // reopen, revise EP1 and verify EP2 remains unchanged.
+    const secondEpisode = await studio.createStudioEpisode(project.id, "EP 2");
+    const secondScript = "พรานอิน: ไปกันเถอะ";
+    await studio.saveStudioEpisodeScript(project.id, secondEpisode.id, secondScript);
+    const secondEditor = { ...editor, id: "episode-" + secondEpisode.id, title: "พิภพเร้นลับ EP 2" };
+    await studio.saveStudioEpisodeEditor(project.id, secondEpisode.id, secondEditor);
+    const revisedEditor = { ...editor, title: "พิภพเร้นลับ EP 1 ฉบับแก้ไข" };
+    await studio.saveStudioEpisodeEditor(project.id, episode.id, revisedEditor);
+    assert.deepEqual(await studio.loadStudioEpisodeEditor(project.id, episode.id), revisedEditor);
+    assert.deepEqual(await studio.loadStudioEpisodeEditor(project.id, secondEpisode.id), secondEditor);
+    assert.equal(await studio.loadStudioEpisodeScript(project.id, episode.id), script);
+    assert.equal(await studio.loadStudioEpisodeScript(project.id, secondEpisode.id), secondScript);
+    await studio.deleteStudioEpisode(project.id, secondEpisode.id);
+    const extraTrash = (await studio.listStudioTrash()).find(item => item.kind === "episode" && item.episodeId === secondEpisode.id);
+    assert.ok(extraTrash);
+    await studio.restoreStudioTrash("episode", extraTrash.archiveId);
+    assert.deepEqual(await studio.loadStudioEpisodeEditor(project.id, secondEpisode.id), secondEditor);
+    await studio.saveStudioEpisodeEditor(project.id, episode.id, editor);
     await studio.deleteStudioEpisode(project.id, episode.id);
     assert.equal((await studio.listStudioProjects())[0].episodes.length, 0);
     let trash = await studio.listStudioTrash();
