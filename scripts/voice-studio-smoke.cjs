@@ -30,6 +30,28 @@ assert.equal(masterHolds[0].start, 0);
 assert.equal(masterHolds[0].end, 4.5);
 assert.equal(masterHolds[1].start, 4.5);
 assert.equal(masterHolds[1].end, 8.75);
+// Several sparse masters must cover every intervening line and pause in order.
+const multiSceneLines = [
+  { lineId: "a", start: 0, end: 1 },
+  { lineId: "b", start: 1.4, end: 2.5 },
+  { lineId: "c", start: 3.2, end: 4.4 },
+  { lineId: "d", start: 5.1, end: 6.2 },
+  { lineId: "e", start: 7, end: 8 },
+  { lineId: "f", start: 8.7, end: 10 }
+];
+const multiSceneHolds = holdFramesThroughDialogue(multiSceneLines, [
+  { imageId: "forest", lineId: "a" },
+  { imageId: "river", lineId: "c" },
+  { imageId: "temple", lineId: "e" }
+]);
+assert.equal(multiSceneHolds.length, 3);
+assert.equal(multiSceneHolds.map(frame => [frame.start, frame.end]).map(pair => pair.join("-")).join(","), "0-3.2,3.2-7,7-10");
+assert.ok(multiSceneHolds.every((frame, index) => index === 0 || multiSceneHolds[index - 1].end === frame.start));
+assert.throws(() => holdFramesThroughDialogue(multiSceneLines, [
+  { imageId: "forest", lineId: "a" },
+  { imageId: "river", lineId: "e" },
+  { imageId: "temple", lineId: "c" }
+]), /Image anchors must be unique/);
 assert.throws(() => holdFramesThroughDialogue([
   { lineId: "a", start: 4, end: 5 },
   { lineId: "b", start: 2, end: 3 }
