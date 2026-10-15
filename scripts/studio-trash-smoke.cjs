@@ -46,6 +46,13 @@ async function main() {
       timeline: null, audioLayers: [], studioFrameAnchors: {}
     };
     await studio.saveStudioEpisodeEditor(project.id, episode.id, editor);
+    await assert.rejects(
+      studio.saveStudioEpisodeEditor(project.id, episode.id, { ...editor, id: "episode-not-this-episode" }),
+      /EP อื่น/,
+      "storage must reject a mismatched EP identity"
+    );
+    assert.deepEqual(await studio.loadStudioEpisodeEditor(project.id, episode.id), editor);
+
     await studio.deleteStudioEpisode(project.id, episode.id);
     assert.equal((await studio.listStudioProjects())[0].episodes.length, 0);
     let trash = await studio.listStudioTrash();
