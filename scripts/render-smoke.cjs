@@ -229,6 +229,26 @@ async function main() {
       throw new Error("Multi-speaker story MP4 failed post-render verification.");
     }
 
+    // Sample raw decoded pixels on either side of the 2-second scene boundary.
+    function sampleScenePixel(second) {
+      const decoded = spawnSync(ffmpegPath, [
+        "-v", "error", "-ss", String(second), "-i", storyOutput,
+        "-frames:v", "1", "-vf", "crop=1:1:180:320,format=rgb24",
+        "-f", "rawvideo", "-"
+      ], { stdio: ["ignore", "pipe", "pipe"] });
+      if (decoded.status !== 0 || decoded.stdout.length !== 3) {
+        throw new Error("Could not decode an MP4 scene-boundary sample");
+      }
+      return [...decoded.stdout];
+    }
+    const beforeCut = sampleScenePixel(1.8);
+    const afterCut = sampleScenePixel(2.2);
+    const colorDistance = beforeCut.reduce((sum, value, index) =>
+      sum + Math.abs(value - afterCut[index]), 0);
+    if (colorDistance < 80) {
+      throw new Error("Encoded MP4 did not switch master frames at the expected scene boundary.");
+    }
+
     // Decode the encoded AAC output and confirm that each speaker's distinct
     // frequency is present only inside that speaker's scheduled time window.
     const pcm = path.join(root, "story-audio.f32le");
