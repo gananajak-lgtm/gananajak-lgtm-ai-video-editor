@@ -160,6 +160,13 @@ async function main() {
     await studio.saveStudioEpisodeEditor(other.id, otherEpisode.id, restoredOtherEditor);
     assert.equal(await studio.loadStudioEpisodeScript(other.id, otherEpisode.id), revisedOtherScript);
     assert.deepEqual(await studio.loadStudioEpisodeEditor(other.id, otherEpisode.id), restoredOtherEditor);
+    // Close/reopen equivalent: archive the revised project, restore it, and re-read disk files.
+    await studio.deleteStudioProject(other.id);
+    const revisedArchive = (await studio.listStudioTrash()).find(item => item.kind === "project" && item.projectId === other.id);
+    assert.ok(revisedArchive, "revised project must remain recoverable");
+    await studio.restoreStudioTrash("project", revisedArchive.archiveId);
+    assert.equal(await studio.loadStudioEpisodeScript(other.id, otherEpisode.id), revisedOtherScript);
+    assert.deepEqual(await studio.loadStudioEpisodeEditor(other.id, otherEpisode.id), restoredOtherEditor);
     assert.equal(await studio.loadStudioEpisodeScript(project.id, episode.id), script);
     console.log("Studio recovery, cross-project isolation and tamper rejection passed.");
   } finally {
