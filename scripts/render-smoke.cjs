@@ -29,12 +29,14 @@ async function main() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ai-video-editor-smoke-"));
   const image1 = path.join(root, "frame-1.png");
   const image2 = path.join(root, "frame-2.png");
+  const image3 = path.join(root, "frame-3.png");
   const narration = path.join(root, "narration.wav");
   const effect = path.join(root, "effect.wav");
   const voiceA = path.join(root, "voice-a.wav");
   const voiceB = path.join(root, "voice-b.wav");
   const music = path.join(root, "music.wav");
   const storyOutput = path.join(root, "story-smoke.mp4");
+  const threeSceneOutput = path.join(root, "three-scene-smoke.mp4");
   const output = path.join(root, "smoke.mp4");
 
   try {
@@ -53,6 +55,8 @@ async function main() {
       "-frames:v", "1",
       image2
     ]);
+
+    run(["-y", "-f", "lavfi", "-i", "color=c=0x206040:s=640x360:d=1", "-frames:v", "1", image3]);
 
     run([
       "-y",
@@ -259,6 +263,38 @@ async function main() {
         pixelDistance(justAfterCut, ending) > 24 ||
         pixelDistance(justBeforeCut, justAfterCut) < 80) {
       throw new Error("MP4 held-frame timing or scene-boundary stability failed.");
+    }
+
+    // Decode both scene boundaries in a separate three-master MP4.
+    const threeScenePlan = {
+      ...storyPlan,
+      clips: [
+        { id: "master-1", imagePath: image1, start: 0, duration: 1.25, motion: "hold" },
+        { id: "master-2", imagePath: image2, start: 1.25, duration: 1.5, motion: "hold" },
+        { id: "master-3", imagePath: image3, start: 2.75, duration: 1.25, motion: "hold" }
+      ]
+    };
+    await renderTimeline(threeScenePlan, threeSceneOutput, () => {});
+    const threeSceneReport = await verifyRenderedOutput(threeScenePlan, threeSceneOutput);
+    if (!threeSceneReport.passed) throw new Error("Three-scene MP4 verification failed");
+    function threeScenePixel(second) {
+      const decoded = spawnSync(ffmpegPath, [
+        "-v", "error", "-ss", String(second), "-i", threeSceneOutput,
+        "-frames:v", "1", "-vf", "crop=1:1:180:320,format=rgb24",
+        "-f", "rawvideo", "-"
+      ], { stdio: ["ignore", "pipe", "pipe"] });
+      if (decoded.status !== 0 || decoded.stdout.length !== 3)
+        throw new Error("Could not decode three-scene MP4 frame");
+      return [...decoded.stdout];
+    }
+    const samples = [0.35, 1.12, 1.38, 2.62, 2.88, 3.65].map(threeScenePixel);
+    for (const [a, b] of [[0, 1], [2, 3], [4, 5]]) {
+      if (pixelDistance(samples[a], samples[b]) > 24)
+        throw new Error("Three-scene MP4 changed a held master too early");
+    }
+    for (const [a, b] of [[1, 2], [3, 4]]) {
+      if (pixelDistance(samples[a], samples[b]) < 80)
+        throw new Error("Three-scene MP4 missed its scheduled scene cut");
     }
 
     // Decode the encoded AAC output and confirm that each speaker's distinct
