@@ -1,6 +1,7 @@
 import { app } from "electron";
 import { mkdir, readFile, writeFile, rename, readdir, access, unlink } from "node:fs/promises";
 import { readProjectFile, writeProject } from "./project-json";
+import { assertStudioEpisodeIdentity } from "../shared/studio-episode-identity";
 import type { ProjectDocument } from "../shared/types";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -189,6 +190,8 @@ export async function loadStudioEpisodeEditor(projectId: string, episodeId: stri
 }
 
 export async function saveStudioEpisodeEditor(projectId: string, episodeId: string, document: ProjectDocument): Promise<void> {
+  // Never allow a document from another episode to overwrite this episode's file.
+  assertStudioEpisodeIdentity(document.id, episodeId);
   const filePath = await episodeEditorPath(projectId, episodeId);
   await writeProject(filePath, document);
 }
