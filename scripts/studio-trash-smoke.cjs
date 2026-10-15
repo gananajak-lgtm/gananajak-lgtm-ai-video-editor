@@ -51,7 +51,13 @@ async function main() {
       /EP อื่น/,
       "storage must reject a mismatched EP identity"
     );
+    await assert.rejects(
+      studio.saveStudioEpisodeEditor(project.id, episode.id, { ...editor, id: "legacy-document" }),
+      /รหัสไทม์ไลน์ไม่ตรงกับ EP/,
+      "legacy identity must be normalized by the editor before saving"
+    );
     assert.deepEqual(await studio.loadStudioEpisodeEditor(project.id, episode.id), editor);
+
 
     await studio.deleteStudioEpisode(project.id, episode.id);
     assert.equal((await studio.listStudioProjects())[0].episodes.length, 0);
