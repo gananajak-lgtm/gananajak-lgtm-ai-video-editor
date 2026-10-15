@@ -96,7 +96,7 @@ async function main() {
     await studio.restoreStudioTrash("project", archivedProject.archiveId);
     const restored = await studio.listStudioProjects();
     assert.equal(restored.length, 1);
-    assert.equal(restored[0].episodes[0].id, episode.id);
+    assert.deepEqual(new Set(restored[0].episodes.map(item => item.id)), new Set([episode.id, secondEpisode.id]));
     assert.equal(await studio.loadStudioEpisodeScript(project.id, episode.id), script);
     assert.deepEqual(await studio.loadStudioEpisodeEditor(project.id, episode.id), editor);
     await assert.rejects(fs.access(path.join(project.folder, ".studio-deleted.json")));
