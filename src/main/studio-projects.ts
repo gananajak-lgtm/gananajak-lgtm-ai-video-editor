@@ -89,7 +89,7 @@ export async function deleteStudioEpisode(projectId: string, episodeId: string):
   const archive = path.join(root(), ".trash", "episodes", randomUUID());
   await mkdir(path.dirname(archive), { recursive: true });
   await rename(original, archive);
-  try { await writeFile(path.join(archive, ".studio-deleted.json"), JSON.stringify({ kind: "episode", projectId, episode }), { flag: "wx" }); }
+  try { await writeFile(path.join(archive, ".studio-deleted.json"), JSON.stringify({ kind: "episode", projectId, episode, originalIndex: project.episodes.findIndex(item => item.id === episodeId) }), { flag: "wx" }); }
   catch (error) { await rename(archive, original); throw error; }
   project.episodes = project.episodes.filter(item => item.id !== episodeId);
   try { await writeIndex(projects); }
@@ -164,7 +164,11 @@ export async function restoreStudioTrash(kind: "project" | "episode", archiveId:
     catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
     await mkdir(path.dirname(original), { recursive: true });
     await rename(archive, original);
-    project.episodes.push(episode);
+    // New archives remember ordering; legacy archives still restore at the end.
+    const originalIndex = Number.isInteger(data.originalIndex) && data.originalIndex >= 0
+      ? Math.min(data.originalIndex, project.episodes.length)
+      : project.episodes.length;
+    project.episodes.splice(originalIndex, 0, episode);
     try { await writeIndex(projects); }
     catch (error) { await rename(original, archive); throw error; }
     await unlink(path.join(original, ".studio-deleted.json")).catch(() => {});
