@@ -79,7 +79,7 @@ async function main() {
     assert.deepEqual(await studio.loadStudioEpisodeEditor(project.id, secondEpisode.id), secondEditor);
     await studio.saveStudioEpisodeEditor(project.id, episode.id, editor);
     await studio.deleteStudioEpisode(project.id, episode.id);
-    assert.equal((await studio.listStudioProjects())[0].episodes.length, 0);
+    assert.equal((await studio.listStudioProjects())[0].episodes.length, 1);
     let trash = await studio.listStudioTrash();
     const archivedEpisode = trash.find(item => item.kind === "episode" && item.episodeId === episode.id);
     assert.ok(archivedEpisode, "episode should be recoverable");
@@ -87,7 +87,7 @@ async function main() {
     assert.equal(await studio.loadStudioEpisodeScript(project.id, episode.id), script);
     assert.deepEqual(await studio.loadStudioEpisodeEditor(project.id, episode.id), editor);
     await assert.rejects(fs.access(path.join(episode.folder, ".studio-deleted.json")));
-    assert.equal((await studio.listStudioProjects())[0].episodes.length, 1);
+    assert.equal((await studio.listStudioProjects())[0].episodes.length, 2);
     await studio.deleteStudioProject(project.id);
     assert.equal((await studio.listStudioProjects()).length, 0);
     trash = await studio.listStudioTrash();
