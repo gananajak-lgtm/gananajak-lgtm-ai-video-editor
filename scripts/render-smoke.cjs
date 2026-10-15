@@ -258,6 +258,19 @@ async function main() {
           speakerBActive > 0.01 && speakerBActive > speakerBQuiet * 5)) {
       throw new Error("Encoded MP4 dialogue timing or speaker separation failed.");
     }
+    // Verify the other independently scheduled tracks survived AAC encoding.
+    // Music remains throughout, SFX enters only at 1.5s, narration ends at 3s.
+    const musicEarly = toneMagnitude(0.5, 110);
+    const musicLate = toneMagnitude(3.5, 110);
+    const sfxActive = toneMagnitude(1.65, 880);
+    const sfxBefore = toneMagnitude(0.5, 880);
+    const narrationActive = toneMagnitude(0.5, 440);
+    const narrationAfter = toneMagnitude(3.5, 440);
+    if (!(musicEarly > 0.001 && musicLate > 0.001 &&
+          sfxActive > 0.001 && sfxActive > sfxBefore * 4 &&
+          narrationActive > 0.005 && narrationActive > narrationAfter * 4)) {
+      throw new Error("Encoded MP4 music, SFX or narration timing failed.");
+    }
 
     console.log(
       `render smoke test passed (${stat.size} bytes, ${progressEvents.length} progress events, ${report.frameCount ?? "n/a"} frames)`
