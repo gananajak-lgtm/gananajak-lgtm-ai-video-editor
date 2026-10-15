@@ -153,6 +153,13 @@ async function main() {
     await fs.writeFile(metadataPath, originalMetadata, "utf8");
     await studio.restoreStudioTrash("episode", tampered.archiveId);
     assert.equal(await studio.loadStudioEpisodeScript(other.id, otherEpisode.id), otherScript);
+    // A restored episode must be fully editable, not merely visible in the index.
+    const revisedOtherScript = otherScript + "\\nตัวละครอื่น: แก้ไขหลังจากกู้คืน";
+    await studio.saveStudioEpisodeScript(other.id, otherEpisode.id, revisedOtherScript);
+    const restoredOtherEditor = { ...editor, id: "episode-" + otherEpisode.id, title: "EP 2 หลังการกู้คืน" };
+    await studio.saveStudioEpisodeEditor(other.id, otherEpisode.id, restoredOtherEditor);
+    assert.equal(await studio.loadStudioEpisodeScript(other.id, otherEpisode.id), revisedOtherScript);
+    assert.deepEqual(await studio.loadStudioEpisodeEditor(other.id, otherEpisode.id), restoredOtherEditor);
     assert.equal(await studio.loadStudioEpisodeScript(project.id, episode.id), script);
     console.log("Studio recovery, cross-project isolation and tamper rejection passed.");
   } finally {
