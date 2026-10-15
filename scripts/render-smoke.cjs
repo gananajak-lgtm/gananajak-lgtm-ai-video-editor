@@ -248,6 +248,18 @@ async function main() {
     if (colorDistance < 80) {
       throw new Error("Encoded MP4 did not switch master frames at the expected scene boundary.");
     }
+    // Check visual stability within each held shot as well as the boundary:
+    // a delayed or premature cut must fail, even if the two samples differ.
+    const pixelDistance = (a, b) => a.reduce((sum, value, i) => sum + Math.abs(value - b[i]), 0);
+    const opening = sampleScenePixel(0.4);
+    const justBeforeCut = sampleScenePixel(1.92);
+    const justAfterCut = sampleScenePixel(2.08);
+    const ending = sampleScenePixel(3.6);
+    if (pixelDistance(opening, justBeforeCut) > 24 ||
+        pixelDistance(justAfterCut, ending) > 24 ||
+        pixelDistance(justBeforeCut, justAfterCut) < 80) {
+      throw new Error("MP4 held-frame timing or scene-boundary stability failed.");
+    }
 
     // Decode the encoded AAC output and confirm that each speaker's distinct
     // frequency is present only inside that speaker's scheduled time window.
