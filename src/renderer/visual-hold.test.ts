@@ -50,3 +50,29 @@ test("drops restored anchors pointing to deleted voice lines when a voice-line c
   assert.deepEqual(restoreFrameAnchors(stored, ["frame1", "frame2", "frame3"], ["line-1"]), { frame1: "line-1" });
   assert.deepEqual(restoreFrameAnchors(stored, ["frame1", "frame2", "frame3"]), { frame1: "line-1", frame2: "deleted-line" });
 });
+
+test("frame holds include dialogue pauses but switch exactly at next scene anchor", () => {
+  const schedule = [
+    { lineId: "opening", start: 0, end: 1.2 },
+    { lineId: "response", start: 1.8, end: 3 },
+    { lineId: "scene-change", start: 4.5, end: 5.5 },
+    { lineId: "closing", start: 6.25, end: 8.75 }
+  ];
+  const frames = holdFramesThroughDialogue(schedule, [
+    { imageId: "master-1", lineId: "opening" },
+    { imageId: "master-2", lineId: "scene-change" }
+  ]);
+  assert.deepEqual(frames, [
+    { imageId: "master-1", anchorLineId: "opening", start: 0, end: 4.5 },
+    { imageId: "master-2", anchorLineId: "scene-change", start: 4.5, end: 8.75 }
+  ]);
+  assert.equal(frames[0].end, frames[1].start, "no visual gap or overlap at scene change");
+  assert.equal(frames[1].end, schedule.at(-1)!.end, "last image covers final voice");
+});
+
+test("frame hold planner rejects non-monotonic voice lines including reversed starts", () => {
+  assert.throws(() => holdFramesThroughDialogue([
+    { lineId: "first", start: 4, end: 5 },
+    { lineId: "second", start: 2, end: 3 }
+  ], [{ imageId: "frame", lineId: "first" }]), /Invalid or overlapping voice schedule/);
+});
