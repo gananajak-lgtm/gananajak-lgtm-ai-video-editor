@@ -287,13 +287,13 @@ async function main() {
         throw new Error("Could not decode three-scene MP4 frame");
       return [...decoded.stdout];
     }
-    const samples = [0.35, 1.12, 1.38, 2.62, 2.88, 3.65].map(threeScenePixel);
+    const scenePixels = [0.35, 1.12, 1.38, 2.62, 2.88, 3.65].map(threeScenePixel);
     for (const [a, b] of [[0, 1], [2, 3], [4, 5]]) {
-      if (pixelDistance(samples[a], samples[b]) > 24)
+      if (pixelDistance(scenePixels[a], scenePixels[b]) > 24)
         throw new Error("Three-scene MP4 changed a held master too early");
     }
     for (const [a, b] of [[1, 2], [3, 4]]) {
-      if (pixelDistance(samples[a], samples[b]) < 80)
+      if (pixelDistance(scenePixels[a], scenePixels[b]) < 80)
         throw new Error("Three-scene MP4 missed its scheduled scene cut");
     }
 
