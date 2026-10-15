@@ -192,6 +192,9 @@ export async function loadStudioEpisodeEditor(projectId: string, episodeId: stri
 export async function saveStudioEpisodeEditor(projectId: string, episodeId: string, document: ProjectDocument): Promise<void> {
   // Never allow a document from another episode to overwrite this episode's file.
   assertStudioEpisodeIdentity(document.id, episodeId);
+  if (document.id !== "episode-" + episodeId) {
+    throw new Error("รหัสไทม์ไลน์ไม่ตรงกับ EP ที่กำลังบันทึก");
+  }
   const filePath = await episodeEditorPath(projectId, episodeId);
   await writeProject(filePath, document);
 }
