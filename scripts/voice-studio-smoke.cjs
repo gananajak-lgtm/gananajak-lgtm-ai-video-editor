@@ -16,6 +16,25 @@ function loadModule(file) {
   return exports;
 }
 
+const { holdFramesThroughDialogue } = loadModule("src/renderer/visual-hold.ts");
+const masterHolds = holdFramesThroughDialogue([
+  { lineId: "opening", start: 0, end: 1.2 },
+  { lineId: "response", start: 1.8, end: 3 },
+  { lineId: "scene-change", start: 4.5, end: 5.5 },
+  { lineId: "closing", start: 6.25, end: 8.75 }
+], [
+  { imageId: "master-1", lineId: "opening" },
+  { imageId: "master-2", lineId: "scene-change" }
+]);
+assert.equal(masterHolds[0].start, 0);
+assert.equal(masterHolds[0].end, 4.5);
+assert.equal(masterHolds[1].start, 4.5);
+assert.equal(masterHolds[1].end, 8.75);
+assert.throws(() => holdFramesThroughDialogue([
+  { lineId: "a", start: 4, end: 5 },
+  { lineId: "b", start: 2, end: 3 }
+], [{ imageId: "frame", lineId: "a" }]), /Invalid or overlapping voice schedule/);
+
 const { parseNovelScript } = loadModule("src/renderer/novel-voice-parser.ts");
 const { buildVoiceProductionPlan, voicePlanSummary } = loadModule("src/renderer/voice-production-plan.ts");
 const { canScheduleWorkspaceJob, selectWorkspaceVoice } = loadModule("src/renderer/elevenlabs-workspace-profiles.ts");
