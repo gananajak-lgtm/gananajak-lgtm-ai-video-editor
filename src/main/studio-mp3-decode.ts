@@ -8,12 +8,13 @@ export async function checkMp3Decoding(filePath: string): Promise<Mp3DecodeResul
   if (typeof ffmpegPath !== "string" || !ffmpegPath) {
     return { valid: false, reason: "FFmpeg executable is unavailable" };
   }
+  const executable: string = ffmpegPath;
   return new Promise(resolve => {
     let settled = false;
     let stderr = "";
     let child: ReturnType<typeof spawn>;
     try {
-      child = spawn(ffmpegPath, [
+      child = spawn(executable, [
         "-hide_banner", "-nostdin", "-v", "error", "-xerror",
         "-i", filePath, "-map", "0:a:0", "-f", "null", "-"
       ], { stdio: ["ignore", "ignore", "pipe"] as const, windowsHide: true });
