@@ -1,7 +1,7 @@
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { hasPlausibleMp3Header } from "../studio-mp3-header";
-import { isDecodableMp3 } from "../studio-mp3-decode";
+import { checkMp3Decoding, isDecodableMp3 } from "../studio-mp3-decode";
 import path from "node:path";
 import type { AssetJob, GeneratedAsset } from "../../shared/content-factory";
 import type { AssetGenerationContext, AssetProvider } from "../content-asset-provider";
@@ -47,7 +47,8 @@ async function generateStudioVoiceLineUnchecked(
   const temporaryPath = path.join(path.dirname(destination.absolutePath), `.${lineId}-${randomUUID()}.mp3`);
   try {
     await writeFile(temporaryPath, audio, { flag: "wx" });
-    if (!(await isDecodableMp3(temporaryPath))) throw new Error("ElevenLabs returned an undecodable MP3");
+    const decoded = await checkMp3Decoding(temporaryPath);
+    if (!decoded.valid) throw new Error(`ElevenLabs MP3 validation failed: ${decoded.reason}`);
     await rename(temporaryPath, destination.absolutePath);
     await registerStudioEpisodeVoiceAudio(projectId, episodeId, lineId, fingerprint, destination.relativePath, { ...metadata, text });
     return { outputPath: destination.relativePath };
