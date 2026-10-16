@@ -746,7 +746,7 @@ export default function App() {
         });
       }
       setAudioLayers(previous => [...previous.filter(layer => layer.origin !== "studio-dialogue"), ...imported]);
-      showImportError(null);
+      setError(null);
       setNotice("นำเข้าเสียงตัวละคร " + imported.length + " บรรทัดแล้ว · หากยังไม่มีภาพ กรุณาเพิ่มมาสเตอร์เฟรมก่อนส่งออก MP4 และบันทึกโปรเจกต์");
       setStudioImportFeedback("นำเข้าเสียง " + imported.length + " บรรทัดสำเร็จ · อยู่ในแทร็กเสียง Timeline แล้ว");
     } catch (error) {
