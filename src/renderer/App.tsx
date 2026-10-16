@@ -666,6 +666,11 @@ export default function App() {
       setError("กรุณาเปิดไทม์ไลน์ของ EP ที่ต้องการนำเข้าเสียงก่อน");
       return;
     }
+    if (episodeEditorRef.current?.projectId !== studioSelectedId ||
+        episodeEditorRef.current?.episodeId !== studioEpisodeId) {
+      setError("โปรดเปิดไทม์ไลน์ EP ที่เลือกก่อนนำเข้า MP3 เพื่อป้องกันการบันทึกเสียงผิดตอน");
+      return;
+    }
     if (studioVoiceSchedule.length === 0 || studioVoiceSchedule.length !== Object.keys(studioVoiceFiles).length) {
       setError("กรุณารอให้ตรวจสอบความยาว MP3 ครบทุกบรรทัดก่อนนำเข้า");
       return;
