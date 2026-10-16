@@ -339,6 +339,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
     setBatchRunStatus({ done: 0, total: pending.length, failed: 0 });
     let done = 0;
     let failed = 0;
+    let failureDetail = "";
     try {
       for (const job of pending) {
         // Stop if the user switched projects while the preceding request ran.
@@ -355,7 +356,8 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
           done++;
         } catch (error) {
           failed++;
-          setVoiceGenerationStatus(`บรรทัด ${job.order + 1} ล้มเหลว: ${error instanceof Error ? error.message : "ไม่ทราบสาเหตุ"}`);
+          failureDetail = `บรรทัด ${job.order + 1} ล้มเหลว: ${error instanceof Error ? error.message : String(error)}`;
+          setVoiceGenerationStatus(failureDetail);
           // Avoid further paid requests after a failure; retry requires new approval.
           break;
         } finally {
@@ -368,7 +370,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
       }
       const queueChanged = activeQueueFingerprintRef.current !== approvedQueueFingerprint;
       const episodeChanged = activeEpisodeIdentityRef.current !== currentAudioIdentity || projectIdentity.current !== activeProjectId;
-      setVoiceGenerationStatus(`สร้างสำเร็จ ${done}/${pending.length} บรรทัด · ล้มเหลว ${failed}${batchCancelRequested.current ? " · หยุดตามคำสั่งแล้ว" : queueChanged || episodeChanged ? " · หยุดเนื่องจากคิวหรือโปรเจกต์เปลี่ยน" : ""} · งานที่เหลือต้องอนุมัติใหม่`);
+      setVoiceGenerationStatus(`สร้างสำเร็จ ${done}/${pending.length} บรรทัด · ล้มเหลว ${failed}${batchCancelRequested.current ? " · หยุดตามคำสั่งแล้ว" : queueChanged || episodeChanged ? " · หยุดเนื่องจากคิวหรือโปรเจกต์เปลี่ยน" : ""} · งานที่เหลือต้องอนุมัติใหม่${failureDetail ? ` · สาเหตุ: ${failureDetail}` : ""}`);
     } finally {
       voiceGenerationLock.current = false;
       setVoiceGenerating(false);
