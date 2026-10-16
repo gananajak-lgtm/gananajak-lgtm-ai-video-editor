@@ -1,5 +1,11 @@
 import { spawn } from "node:child_process";
 import ffmpegPath from "ffmpeg-static";
+import path from "node:path";
+
+/** Electron Builder unpacks ffmpeg-static beside app.asar, not inside it. */
+export function resolveBundledFfmpegPath(executable: string): string {
+  return executable.split(path.sep).map(segment => segment === "app.asar" ? "app.asar.unpacked" : segment).join(path.sep);
+}
 
 export type Mp3DecodeResult = { valid: true } | { valid: false; reason: string };
 
@@ -8,7 +14,7 @@ export async function checkMp3Decoding(filePath: string): Promise<Mp3DecodeResul
   if (typeof ffmpegPath !== "string" || !ffmpegPath) {
     return { valid: false, reason: "FFmpeg executable is unavailable" };
   }
-  const executable: string = ffmpegPath;
+  const executable: string = resolveBundledFfmpegPath(ffmpegPath);
   return new Promise(resolve => {
     let settled = false;
     let stderr = "";
