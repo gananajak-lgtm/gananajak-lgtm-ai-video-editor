@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import ffmpegPath from "ffmpeg-static";
-import { isDecodableMp3 } from "./studio-mp3-decode";
+import { checkMp3Decoding, isDecodableMp3 } from "./studio-mp3-decode";
 
 test("cached MP3 validation decodes valid audio and rejects damaged assets", async t => {
   if (typeof ffmpegPath !== "string" || !ffmpegPath) {
@@ -22,7 +22,11 @@ test("cached MP3 validation decodes valid audio and rejects damaged assets", asy
   ], { timeout: 15000, windowsHide: true });
   assert.equal(encoded.status, 0, String(encoded.stderr));
   assert.equal(await isDecodableMp3(valid), true);
+  assert.deepEqual(await checkMp3Decoding(valid), { valid: true });
   assert.equal(await isDecodableMp3(path.join(folder, "missing.mp3")), false);
+  const missingResult = await checkMp3Decoding(path.join(folder, "missing.mp3"));
+  assert.equal(missingResult.valid, false);
+  if (!missingResult.valid) assert.match(missingResult.reason, /FFmpeg exited|FFmpeg launch failed/);
   const invalid = path.join(folder, "invalid.mp3");
   await writeFile(invalid, Buffer.from("ID3\\x04\\x00\\x00\\x00\\x00\\x00\\x00not audio"));
   assert.equal(await isDecodableMp3(invalid), false);
