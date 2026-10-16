@@ -34,7 +34,7 @@ export async function checkMp3Decoding(filePath: string): Promise<Mp3DecodeResul
       child.kill();
       finish({ valid: false, reason: "FFmpeg decode timed out after 30 seconds" });
     }, 30000);
-    child.on("error", error => finish({ valid: false, reason: `FFmpeg launch failed (${error.code ?? "unknown"}): ${error.message}` }));
+    child.on("error", error => finish({ valid: false, reason: `FFmpeg launch failed (${(error as NodeJS.ErrnoException).code ?? "unknown"}): ${error.message}` }));
     child.on("close", code => finish(code === 0
       ? { valid: true }
       : { valid: false, reason: `FFmpeg exited with code ${code ?? "unknown"}: ${stderr.trim().slice(0, 350) || "no diagnostic output"}` }));
