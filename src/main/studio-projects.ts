@@ -2,6 +2,7 @@ import { app } from "electron";
 import { mkdir, readFile, writeFile, rename, readdir, access, unlink } from "node:fs/promises";
 import { readProjectFile, writeProject } from "./project-json";
 import { assertStudioEpisodeIdentity } from "../shared/studio-episode-identity";
+import { resolveBundledFfmpegPath } from "./studio-mp3-decode";
 import type { ProjectDocument } from "../shared/types";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -351,8 +352,9 @@ export async function getStudioVoiceAudioDuration(
   const { spawn } = await import("node:child_process");
   const ffmpeg = (await import("ffmpeg-static")).default;
   if (typeof ffmpeg !== "string" || !ffmpeg) throw new Error("FFmpeg unavailable");
+  const executable: string = resolveBundledFfmpegPath(ffmpeg);
   return new Promise<number>((resolve, reject) => {
-    const child = spawn(ffmpeg, ["-hide_banner", "-nostdin", "-i", verifiedPath, "-f", "null", "-"], {
+    const child = spawn(executable, ["-hide_banner", "-nostdin", "-i", verifiedPath, "-f", "null", "-"], {
       stdio: ["ignore", "ignore", "pipe"], windowsHide: true
     });
     let output = "";
