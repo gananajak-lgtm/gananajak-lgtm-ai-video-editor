@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import ffmpegPath from "ffmpeg-static";
-import { checkMp3Decoding, isDecodableMp3 } from "./studio-mp3-decode";
+import { checkMp3Decoding, isDecodableMp3, resolveBundledFfmpegPath } from "./studio-mp3-decode";
 
 test("cached MP3 validation decodes valid audio and rejects damaged assets", async t => {
   if (typeof ffmpegPath !== "string" || !ffmpegPath) {
@@ -34,4 +34,11 @@ test("cached MP3 validation decodes valid audio and rejects damaged assets", asy
   const bytes = await readFile(valid);
   await writeFile(truncated, bytes.subarray(0, 10));
   assert.equal(await isDecodableMp3(truncated), false);
+});
+
+test("packaged Electron FFmpeg path targets app.asar.unpacked", () => {
+  const installed = path.join("C:", "Program Files", "Editor", "resources", "app.asar", "node_modules", "ffmpeg-static", "ffmpeg.exe");
+  assert.equal(resolveBundledFfmpegPath(installed), installed.replace("app.asar", "app.asar.unpacked"));
+  const development = path.join("repo", "node_modules", "ffmpeg-static", "ffmpeg.exe");
+  assert.equal(resolveBundledFfmpegPath(development), development);
 });
