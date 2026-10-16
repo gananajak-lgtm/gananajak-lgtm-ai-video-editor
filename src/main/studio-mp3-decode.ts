@@ -16,7 +16,7 @@ export async function checkMp3Decoding(filePath: string): Promise<Mp3DecodeResul
       child = spawn(ffmpegPath, [
         "-hide_banner", "-nostdin", "-v", "error", "-xerror",
         "-i", filePath, "-map", "0:a:0", "-f", "null", "-"
-      ], { stdio: ["ignore", "ignore", "pipe"], windowsHide: true });
+      ], { stdio: ["ignore", "ignore", "pipe"] as const, windowsHide: true });
     } catch (error) {
       resolve({ valid: false, reason: `FFmpeg launch failed: ${error instanceof Error ? error.message : String(error)}` });
       return;
