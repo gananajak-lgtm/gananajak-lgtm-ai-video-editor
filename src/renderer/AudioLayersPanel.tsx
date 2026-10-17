@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { AudioLayer, AudioLayerKind } from "../shared/types";
 
 type Props = {
@@ -10,6 +11,12 @@ function fileName(filePath: string) {
 }
 
 export default function AudioLayersPanel({ layers, onChange }: Props) {
+  const [page, setPage] = useState(0);
+  const [filter, setFilter] = useState("");
+  const [timingWarning, setTimingWarning] = useState<string | null>(null);
+  const pageSize = 25;
+  const matching = layers.filter(layer => (layer.voiceLineId ?? layer.label ?? "").toLowerCase().includes(filter.toLowerCase()) || fileName(layer.filePath).toLowerCase().includes(filter.toLowerCase()));
+  const currentPage = Math.min(page, Math.max(0, Math.ceil(matching.length / pageSize) - 1));
   const addAudio = async () => {
     const assets = await window.videoEditor.selectAudioLayers();
     if (!assets.length) return;
@@ -30,9 +37,22 @@ export default function AudioLayersPanel({ layers, onChange }: Props) {
   };
 
   const patchLayer = (id: string, patch: Partial<AudioLayer>) => {
-    onChange(
-      layers.map((layer) => (layer.id === id ? { ...layer, ...patch } : layer))
-    );
+    const target = layers.find(layer => layer.id === id);
+    if (!target) return;
+    const candidate = { ...target, ...patch };
+    if (target.origin === "studio-dialogue" && patch.start !== undefined) {
+      const overlap = layers.find(other =>
+        other.id !== id && other.origin === "studio-dialogue" &&
+        candidate.start < other.start + other.duration - 0.001 &&
+        candidate.start + candidate.duration > other.start + 0.001
+      );
+      if (overlap) {
+        setTimingWarning("ไม่สามารถขยับเสียงไปทับเสียง " + (overlap.voiceLineId ?? overlap.label ?? "") + " ได้");
+        return;
+      }
+    }
+    setTimingWarning(null);
+    onChange(layers.map(layer => layer.id === id ? candidate : layer));
   };
 
   const removeLayer = (id: string) => {
@@ -60,7 +80,10 @@ export default function AudioLayersPanel({ layers, onChange }: Props) {
         </div>
       ) : (
         <div className="audioLayerList">
-          {layers.map((layer) => (
+          <label>ค้นหาเสียงหรือเลขบรรทัด <input value={filter} onChange={event => { setFilter(event.target.value); setPage(0); }} placeholder="ค้นหา..." /></label>
+          <div className="editorMediaPager"><button type="button" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>ก่อนหน้า</button><span>รายการ {matching.length ? currentPage * pageSize + 1 : 0}–{Math.min(matching.length, (currentPage + 1) * pageSize)} จาก {matching.length}</span><button type="button" disabled={(currentPage + 1) * pageSize >= matching.length} onClick={() => setPage(currentPage + 1)}>ถัดไป</button></div>
+          {timingWarning && <p role="alert">{timingWarning}</p>}
+          {matching.slice(currentPage * pageSize, (currentPage + 1) * pageSize).map((layer) => (
             <div className="audioLayerRow" key={layer.id}>
               <div className="audioLayerName">
                 <strong>{fileName(layer.filePath)}</strong>
