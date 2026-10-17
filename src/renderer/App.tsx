@@ -788,24 +788,41 @@ export default function App() {
       }
     }
     try {
-      const imported = await Promise.all(studioVoiceSchedule.map(async clip => ({
-        id: "studio-dialogue:" + studioSelectedId + ":" + studioEpisodeId + ":" + clip.lineId,
-        filePath: await window.videoEditor.resolveStudioVoiceAudio(studioSelectedId, studioEpisodeId, clip.filePath),
-        kind: "dialogue" as const,
-        start: clip.start,
-        duration: clip.duration,
-        volume: 1,
-        loop: false,
-        fadeIn: 0,
-        fadeOut: 0,
-        origin: "studio-dialogue" as const,
-        label: clip.lineId,
-        voiceLineId: clip.lineId,
-        ...(clip.jobId ? { voiceJobId: clip.jobId } : {}),
-        ...(clip.speaker ? { voiceSpeaker: clip.speaker } : {}),
-        ...(clip.emotion ? { voiceEmotion: clip.emotion } : {}),
-        ...(clip.text ? { voiceText: clip.text } : {})
-      })));
+      // Resolve local MP3 paths in bounded batches. Do not alter the timeline
+      // unless every file has been verified successfully.
+      const imported: AudioLayer[] = new Array(studioVoiceSchedule.length);
+      let cursor = 0;
+      let done = 0;
+      const worker = async () => {
+        while (cursor < studioVoiceSchedule.length) {
+          const index = cursor++;
+          const clip = studioVoiceSchedule[index];
+          const filePath = await window.videoEditor.resolveStudioVoiceAudio(studioSelectedId, studioEpisodeId, clip.filePath);
+          imported[index] = {
+            id: "studio-dialogue:" + studioSelectedId + ":" + studioEpisodeId + ":" + clip.lineId,
+            filePath,
+            kind: "dialogue",
+            start: clip.start,
+            duration: clip.duration,
+            volume: 1,
+            loop: false,
+            fadeIn: 0,
+            fadeOut: 0,
+            origin: "studio-dialogue",
+            label: clip.lineId,
+            voiceLineId: clip.lineId,
+            ...(clip.jobId ? { voiceJobId: clip.jobId } : {}),
+            ...(clip.speaker ? { voiceSpeaker: clip.speaker } : {}),
+            ...(clip.emotion ? { voiceEmotion: clip.emotion } : {}),
+            ...(clip.text ? { voiceText: clip.text } : {})
+          };
+          done++;
+          if (done % 4 === 0 || done === studioVoiceSchedule.length) {
+            setStudioImportFeedback(`กำลังตรวจสอบเสียง MP3 ${done}/${studioVoiceSchedule.length} บรรทัด…`);
+          }
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(4, studioVoiceSchedule.length) }, () => worker()));
       if (!timeline) {
         setTimeline({ duration: voiceEnd, narration: "", width: 1080, height: 1920, fps: 30, clips: [], audioLayers: [], subtitles: [], transitionDuration: 0, quality: "draft" });
       } else if (voiceEnd > timeline.duration + 0.001) {
