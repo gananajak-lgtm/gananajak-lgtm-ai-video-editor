@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   ShotMotion,
   SubtitleCue,
@@ -9,6 +9,7 @@ import type {
 type Props = {
   plan: TimelinePlan;
   onChange: (plan: TimelinePlan) => void;
+  seekRequest?: { id: number; seconds: number } | null;
 };
 
 const MIN_CLIP_SECONDS = 0.6;
@@ -56,12 +57,48 @@ function motionLabel(motion: ShotMotion) {
   }
 }
 
-export default function TimelineEditor({ plan, onChange }: Props) {
+export default function TimelineEditor({ plan, onChange, seekRequest }: Props) {
   const [selectedClipIndex, setSelectedClipIndex] = useState(0);
   const [preview, setPreview] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [timelineZoom, setTimelineZoom] = useState(1);
+  const [shotPage, setShotPage] = useState(0);
+  const trackViewportRef = useRef<HTMLDivElement | null>(null);
+  const [trackViewport, setTrackViewport] = useState({ left: 0, width: 900 });
+  const pixelsPerSecond = 24 * timelineZoom;
+  const trackWidth = Math.max(900, plan.duration * pixelsPerSecond);
+  const trackVisibleStart = Math.max(0, trackViewport.left / pixelsPerSecond - 6);
+  const trackVisibleEnd = (trackViewport.left + trackViewport.width) / pixelsPerSecond + 6;
+  const trackClips = plan.clips.map((clip, index) => ({ clip, index })).filter(({ clip }) =>
+    clip.start + clip.duration >= trackVisibleStart && clip.start <= trackVisibleEnd
+  );
+  const scrollTimelineTo = (left: number) => {
+    const viewport = trackViewportRef.current;
+    if (!viewport) return;
+    viewport.scrollLeft = Math.max(0, left);
+    setTrackViewport({ left: viewport.scrollLeft, width: viewport.clientWidth });
+  };
+  const goToSelectedClip = () => {
+    const clip = plan.clips[selectedClipIndex];
+    if (clip) scrollTimelineTo(clip.start * pixelsPerSecond);
+  };
+  const changeTimelineZoom = (zoom: number) => {
+    const viewport = trackViewportRef.current;
+    const centerSeconds = viewport
+      ? (viewport.scrollLeft + viewport.clientWidth / 2) / pixelsPerSecond
+      : playheadSeconds;
+    setTimelineZoom(zoom);
+    if (viewport) {
+      const left = Math.max(0, centerSeconds * 24 * zoom - viewport.clientWidth / 2);
+      viewport.scrollLeft = left;
+      setTrackViewport({ left: viewport.scrollLeft, width: viewport.clientWidth });
+    }
+  };
+  const SHOT_PAGE_SIZE = 25;
+  const shotPages = Math.max(1, Math.ceil(plan.clips.length / SHOT_PAGE_SIZE));
+  const currentShotPage = Math.min(shotPage, shotPages - 1);
   const [draggedClipIndex, setDraggedClipIndex] = useState<number | null>(null);
+  const [playheadSeconds, setPlayheadSeconds] = useState(0);
 
   const selectedClip =
     plan.clips[Math.min(selectedClipIndex, Math.max(0, plan.clips.length - 1))];
@@ -97,6 +134,34 @@ export default function TimelineEditor({ plan, onChange }: Props) {
     };
   }, [selectedClip?.imagePath]);
 
+  useEffect(() => {
+    setPlayheadSeconds((current) => Math.min(current, plan.duration));
+  }, [plan.duration]);
+
+  const seekTo = (seconds: number) => {
+    const target = Math.max(0, Math.min(plan.duration, seconds));
+    setPlayheadSeconds(target);
+    const index = plan.clips.findIndex((clip) => target >= clip.start && target < clip.start + clip.duration);
+    const nextIndex = index >= 0 ? index : plan.clips.length - 1;
+    if (nextIndex >= 0) {
+      setSelectedClipIndex(nextIndex);
+      const clip = plan.clips[nextIndex];
+      const viewport = trackViewportRef.current;
+      if (clip && viewport) {
+        const clipLeft = clip.start * pixelsPerSecond;
+        const clipRight = (clip.start + clip.duration) * pixelsPerSecond;
+        if (clipLeft < viewport.scrollLeft || clipLeft > viewport.scrollLeft + viewport.clientWidth || clipRight < viewport.scrollLeft) {
+          scrollTimelineTo(Math.max(0, clipLeft - viewport.clientWidth / 3));
+        }
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (seekRequest) seekTo(seekRequest.seconds);
+    // Each request has a unique id; ordinary timeline edits must not repeat seeks.
+  }, [seekRequest?.id]);
+
   const totalClipDuration = useMemo(
     () => plan.clips.reduce((sum, clip) => sum + clip.duration, 0),
     [plan.clips]
@@ -106,7 +171,8 @@ export default function TimelineEditor({ plan, onChange }: Props) {
     const clips = plan.clips.map((clip, clipIndex) =>
       clipIndex === index ? { ...clip, ...patch } : clip
     );
-    onChange({ ...plan, clips });
+    // Keep clip start timestamps contiguous after duration edits.
+    onChange({ ...plan, clips: rebuildStarts(clips) });
   };
 
   const shiftBoundary = (index: number, requestedDelta: number) => {
@@ -142,6 +208,45 @@ export default function TimelineEditor({ plan, onChange }: Props) {
     onChange({ ...plan, clips: rebuildStarts(clips) });
     setSelectedClipIndex(to);
   };
+
+  const removeSelectedClip = () => {
+    const clip = plan.clips[selectedClipIndex];
+    if (!clip) return;
+    if (!window.confirm(`ลบช็อต “${fileName(clip.imagePath)}” ออกจากไทม์ไลน์?\\nความยาวภาพจะสั้นลง แต่ไฟล์ต้นฉบับจะไม่ถูกลบ`)) return;
+    const clips = rebuildStarts(plan.clips.filter((_, index) => index !== selectedClipIndex));
+    onChange({ ...plan, clips });
+    setSelectedClipIndex(Math.max(0, Math.min(selectedClipIndex, clips.length - 1)));
+  };
+
+  const splitAtPlayhead = () => {
+    const index = plan.clips.findIndex((clip) =>
+      playheadSeconds > clip.start + MIN_CLIP_SECONDS &&
+      playheadSeconds < clip.start + clip.duration - MIN_CLIP_SECONDS
+    );
+    if (index < 0) return;
+    const original = plan.clips[index];
+    const leftDuration = playheadSeconds - original.start;
+    const rightDuration = original.duration - leftDuration;
+    const right: TimelineClip = {
+      ...original,
+      id: `${original.id}-split-${Date.now()}`,
+      start: playheadSeconds,
+      duration: rightDuration
+    };
+    const clips = [
+      ...plan.clips.slice(0, index),
+      { ...original, duration: leftDuration },
+      right,
+      ...plan.clips.slice(index + 1)
+    ];
+    onChange({ ...plan, clips: rebuildStarts(clips) });
+    setSelectedClipIndex(index + 1);
+  };
+
+  const canSplitAtPlayhead = plan.clips.some((clip) =>
+    playheadSeconds > clip.start + MIN_CLIP_SECONDS &&
+    playheadSeconds < clip.start + clip.duration - MIN_CLIP_SECONDS
+  );
 
   const replaceImage = async (index: number) => {
     const picked = await window.videoEditor.selectImages();
@@ -215,24 +320,34 @@ export default function TimelineEditor({ plan, onChange }: Props) {
       <div className="editorTrackSurface">
         <div className="editorTrackToolbar">
           <strong>ไทม์ไลน์ภาพ</strong>
-          <label>ซูม <input type="range" min="0.5" max="3" step="0.25" value={timelineZoom} onChange={(event) => setTimelineZoom(Number(event.target.value))} /></label>
+          <label>ซูม <input type="range" min="0.5" max="3" step="0.25" value={timelineZoom} onChange={(event) => changeTimelineZoom(Number(event.target.value))} /></label>
           <span>{timelineZoom.toFixed(2)}×</span>
         </div>
-        <div className="editorTrackScroller">
-          <div className="editorTrackClips" style={{ width: `${Math.max(100, timelineZoom * 100)}%` }}>
-            {plan.clips.map((clip, index) => (
+        <div className="editorPlayheadControl">
+          <label htmlFor="timeline-playhead">หัวอ่านเวลา</label>
+          <input id="timeline-playhead" type="range" min="0" max={Math.max(plan.duration, 0.01)} step="0.1" value={Math.min(playheadSeconds, plan.duration)} onChange={(event) => seekTo(Number(event.target.value))} />
+          <output htmlFor="timeline-playhead">{formatTime(playheadSeconds)} / {formatTime(plan.duration)}</output>
+          <button type="button" disabled={!canSplitAtPlayhead} onClick={splitAtPlayhead} title="แบ่งช็อตที่ตำแหน่งหัวอ่านเวลาโดยรักษาระยะเวลารวม">✂ แยกช็อต</button>
+        </div>
+        <div className="editorMediaPager" aria-label="เลื่อนไทม์ไลน์">
+          <span>แสดง {trackClips.length} จาก {plan.clips.length} คลิป · เลื่อนแนวนอนได้</span>
+          <button type="button" onClick={goToSelectedClip}>ไปช็อตที่เลือก</button>
+        </div>
+        <div className="editorTrackScroller" ref={trackViewportRef} onScroll={event => setTrackViewport({ left: event.currentTarget.scrollLeft, width: event.currentTarget.clientWidth })}>
+          <div className="editorTrackClips" style={{ position: "relative", width: trackWidth + "px", minWidth: trackWidth + "px" }}>
+            {trackClips.map(({ clip, index }) => (
               <button
                 type="button"
                 key={clip.id}
                 draggable
-                onDragStart={(event) => { setDraggedClipIndex(index); event.dataTransfer.effectAllowed = "move"; }}
-                onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "move"; }}
-                onDrop={(event) => { event.preventDefault(); if (draggedClipIndex !== null) moveClip(draggedClipIndex, index); setDraggedClipIndex(null); }}
+                onDragStart={event => { setDraggedClipIndex(index); event.dataTransfer.effectAllowed = "move"; }}
+                onDragOver={event => { event.preventDefault(); event.dataTransfer.dropEffect = "move"; }}
+                onDrop={event => { event.preventDefault(); if (draggedClipIndex !== null) moveClip(draggedClipIndex, index); setDraggedClipIndex(null); }}
                 onDragEnd={() => setDraggedClipIndex(null)}
-                onClick={() => setSelectedClipIndex(index)}
+                onClick={() => { setSelectedClipIndex(index); setPlayheadSeconds(clip.start); }}
                 aria-pressed={selectedClipIndex === index}
                 className={selectedClipIndex === index ? "editorTrackClip editorTrackClipSelected" : "editorTrackClip"}
-                style={{ flexGrow: Math.max(0.6, clip.duration), flexBasis: 0 }}
+                style={{ position: "absolute", left: clip.start * pixelsPerSecond, width: Math.max(1, clip.duration * pixelsPerSecond - 3), height: "100%" }}
                 title={`${fileName(clip.imagePath)} · ${formatTime(clip.start)} · ${clip.duration.toFixed(1)}s`}
               >
                 <span>{String(index + 1).padStart(2, "0")}</span>
@@ -271,6 +386,9 @@ export default function TimelineEditor({ plan, onChange }: Props) {
             <div className="inspectorControls">
               <button onClick={() => replaceImage(selectedClipIndex)}>
                 Replace image
+              </button>
+              <button type="button" className="removeButton" onClick={removeSelectedClip}>
+                🗑️ ลบช็อตที่เลือก
               </button>
 
               <label>
@@ -317,12 +435,13 @@ export default function TimelineEditor({ plan, onChange }: Props) {
         </div>
 
         <div className="shotList">
+          <div className="editorMediaPager"><button type="button" disabled={currentShotPage === 0} onClick={() => setShotPage(currentShotPage - 1)}>ก่อนหน้า</button><span>ช็อต {currentShotPage * SHOT_PAGE_SIZE + 1}–{Math.min((currentShotPage + 1) * SHOT_PAGE_SIZE, plan.clips.length)} / {plan.clips.length}</span><button type="button" disabled={currentShotPage >= shotPages - 1} onClick={() => setShotPage(currentShotPage + 1)}>ถัดไป</button><button type="button" onClick={() => setShotPage(Math.floor(selectedClipIndex / SHOT_PAGE_SIZE))}>ไปช็อตที่เลือก</button></div>
           <div className="manualSectionTitle">
             <strong>Shots</strong>
             <small>Cut nudges preserve total runtime</small>
           </div>
 
-          {plan.clips.map((clip, index) => (
+          {plan.clips.slice(currentShotPage * SHOT_PAGE_SIZE, (currentShotPage + 1) * SHOT_PAGE_SIZE).map((clip, pageIndex) => { const index = currentShotPage * SHOT_PAGE_SIZE + pageIndex; return (
             <button
               className={
                 index === selectedClipIndex
@@ -341,7 +460,7 @@ export default function TimelineEditor({ plan, onChange }: Props) {
                 </small>
               </div>
             </button>
-          ))}
+          ); })}
         </div>
       </div>
 

@@ -1,3 +1,5 @@
+import { generateStudioVoiceLine } from "./providers/elevenlabs-voice-provider";
+import { listStudioProjects, createStudioProject, createStudioEpisode, deleteStudioProject, deleteStudioEpisode, listStudioTrash, restoreStudioTrash, loadStudioEpisodeEditor, saveStudioEpisodeEditor, loadStudioEpisodeScript, saveStudioEpisodeScript, loadStudioCharacterVoices, saveStudioCharacterVoices, patchStudioCharacterVoice, loadStudioEpisodeVoiceAudio, removeStudioEpisodeVoiceAudio, getStudioVoiceAudioDuration, findReusableStudioEpisodeAudio } from "./studio-projects";
 import { checkProviderConnection } from "./provider-connection";
 import { createMetaBrokerSession, exchangeMetaBrokerSession, validateMetaBrokerConfig } from "./meta-auth-broker";
 import { explainAffiliateProduct } from "./affiliate-product-search";
@@ -5,6 +7,7 @@ import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell } from "electro
 import path from "node:path";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import ffmpegPath from "ffmpeg-static";
+import { resolveBundledFfmpegPath } from "./studio-mp3-decode";
 import { spawn } from "node:child_process";
 import type { ContentBrief } from "../shared/content-factory";
 import type { AudioAsset, ProjectDocument, SceneBlock, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
@@ -31,7 +34,7 @@ import {
   createPlaybackUrl,
   installMediaProtocol
 } from "./mediaProtocol";
-import { getAiSettingsStatus, saveOpenAiApiKey, getReplicateApiToken, saveReplicateApiToken, getElevenLabsApiKey, saveElevenLabsApiKey, getReplicateVideoModel, saveReplicateVideoModel } from "./settings";
+import { getAiSettingsStatus, saveOpenAiApiKey, getReplicateApiToken, saveReplicateApiToken, getElevenLabsApiKey, saveElevenLabsApiKey, listElevenLabsWorkspaces, saveElevenLabsWorkspace, selectElevenLabsWorkspace, getReplicateVideoModel, saveReplicateVideoModel } from "./settings";
 import {
   autosaveProject,
   findMissingMedia,
@@ -243,6 +246,48 @@ ipcMain.handle("media:select-audio-layers", async () => {
   return assets;
 });
 
+ipcMain.handle("studio:list-projects", () => listStudioProjects());
+ipcMain.handle("studio:create-project", (_event, title: string) => createStudioProject(title));
+ipcMain.handle("studio:create-episode", (_event, projectId: string, title: string) => createStudioEpisode(projectId, title));
+ipcMain.handle("studio:delete-project", (_event, projectId: string) => deleteStudioProject(projectId));
+ipcMain.handle("studio:delete-episode", (_event, projectId: string, episodeId: string) => deleteStudioEpisode(projectId, episodeId));
+ipcMain.handle("studio:list-trash", () => listStudioTrash());
+ipcMain.handle("studio:restore-trash", (_event, kind: "project" | "episode", archiveId: string) => restoreStudioTrash(kind, archiveId));
+ipcMain.handle("studio:load-episode-editor", (_event, projectId: string, episodeId: string) => loadStudioEpisodeEditor(projectId, episodeId));
+ipcMain.handle("studio:save-episode-editor", (_event, projectId: string, episodeId: string, document: ProjectDocument) => saveStudioEpisodeEditor(projectId, episodeId, document));
+ipcMain.handle("studio:load-episode-script", (_event, projectId: string, episodeId: string) => loadStudioEpisodeScript(projectId, episodeId));
+ipcMain.handle("studio:save-episode-script", (_event, projectId: string, episodeId: string, script: string) => saveStudioEpisodeScript(projectId, episodeId, script));
+ipcMain.handle("studio:generate-voice-line", async (_event, request: {
+  projectId: string; episodeId: string; lineId: string; fingerprint: string;
+  text: string; voiceId: string; modelId: string; approved: boolean;
+  jobId?: string; speaker?: string; emotion?: string;
+}) => {
+  if (!request || request.approved !== true) throw new Error("Explicit paid generation approval required");
+  if (typeof request.projectId !== "string" || typeof request.episodeId !== "string" ||
+      typeof request.lineId !== "string" || typeof request.fingerprint !== "string" ||
+      typeof request.text !== "string" || typeof request.voiceId !== "string" ||
+      typeof request.modelId !== "string") throw new Error("Invalid voice request");
+  return generateStudioVoiceLine(request.projectId, request.episodeId, request.lineId,
+    request.fingerprint, request.text, request.voiceId, request.modelId,
+    { jobId: request.jobId, speaker: request.speaker, emotion: request.emotion });
+});
+ipcMain.handle("studio:remove-voice-audio", (_event, projectId: string, episodeId: string, lineId: string) => removeStudioEpisodeVoiceAudio(projectId, episodeId, lineId));
+ipcMain.handle("studio:load-voice-audio", (_event, projectId: string, episodeId: string) => loadStudioEpisodeVoiceAudio(projectId, episodeId));
+  ipcMain.handle("studio:voice-audio-duration", (_event, projectId: string, episodeId: string, relativePath: string) => getStudioVoiceAudioDuration(projectId, episodeId, relativePath));
+  ipcMain.handle("studio:resolve-voice-audio", async (_event, projectId: string, episodeId: string, relativePath: string) => {
+    const verified = await findReusableStudioEpisodeAudio(projectId, episodeId, relativePath);
+    if (!verified) throw new Error("Dialogue MP3 is missing or invalid");
+    return verified;
+  });
+ipcMain.handle("studio:preview-voice-audio", async (_event, projectId: string, episodeId: string, relativePath: string) => {
+  const verified = await findReusableStudioEpisodeAudio(projectId, episodeId, relativePath);
+  if (!verified) throw new Error("Dialogue MP3 is missing or invalid");
+  return createPlaybackUrl(verified);
+});
+ipcMain.handle("studio:load-character-voices", (_event, projectId: string) => loadStudioCharacterVoices(projectId));
+ipcMain.handle("studio:save-character-voices", (_event, projectId: string, voices: Record<string, string>) => saveStudioCharacterVoices(projectId, voices));
+ipcMain.handle("studio:patch-character-voice", (_event, projectId: string, character: string, voiceId: string | null) => patchStudioCharacterVoice(projectId, character, voiceId));
+
 ipcMain.handle("project:open", async () => {
   return openProject();
 });
@@ -322,6 +367,35 @@ async function contentProviderStatus() {
 }
 
 ipcMain.handle("content:provider-status", contentProviderStatus);
+ipcMain.handle("voice:workspaces", () => listElevenLabsWorkspaces());
+ipcMain.handle("voice:add-workspace", (_event, name: string, key: string) => saveElevenLabsWorkspace(name, key));
+ipcMain.handle("voice:select-workspace", (_event, id: string) => selectElevenLabsWorkspace(id));
+ipcMain.handle("voice:subscription", async () => {
+  const key = await getElevenLabsApiKey();
+  if (!key) throw new Error("ยังไม่ได้ตั้งค่า API Key");
+  const response = await fetch("https://api.elevenlabs.io/v1/user/subscription", { headers: { "xi-api-key": key, Accept: "application/json" }, signal: AbortSignal.timeout(15000) });
+  if (!response.ok) throw new Error(response.status === 403 ? "API Key ไม่มีสิทธิ์อ่านข้อมูล Subscription" : response.status === 401 ? "API Key ไม่ถูกต้อง" : `อ่านเครดิตไม่สำเร็จ (HTTP ${response.status})`);
+  const data: unknown = await response.json();
+  if (!data || typeof data !== "object") throw new Error("ข้อมูลเครดิตไม่ถูกต้อง");
+  const record = data as Record<string, unknown>;
+  const used = typeof record.character_count === "number" ? record.character_count : null;
+  const limit = typeof record.character_limit === "number" ? record.character_limit : null;
+  return { used, limit, remaining: used !== null && limit !== null ? Math.max(0, limit - used) : null, resetAt: typeof record.next_character_count_reset_unix === "number" ? record.next_character_count_reset_unix : null };
+});
+ipcMain.handle("voice:list-elevenlabs-voices", async () => {
+  const key = await getElevenLabsApiKey();
+  if (!key) throw new Error("ยังไม่ได้ตั้งค่า ElevenLabs API Key");
+  const response = await fetch("https://api.elevenlabs.io/v1/voices", {
+    headers: { "xi-api-key": key, Accept: "application/json" },
+    signal: AbortSignal.timeout(15000)
+  });
+  if (!response.ok) throw new Error(response.status === 401 ? "API Key ไม่ถูกต้อง" : response.status === 403 ? "API Key ไม่มีสิทธิ์อ่านรายชื่อเสียง" : `โหลดรายชื่อเสียงไม่สำเร็จ (HTTP ${response.status})`);
+  const payload: unknown = await response.json();
+  if (!payload || typeof payload !== "object" || !("voices" in payload) || !Array.isArray(payload.voices)) throw new Error("ข้อมูลเสียงไม่ถูกต้อง");
+  return payload.voices.flatMap((item: unknown) => item && typeof item === "object" && "voice_id" in item && "name" in item && typeof item.voice_id === "string" && typeof item.name === "string" ? [{ id: item.voice_id, name: item.name, previewUrl: "preview_url" in item && typeof item.preview_url === "string" && /^https:\/\//.test(item.preview_url) ? item.preview_url : null }] : []);
+});
+
+
 ipcMain.handle("content:save-replicate-token", async (_event, token: string) => {
   await saveReplicateApiToken(token);
   return contentProviderStatus();
@@ -945,7 +1019,7 @@ app.whenReady().then(async () => {
     await mkdir(smokeRoot, { recursive: true });
     const imagePath = path.join(smokeRoot, "frame.png");
     await new Promise<void>((resolve, reject) => {
-      const proc = spawn(ffmpegPath || "ffmpeg", ["-y", "-f", "lavfi", "-i", "color=c=0x182033:s=320x568:r=30", "-frames:v", "1", imagePath]);
+      const proc = spawn(ffmpegPath ? resolveBundledFfmpegPath(ffmpegPath) : "ffmpeg", ["-y", "-f", "lavfi", "-i", "color=c=0x182033:s=320x568:r=30", "-frames:v", "1", imagePath]);
       proc.once("error", reject);
       proc.once("exit", (code) => code === 0 ? resolve() : reject(new Error(`Packaged FFmpeg smoke test failed (${code})`)));
     });

@@ -1,3 +1,5 @@
+export type StudioEpisode = { id: string; title: string; folder: string; createdAt: string };
+export type StudioProject = { id: string; title: string; folder: string; createdAt: string; episodes: StudioEpisode[] };
 import type { ContentBatch, ContentBrief, ContentProject } from "./content-factory";
 
 export type ProjectMedia = {
@@ -24,6 +26,9 @@ export type ProjectDocument = {
   editingPlan: EditingBrainPlan | null;
   timeline: TimelinePlan | null;
   audioLayers: AudioLayer[];
+  aiSfxEnabled?: boolean;
+  /** Explicit still-frame ID to voice line ID mappings for sparse visual holds. */
+  studioFrameAnchors?: Record<string, string>;
   contentProject?: ContentProject | null;
   renderHistory?: FullEpisodeTestReport[];
 };
@@ -68,8 +73,8 @@ export type TimelineClip = {
   motion: ShotMotion;
 };
 
-export type AudioLayerKind = "sfx" | "music" | "ambience";
-export type AudioLayerOrigin = "manual" | "auto-sfx";
+export type AudioLayerKind = "sfx" | "music" | "ambience" | "dialogue";
+export type AudioLayerOrigin = "manual" | "auto-sfx" | "studio-dialogue";
 
 export type AudioAsset = {
   id: string;
@@ -90,6 +95,12 @@ export type AudioLayer = {
   sourceOffset?: number;
   origin?: AudioLayerOrigin;
   label?: string;
+  /** Original voice line identity; preserved when a studio clip becomes a project layer. */
+  voiceLineId?: string;
+  voiceJobId?: string;
+  voiceSpeaker?: string;
+  voiceEmotion?: string;
+  voiceText?: string;
 };
 
 export type RenderQuality = "draft" | "standard" | "high";
@@ -297,6 +308,26 @@ export type DesktopApi = {
   readImagePreview: (filePath: string) => Promise<string | null>;
   selectAudioLayers: () => Promise<AudioAsset[]>;
   openProject: () => Promise<ProjectLoadResult | null>;
+  listStudioProjects: () => Promise<StudioProject[]>;
+  createStudioProject: (title: string) => Promise<StudioProject>;
+  createStudioEpisode: (projectId: string, title: string) => Promise<StudioEpisode>;
+  deleteStudioProject: (projectId: string) => Promise<void>;
+  deleteStudioEpisode: (projectId: string, episodeId: string) => Promise<void>;
+  listStudioTrash: () => Promise<Array<{ archiveId: string; kind: "project" | "episode"; title: string; projectId: string; episodeId?: string }>>;
+  restoreStudioTrash: (kind: "project" | "episode", archiveId: string) => Promise<void>;
+  loadStudioEpisodeEditor: (projectId: string, episodeId: string) => Promise<ProjectDocument | null>;
+  saveStudioEpisodeEditor: (projectId: string, episodeId: string, document: ProjectDocument) => Promise<void>;
+  loadStudioEpisodeScript: (projectId: string, episodeId: string) => Promise<string>;
+  saveStudioEpisodeScript: (projectId: string, episodeId: string, script: string) => Promise<void>;
+  generateStudioVoiceLine: (request: { projectId: string; episodeId: string; lineId: string; fingerprint: string; text: string; voiceId: string; modelId: string; approved: boolean; jobId?: string; speaker?: string; emotion?: string }) => Promise<{ outputPath: string }>;
+  loadStudioEpisodeVoiceAudio: (projectId: string, episodeId: string) => Promise<Record<string, { fingerprint: string; outputPath: string; jobId?: string; speaker?: string; emotion?: string; text?: string }>>;
+  removeStudioEpisodeVoiceAudio: (projectId: string, episodeId: string, lineId: string) => Promise<void>;
+  getStudioVoiceAudioDuration: (projectId: string, episodeId: string, relativePath: string) => Promise<number>;
+  resolveStudioVoiceAudio: (projectId: string, episodeId: string, relativePath: string) => Promise<string>;
+  previewStudioVoiceAudio: (projectId: string, episodeId: string, relativePath: string) => Promise<string>;
+  loadStudioCharacterVoices: (projectId: string) => Promise<Record<string, string>>;
+  saveStudioCharacterVoices: (projectId: string, voices: Record<string, string>) => Promise<void>;
+  patchStudioCharacterVoice: (projectId: string, character: string, voiceId: string | null) => Promise<Record<string, string>>;
   saveProject: (
     project: ProjectDocument,
     filePath?: string | null
@@ -323,6 +354,11 @@ export type DesktopApi = {
   saveReplicateApiToken: (token: string) => Promise<ContentProviderStatus>;
   saveReplicateVideoModel: (model: string) => Promise<ContentProviderStatus>;
   saveElevenLabsApiKey: (apiKey: string) => Promise<ContentProviderStatus>;
+  listElevenLabsWorkspaces: () => Promise<{ activeId: string; workspaces: Array<{ id: string; name: string; configured: boolean }> }>;
+  addElevenLabsWorkspace: (name: string, key: string) => Promise<{ activeId: string; workspaces: Array<{ id: string; name: string; configured: boolean }> }>;
+  selectElevenLabsWorkspace: (id: string) => Promise<{ activeId: string; workspaces: Array<{ id: string; name: string; configured: boolean }> }>;
+  getElevenLabsSubscription: () => Promise<{ used: number | null; limit: number | null; remaining: number | null; resetAt: number | null }>;
+  listElevenLabsVoices: () => Promise<Array<{ id: string; name: string; previewUrl: string | null }>>;
   generateContentProject: (brief: ContentBrief) => Promise<ContentProject>;
   generateLocalTestProject: (brief: ContentBrief) => Promise<ContentProject>;
   generateLocalTestAssets: (project: ContentProject) => Promise<ContentProject>;

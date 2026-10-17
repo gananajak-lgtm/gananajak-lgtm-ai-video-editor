@@ -39,12 +39,10 @@ export default function FullEpisodeTestPanel({ history }: Props) {
     return (
       <section className="fullEpisodeTestPanel">
         <div>
-          <p className="eyebrow">FULL EPISODE TEST</p>
-          <h3>Post-render verification will appear here</h3>
+          <p className="eyebrow">ตรวจสอบวิดีโอทั้งตอน</p>
+          <h3>ผลตรวจสอบวิดีโอหลังส่งออกจะแสดงที่นี่</h3>
           <p className="muted">
-            After a full MP4 export, the editor probes the actual output and
-            records duration, file size, resolution, FPS, codecs, frame count,
-            and audio/video timing. A JSON report is saved beside the MP4.
+            หลังส่งออก MP4 ระบบจะตรวจระยะเวลา ขนาดไฟล์ ความละเอียด เฟรมเรต ตัวเข้ารหัส จำนวนเฟรม และความตรงกันของเสียงกับภาพ พร้อมบันทึกรายงาน JSON ข้างไฟล์วิดีโอ
           </p>
         </div>
       </section>
@@ -57,11 +55,10 @@ export default function FullEpisodeTestPanel({ history }: Props) {
     <section className="fullEpisodeTestPanel">
       <div className="fullEpisodeTestHeader">
         <div>
-          <p className="eyebrow">FULL EPISODE TEST</p>
-          <h3>Verify the exported MP4, not just the timeline plan</h3>
+          <p className="eyebrow">ตรวจสอบวิดีโอทั้งตอน</p>
+          <h3>ตรวจสอบไฟล์ MP4 จริงหลังส่งออก</h3>
           <p className="muted">
-            Every full export is checked with FFprobe and stored in this project
-            so different render rounds can be compared.
+            ตรวจสอบไฟล์ที่ส่งออกด้วย FFprobe และเก็บผลในโปรเจกต์เพื่อเปรียบเทียบการส่งออกแต่ละครั้ง
           </p>
         </div>
 
@@ -72,7 +69,7 @@ export default function FullEpisodeTestPanel({ history }: Props) {
               : "fullTestBadge fullTestFail"
           }
         >
-          {latest.passed ? "Latest export passed" : "Latest export needs review"}
+          {latest.passed ? "ไฟล์ล่าสุดผ่านการตรวจสอบ" : "ไฟล์ล่าสุดต้องตรวจสอบ"}
         </span>
       </div>
 
@@ -80,7 +77,7 @@ export default function FullEpisodeTestPanel({ history }: Props) {
         <span>{latest.width ?? "?"}×{latest.height ?? "?"}</span>
         <span>{latest.fps?.toFixed(2) ?? "?"} fps</span>
         <span>{formatBytes(latest.fileSizeBytes)}</span>
-        <span>{latest.frameCount?.toLocaleString() ?? "n/a"} frames</span>
+        <span>{latest.frameCount?.toLocaleString() ?? "n/a"} เฟรม</span>
         <span>duration Δ {latest.durationDelta.toFixed(3)}s</span>
         <span>
           A/V Δ {latest.avSyncDelta === null ? "n/a" : `${latest.avSyncDelta.toFixed(3)}s`}
@@ -91,17 +88,17 @@ export default function FullEpisodeTestPanel({ history }: Props) {
         <div>
           <strong>{fileName(latest.outputPath)}</strong>
           <small>
-            {formatTime(latest.actualDuration)} actual ·{" "}
-            {formatTime(latest.expectedDuration)} expected
+            {formatTime(latest.actualDuration)} จริง ·{" "}
+            {formatTime(latest.expectedDuration)} ที่คาดไว้
           </small>
         </div>
         <div>
           <strong>
-            {latest.videoCodec ?? "unknown video"} +{" "}
-            {latest.audioCodec ?? "unknown audio"}
+            {latest.videoCodec ?? "ไม่ทราบรูปแบบวิดีโอ"} +{" "}
+            {latest.audioCodec ?? "ไม่ทราบรูปแบบเสียง"}
           </strong>
           <small title={latest.reportPath}>
-            Report: {fileName(latest.reportPath)}
+            รายงาน: {fileName(latest.reportPath)}
           </small>
         </div>
       </div>
@@ -121,14 +118,14 @@ export default function FullEpisodeTestPanel({ history }: Props) {
       {history.length > 1 && (
         <div className="fullTestHistory">
           <div className="manualSectionTitle">
-            <strong>Recent export tests</strong>
-            <small>Newest first · saved with the project</small>
+            <strong>ผลตรวจสอบการส่งออกล่าสุด</strong>
+            <small>เรียงใหม่สุดก่อน · บันทึกพร้อมโปรเจกต์</small>
           </div>
 
           {history.slice(0, 8).map((report) => (
             <div className="fullTestHistoryRow" key={report.id}>
               <span className={report.passed ? "historyPass" : "historyFail"}>
-                {report.passed ? "PASS" : "CHECK"}
+                {report.passed ? "ผ่าน" : "ตรวจสอบ"}
               </span>
               <div>
                 <strong>{fileName(report.outputPath)}</strong>

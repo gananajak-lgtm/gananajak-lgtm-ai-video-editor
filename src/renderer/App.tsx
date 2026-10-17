@@ -1,6 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { assertStudioEpisodeIdentity } from "../shared/studio-episode-identity";
+import { createSerializedSaveQueue } from "../shared/serialized-save-queue";
+import { scheduleDialogueClips } from "./dialogue-timeline";
+import { holdFramesThroughDialogue, restoreFrameAnchors } from "./visual-hold";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ContentProject } from "../shared/content-factory";
-import type { AudioLayer, AiSettingsStatus, EditingBrainPlan, FullEpisodeTestReport, ProjectDocument, ProjectLoadResult, ProjectRelinkResult, RenderProgress, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
+import type { AudioLayer, AiSettingsStatus, EditingBrainPlan, FullEpisodeTestReport, ProjectDocument, ProjectLoadResult, ProjectRelinkResult, StudioProject, RenderProgress, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
 import AudioLayersPanel from "./AudioLayersPanel";
 import EditingBrainPanel from "./EditingBrainPanel";
 import VisualBrainPanel from "./VisualBrainPanel";
@@ -12,7 +16,9 @@ import EpisodeReadinessPanel from "./EpisodeReadinessPanel";
 import QuickPreviewPanel from "./QuickPreviewPanel";
 import EpisodeQcPackPanel from "./EpisodeQcPackPanel";
 import FullEpisodeTestPanel from "./FullEpisodeTestPanel";
-import ContentFactoryPanel from "./ContentFactoryPanel";
+import VoiceStudioPanel from "./VoiceStudioPanel";
+import ElevenLabsSettingsPanel from "./ElevenLabsSettingsPanel";
+import CharacterVoiceLibrary from "./CharacterVoiceLibrary";
 
 const providerStatusLabel: Record<string, string> = {
   missing_key: "ยังไม่ได้ตั้งค่า API Key",
@@ -36,6 +42,16 @@ function formatTime(seconds: number) {
 
 export default function App() {
   const [projectId, setProjectId] = useState(() => `project-${Date.now()}`);
+  const episodeEditorRef = useRef<{ projectId: string; episodeId: string } | null>(null);
+  const autosaveGenerationRef = useRef(0);
+  const queueEpisodeSaveRef = useRef<((value: { projectId: string; episodeId: string; document: ProjectDocument }) => Promise<void>) | null>(null);
+  if (!queueEpisodeSaveRef.current) {
+    queueEpisodeSaveRef.current = createSerializedSaveQueue(({ projectId, episodeId, document }) =>
+      window.videoEditor.saveStudioEpisodeEditor(projectId, episodeId, document));
+  }
+  const queueEpisodeSave = (projectId: string, episodeId: string, document: ProjectDocument) =>
+    queueEpisodeSaveRef.current!({ projectId, episodeId, document });
+  const [episodeEditorScope, setEpisodeEditorScope] = useState<{ projectId: string; episodeId: string } | null>(null);
   const [projectTitle, setProjectTitle] = useState("เรื่องไม่มีชื่อ");
   const [projectCreatedAt, setProjectCreatedAt] = useState(
     () => new Date().toISOString()
@@ -48,11 +64,28 @@ export default function App() {
   const [missingMedia, setMissingMedia] = useState<string[]>([]);
   const [relinking, setRelinking] = useState(false);
   const [images, setImages] = useState<string[]>([]);
+  const [mediaSearch, setMediaSearch] = useState("");
+  const [mediaPage, setMediaPage] = useState(0);
+  const [inspectorExpanded, setInspectorExpanded] = useState(false);
+  const [voiceListExpanded, setVoiceListExpanded] = useState(false);
+  const [voiceListSearch, setVoiceListSearch] = useState("");
+  const [voiceListPage, setVoiceListPage] = useState(0);
+  const [voiceSeekRequest, setVoiceSeekRequest] = useState<{ id: number; seconds: number } | null>(null);
+  const [voicePreview, setVoicePreview] = useState<{ lineId: string; url: string } | null>(null);
+  const [voicePreviewError, setVoicePreviewError] = useState<string | null>(null);
+  const voicePreviewRequestRef = useRef(0);
+  const [frameAnchorExpanded, setFrameAnchorExpanded] = useState(false);
+  const visibleImages = useMemo(() => images.filter(image => fileName(image).toLocaleLowerCase().includes(mediaSearch.trim().toLocaleLowerCase())), [images, mediaSearch]);
+  const mediaPageCount = Math.max(1, Math.ceil(visibleImages.length / 24));
+  const mediaPageSafe = Math.min(mediaPage, mediaPageCount - 1);
+  const mediaPageImages = visibleImages.slice(mediaPageSafe * 24, (mediaPageSafe + 1) * 24);
   const [narration, setเสียงบรรยาย] = useState<string | null>(null);
   const [timeline, setTimeline] = useState<TimelinePlan | null>(null);
+  const [studioFrameAnchors, setStudioFrameAnchors] = useState<Record<string, string>>({});
   const [transcript, setTranscript] = useState<TranscriptResult | null>(null);
   const [editingPlan, setEditingPlan] = useState<EditingBrainPlan | null>(null);
   const [audioLayers, setAudioLayers] = useState<AudioLayer[]>([]);
+  const [aiSfxEnabled, setAiSfxEnabled] = useState(false);
   const [contentProject, setContentProject] = useState<ContentProject | null>(null);
   const [aiStatus, setAiStatus] = useState<AiSettingsStatus>({
     configured: false,
@@ -89,6 +122,14 @@ export default function App() {
         : null
     );
     setAudioLayers(project.audioLayers);
+    setStudioFrameAnchors(restoreFrameAnchors(
+      project.studioFrameAnchors,
+      project.timeline?.clips.map(clip => clip.id) ?? [],
+      project.audioLayers.some(layer => layer.origin === "studio-dialogue" && Boolean(layer.voiceLineId))
+        ? project.audioLayers.filter(layer => layer.origin === "studio-dialogue" && Boolean(layer.voiceLineId)).map(layer => layer.voiceLineId!)
+        : undefined
+    ));
+    setAiSfxEnabled(project.aiSfxEnabled ?? false);
     setContentProject(project.contentProject ?? null);
     setRenderHistory(project.renderHistory ?? []);
     setMissingMedia(loaded.missingMedia);
@@ -117,7 +158,12 @@ export default function App() {
       .then(([status, autosave]) => {
         if (cancelled) return;
         setAiStatus(status);
-        if (autosave) applyLoadedProject(autosave);
+        if (autosave) {
+          // The global autosave belongs only to the standalone editor. It is
+          // never interpreted as an episode timeline; those load explicitly.
+          applyLoadedProject(autosave);
+          setNotice("กู้คืนงานตัดต่อทั่วไปแล้ว · หากต้องการไทม์ไลน์ของ EP ให้เปิดจากรายการตอนใน AI Voice Studio");
+        }
       })
       .catch((startupError) => {
         if (cancelled) return;
@@ -153,6 +199,8 @@ export default function App() {
       editingPlan,
       timeline,
       audioLayers,
+      aiSfxEnabled,
+      studioFrameAnchors,
       contentProject,
       renderHistory
     }),
@@ -166,6 +214,8 @@ export default function App() {
       editingPlan,
       timeline,
       audioLayers,
+      aiSfxEnabled,
+      studioFrameAnchors,
       contentProject,
       renderHistory
     ]
@@ -180,18 +230,33 @@ export default function App() {
     audioLayers.length > 0;
 
   useEffect(() => {
+    const generation = ++autosaveGenerationRef.current;
     if (!sessionReady || !hasProjectContent) return;
 
+    const target = episodeEditorScope;
+    // Bind each scheduled snapshot to its original editor scope. A timer from
+    // another episode must never write its stale document into the new episode.
+    if (target && projectDocument.id !== "episode-" + target.episodeId) return;
     setAutosaveState("saving");
     const timer = window.setTimeout(() => {
-      void window.videoEditor
-        .autosaveProject(projectDocument)
-        .then(() => setAutosaveState("saved"))
-        .catch(() => setAutosaveState("error"));
+      if (autosaveGenerationRef.current !== generation ||
+          episodeEditorRef.current?.episodeId !== target?.episodeId ||
+          episodeEditorRef.current?.projectId !== target?.projectId) return;
+      const save = target
+        ? queueEpisodeSave(target.projectId, target.episodeId, projectDocument)
+        : window.videoEditor.autosaveProject(projectDocument);
+      void save.then(() => {
+        if (autosaveGenerationRef.current === generation) setAutosaveState("saved");
+      }).catch(() => {
+        if (autosaveGenerationRef.current === generation) setAutosaveState("error");
+      });
     }, 800);
 
-    return () => window.clearTimeout(timer);
-  }, [sessionReady, hasProjectContent, projectDocument]);
+    return () => {
+      window.clearTimeout(timer);
+      if (autosaveGenerationRef.current === generation) ++autosaveGenerationRef.current;
+    };
+  }, [sessionReady, hasProjectContent, projectDocument, episodeEditorScope]);
 
   const openProjectFile = async () => {
     setError(null);
@@ -199,6 +264,20 @@ export default function App() {
     try {
       const loaded = await window.videoEditor.openProject();
       if (loaded) {
+        const previous = episodeEditorRef.current;
+        if (previous) {
+          if (projectDocument.id !== "episode-" + previous.episodeId) {
+            throw new Error("ข้อมูลไทม์ไลน์ไม่ตรงกับ EP เดิม ยกเลิกการเปิดไฟล์เพื่อป้องกันข้อมูลสูญหาย");
+          }
+          // The file picker completed successfully. Flush the outgoing EP
+          // before detaching its autosave destination.
+          await queueEpisodeSave(previous.projectId, previous.episodeId, projectDocument);
+        }
+        // Standalone .aivproj files must never inherit the previously attached
+        // Studio episode autosave destination.
+        episodeEditorRef.current = null;
+        setEpisodeEditorScope(null);
+        ++autosaveGenerationRef.current;
         applyLoadedProject(loaded);
         setAutosaveState("saved");
       }
@@ -222,6 +301,7 @@ export default function App() {
         : null
     );
     setAudioLayers(project.audioLayers);
+    setAiSfxEnabled(project.aiSfxEnabled ?? false);
     setRenderHistory(project.renderHistory ?? renderHistory);
     setMissingMedia(result.missingMedia);
     setNotice(
@@ -298,10 +378,56 @@ export default function App() {
     const picked = await window.videoEditor.selectImages();
     if (picked.length) {
       setImages(picked);
-      setTimeline(null);
+      if (timeline?.clips.length) {
+        setTimeline(null);
+        setStudioFrameAnchors({});
+      }
       setNotice(null);
       setError(null);
     }
+  };
+
+  const placeImagesOnAudioTimeline = () => {
+    if (!timeline || !images.length || timeline.clips.length > 0 || !Number.isFinite(timeline.duration) || timeline.duration <= 0) {
+      setError("ต้องมีภาพอย่างน้อยหนึ่งภาพและไทม์ไลน์เสียงที่ยังไม่มีคลิปภาพ");
+      return;
+    }
+    const duration = timeline.duration;
+    const clips = images.map((imagePath, index) => {
+      const start = duration * index / images.length;
+      const end = duration * (index + 1) / images.length;
+      return {
+        id: "studio-image-" + index + "-" + imagePath,
+        imagePath,
+        start,
+        duration: end - start,
+        motion: "hold" as const
+      };
+    });
+    setTimeline(previous => previous && previous === timeline && previous.clips.length === 0
+      ? { ...previous, clips, transitionDuration: 0 }
+      : previous);
+    setError(null);
+    setNotice("เพิ่มภาพ " + clips.length + " ภาพลง Timeline เสียงเดิมแล้ว · เสียงตัวละครยังอยู่ครบ กรุณาบันทึก EP");
+  };
+
+  const removeImportedImage = (imagePath: string) => {
+    if (!window.confirm(`นำภาพ “${fileName(imagePath)}” ออกจากรายการภาพที่เลือก?\\nไฟล์ต้นฉบับจะยังอยู่`)) return;
+    setImages(current => current.filter(image => image !== imagePath));
+    // Generated timing/shot mapping may refer to the removed image.
+    setTimeline(null);
+    setStudioFrameAnchors({});
+    setNotice("นำภาพออกแล้ว · ต้องสร้างไทม์ไลน์ใหม่เพื่อให้ช็อตตรงกับรายการภาพ");
+  };
+
+  const removeNarration = () => {
+    if (!narration || !window.confirm(`นำเสียงบรรยาย “${fileName(narration)}” ออกจากโปรเจกต์?\\nไฟล์เสียงต้นฉบับจะยังอยู่`)) return;
+    setเสียงบรรยาย(null);
+    setTranscript(null);
+    setEditingPlan(null);
+    setTimeline(null);
+    setStudioFrameAnchors({});
+    setNotice("นำเสียงบรรยายออกแล้ว · ข้อมูลไทม์ไลน์ที่อ้างอิงเสียงเดิมถูกรีเซ็ต");
   };
 
   const chooseเสียงบรรยาย = async () => {
@@ -483,16 +609,538 @@ export default function App() {
     }
   };
 
+  const [studioProjects, setStudioProjects] = useState<StudioProject[]>([]);
+  const [studioTrash, setStudioTrash] = useState<Array<{ archiveId: string; kind: "project" | "episode"; title: string; projectId: string; episodeId?: string }>>([]);
+  const [studioSelectedId, setStudioSelectedId] = useState<string | null>(null);
+  const [studioNewTitle, setStudioNewTitle] = useState("");
+  const [studioNewEpisode, setStudioNewEpisode] = useState("");
+  const [studioBusy, setStudioBusy] = useState(false);
+  const [studioImportFeedback, setStudioImportFeedback] = useState<string | null>(null);
+  const [studioEpisodeId, setStudioEpisodeId] = useState<string | null>(null);
+  const [studioVoiceFiles, setStudioVoiceFiles] = useState<Record<string, { fingerprint: string; outputPath: string; jobId?: string; speaker?: string; emotion?: string; text?: string }>>({});
+  useEffect(() => {
+    let active = true;
+    setStudioVoiceFiles({});
+    if (!studioSelectedId || !studioEpisodeId) return () => { active = false; };
+    const refresh = () => { void window.videoEditor.loadStudioEpisodeVoiceAudio(studioSelectedId, studioEpisodeId).then(entries => { if (active) setStudioVoiceFiles(entries); }).catch(() => { if (active) setStudioVoiceFiles({}); }); };
+    refresh();
+    window.addEventListener("studio-voice-audio-updated", refresh);
+    return () => { active = false; window.removeEventListener("studio-voice-audio-updated", refresh); };
+  }, [studioSelectedId, studioEpisodeId]);
+  useEffect(() => { voicePreviewRequestRef.current++; setVoicePreview(null); setVoicePreviewError(null); }, [studioSelectedId, studioEpisodeId]);
+  const toggleVoicePreview = async (lineId: string, outputPath: string) => {
+    const request = ++voicePreviewRequestRef.current;
+    if (voicePreview?.lineId === lineId) { setVoicePreview(null); return; }
+    setVoicePreview(null);
+    setVoicePreviewError(null);
+    if (!studioSelectedId || !studioEpisodeId) return;
+    try {
+      const url = await window.videoEditor.previewStudioVoiceAudio(studioSelectedId, studioEpisodeId, outputPath);
+      if (request === voicePreviewRequestRef.current) setVoicePreview({ lineId, url });
+    } catch (error) {
+      if (request === voicePreviewRequestRef.current) setVoicePreviewError("ฟังตัวอย่างไม่ได้: " + (error instanceof Error ? error.message : String(error)));
+    }
+  };
+  const [studioVoiceDurationErrors, setStudioVoiceDurationErrors] = useState<Record<string, string>>({});
+  const [studioVoiceDurations, setStudioVoiceDurations] = useState<Record<string, number>>({});
+  const [voiceProbeProgress, setVoiceProbeProgress] = useState({ done: 0, total: 0 });
+  useEffect(() => {
+    let active = true;
+    setStudioVoiceDurations({});
+    setStudioVoiceDurationErrors({});
+    setVoiceProbeProgress({ done: 0, total: Object.keys(studioVoiceFiles).length });
+    if (!studioSelectedId || !studioEpisodeId) return () => { active = false; };
+    const entries = Object.entries(studioVoiceFiles);
+    // Limit concurrent FFmpeg probes for large episodes (hundreds of voice files).
+    // Check cancellation between requests to avoid probing the previous EP.
+    void (async () => {
+      const durations: Record<string, number> = {};
+      const errors: Record<string, string> = {};
+      let cursor = 0;
+      let completed = 0;
+      const publish = () => {
+        if (!active) return;
+        setStudioVoiceDurations({ ...durations });
+        setStudioVoiceDurationErrors({ ...errors });
+        setVoiceProbeProgress({ done: completed, total: entries.length });
+      };
+      const worker = async () => {
+        while (active && cursor < entries.length) {
+          const [lineId, entry] = entries[cursor++];
+          try {
+            const seconds = await window.videoEditor.getStudioVoiceAudioDuration(studioSelectedId, studioEpisodeId, entry.outputPath);
+            if (active) durations[lineId] = seconds;
+          } catch (error) {
+            if (active) errors[lineId] = error instanceof Error ? error.message : String(error);
+          }
+          completed++;
+          if (completed % 4 === 0 || completed === entries.length) publish();
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(4, entries.length) }, () => worker()));
+      if (!active) return;
+      publish();
+    })();
+    return () => { active = false; };
+  }, [studioSelectedId, studioEpisodeId, studioVoiceFiles]);
+  const [studioDialogueGap, setStudioDialogueGap] = useState(0.3);
+  const studioVoiceSchedule = scheduleDialogueClips(
+    Object.entries(studioVoiceFiles)
+      .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
+      .filter(([lineId]) => Number.isFinite(studioVoiceDurations[lineId]) && studioVoiceDurations[lineId] > 0)
+      .map(([lineId, entry]) => ({ lineId, filePath: entry.outputPath, duration: studioVoiceDurations[lineId], jobId: entry.jobId, speaker: entry.speaker, emotion: entry.emotion, text: entry.text })),
+    Object.values(studioVoiceFiles).every(entry => Boolean(entry.speaker && entry.text)) ? { sameSpeaker: studioDialogueGap, speakerChange: Math.max(studioDialogueGap, 0.6), sentenceEnd: Math.max(studioDialogueGap, 0.8), narrationChange: Math.max(studioDialogueGap, 1), sceneBreak: Math.max(studioDialogueGap, 1.5) } : studioDialogueGap
+  );
+
+  const studioFrameHoldPreview = useMemo(() => {
+    if (!timeline?.clips.length || !studioVoiceSchedule.length) return { holds: [], error: null as string | null };
+    const anchors = timeline.clips.map((clip, index) => ({
+      imageId: clip.id,
+      lineId: studioFrameAnchors[clip.id] ?? (index === 0 ? studioVoiceSchedule[0].lineId : "")
+    })).filter(anchor => anchor.lineId);
+    try {
+      return { holds: holdFramesThroughDialogue(studioVoiceSchedule, anchors), error: null as string | null };
+    } catch (error) {
+      return { holds: [], error: String(error) };
+    }
+  }, [timeline, studioVoiceSchedule, studioFrameAnchors]);
+  const applyStudioFrameHolds = () => {
+    if (!timeline || studioFrameHoldPreview.error || studioFrameHoldPreview.holds.length !== timeline.clips.length) {
+      setError("กรุณากำหนดบรรทัดเริ่มต้นให้ภาพทุกภาพตามลำดับก่อนนำไปใช้");
+      return;
+    }
+    if (timeline.clips.some(clip => clip.videoPath || !clip.imagePath)) {
+      setError("การค้างภาพอัตโนมัติรองรับเฉพาะภาพนิ่ง ยังไม่รองรับคลิปวิดีโอ");
+      return;
+    }
+    const holds = studioFrameHoldPreview.holds;
+    if (timeline.subtitles.length > 0 || narration || [...audioLayers, ...timeline.audioLayers].some(layer => layer.origin !== "studio-dialogue") || (timeline.narration && timeline.narration.trim().length > 0)) {
+      setError("ไทม์ไลน์นี้มีเสียงบรรยาย คำบรรยาย หรือแทร็กเสียงอื่นที่กำหนดเวลาไว้แล้ว กรุณาปรับจุดเวลาให้ตรงก่อนใช้การค้างภาพอัตโนมัติ");
+      return;
+    }
+    if (holds.some((hold, index) => hold.imageId !== timeline.clips[index].id)) {
+      setError("ลำดับภาพไม่ตรงกับลำดับจุดเริ่มภาพ");
+      return;
+    }
+    setTimeline(previous => {
+      if (!previous || previous !== timeline) return previous;
+      return {
+        ...previous,
+        duration: holds[holds.length - 1].end,
+        transitionDuration: 0,
+        clips: previous.clips.map((clip, index) => ({
+          ...clip,
+          start: holds[index].start,
+          duration: holds[index].end - holds[index].start
+        }))
+      };
+    });
+    setError(null);
+    setNotice("ปรับเวลาแสดงภาพนิ่งตามจุดเริ่มบทพูดแล้ว และปิดภาพซ้อนช่วงเปลี่ยนภาพเพื่อรักษาจุดเริ่มต้น กรุณาตรวจสอบก่อนส่งออกและบันทึกโปรเจกต์");
+  };
+  const importStudioDialogueToTimeline = async () => {
+    setStudioImportFeedback("กำลังตรวจสอบและนำเข้าเสียงตัวละคร...");
+    const showImportError = (message: string) => { setError(message); setStudioImportFeedback(message); };
+    if (!studioSelectedId || !studioEpisodeId) {
+      showImportError("กรุณาเปิดไทม์ไลน์ของ EP ที่ต้องการนำเข้าเสียงก่อน");
+      return;
+    }
+    if (episodeEditorRef.current?.projectId !== studioSelectedId ||
+        episodeEditorRef.current?.episodeId !== studioEpisodeId) {
+      showImportError("โปรดเปิดไทม์ไลน์ EP ที่เลือกก่อนนำเข้า MP3 เพื่อป้องกันการบันทึกเสียงผิดตอน");
+      return;
+    }
+    if (studioVoiceSchedule.length === 0 || studioVoiceSchedule.length !== Object.keys(studioVoiceFiles).length) {
+      showImportError("กรุณารอให้ตรวจสอบความยาว MP3 ครบทุกบรรทัดก่อนนำเข้า");
+      return;
+    }
+    if (timeline?.audioLayers.some(layer => layer.origin === "studio-dialogue")) {
+      showImportError("ไทม์ไลน์มีเสียง Studio อยู่ในแทร็กเสียงภายในแล้ว กรุณาตรวจสอบและนำแทร็กซ้ำออกก่อนนำเข้าใหม่ เพื่อป้องกันเสียงพูดซ้อนกัน");
+      return;
+    }
+    const existingStudioLines = audioLayers.filter(layer => layer.origin === "studio-dialogue");
+    if (existingStudioLines.length > 0 && existingStudioLines.some(layer => !layer.voiceLineId || !studioVoiceSchedule.some(clip => clip.lineId === layer.voiceLineId))) {
+      showImportError("พบเสียง Studio ที่ไม่ตรงกับบทพูดปัจจุบัน กรุณาตรวจสอบและลบแทร็กเก่าก่อนนำเข้าใหม่ เพื่อป้องกันเสียงที่จัดเวลาไว้สูญหาย");
+      return;
+    }
+    if (existingStudioLines.length > 0 && (
+      existingStudioLines.length !== studioVoiceSchedule.length ||
+      existingStudioLines.some(layer => {
+        const current = studioVoiceSchedule.find(clip => clip.lineId === layer.voiceLineId);
+        return !current || Math.abs(layer.start - current.start) > 0.05 || Math.abs(layer.duration - current.duration) > 0.05;
+      })
+    )) {
+      showImportError("เวลาหรือจำนวนบรรทัดเสียง Studio เปลี่ยนจากที่วางไว้บนไทม์ไลน์ กรุณาตรวจสอบแทร็กเดิมก่อนนำเข้าใหม่ เพื่อไม่ให้ตำแหน่งเสียงที่แก้ไขไว้ถูกแทนที่");
+      return;
+    }
+    if (existingStudioLines.length > 0 && existingStudioLines.some(layer => {
+      const current = studioVoiceSchedule.find(clip => clip.lineId === layer.voiceLineId);
+      return !current || (layer.voiceJobId && current.jobId && layer.voiceJobId !== current.jobId) ||
+        (layer.voiceText && current.text && layer.voiceText !== current.text) ||
+        (layer.voiceSpeaker && current.speaker && layer.voiceSpeaker !== current.speaker);
+    })) {
+      showImportError("เสียง Studio ชุดใหม่มีข้อความ ผู้พูด หรือรหัสงานเสียงต่างจากที่นำเข้าไว้ กรุณาตรวจสอบก่อนแทนที่ เพื่อป้องกันการสูญเสียเสียงฉบับที่เลือกไว้");
+      return;
+    }
+    const voiceEnd = studioVoiceSchedule[studioVoiceSchedule.length - 1].end;
+    if (timeline && voiceEnd > timeline.duration + 0.001) {
+      const lastClip = timeline.clips[timeline.clips.length - 1];
+      if (!lastClip || !lastClip.imagePath || lastClip.videoPath || !Number.isFinite(lastClip.start) || !Number.isFinite(lastClip.duration) || lastClip.duration <= 0 || Math.abs(lastClip.start + lastClip.duration - timeline.duration) > 0.05) {
+        showImportError("เสียงยาวกว่าไทม์ไลน์และไม่สามารถยืดภาพท้ายได้อัตโนมัติ กรุณาปรับภาพหรือระยะเวลาเอง");
+        return;
+      }
+    }
+    try {
+      // Resolve local MP3 paths in bounded batches. Do not alter the timeline
+      // unless every file has been verified successfully.
+      const imported: AudioLayer[] = new Array(studioVoiceSchedule.length);
+      let cursor = 0;
+      let done = 0;
+      const worker = async () => {
+        while (cursor < studioVoiceSchedule.length) {
+          const index = cursor++;
+          const clip = studioVoiceSchedule[index];
+          const filePath = await window.videoEditor.resolveStudioVoiceAudio(studioSelectedId, studioEpisodeId, clip.filePath);
+          imported[index] = {
+            id: "studio-dialogue:" + studioSelectedId + ":" + studioEpisodeId + ":" + clip.lineId,
+            filePath,
+            kind: "dialogue",
+            start: clip.start,
+            duration: clip.duration,
+            volume: 1,
+            loop: false,
+            fadeIn: 0,
+            fadeOut: 0,
+            origin: "studio-dialogue",
+            label: clip.lineId,
+            voiceLineId: clip.lineId,
+            ...(clip.jobId ? { voiceJobId: clip.jobId } : {}),
+            ...(clip.speaker ? { voiceSpeaker: clip.speaker } : {}),
+            ...(clip.emotion ? { voiceEmotion: clip.emotion } : {}),
+            ...(clip.text ? { voiceText: clip.text } : {})
+          };
+          done++;
+          if (done % 4 === 0 || done === studioVoiceSchedule.length) {
+            setStudioImportFeedback(`กำลังตรวจสอบเสียง MP3 ${done}/${studioVoiceSchedule.length} บรรทัด…`);
+          }
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(4, studioVoiceSchedule.length) }, () => worker()));
+      if (!timeline) {
+        setTimeline({ duration: voiceEnd, narration: "", width: 1080, height: 1920, fps: 30, clips: [], audioLayers: [], subtitles: [], transitionDuration: 0, quality: "draft" });
+      } else if (voiceEnd > timeline.duration + 0.001) {
+        setTimeline(previous => {
+          if (!previous || previous !== timeline) return previous;
+          const clips = [...previous.clips];
+          const last = clips[clips.length - 1];
+          if (!last || !last.imagePath || last.videoPath || !Number.isFinite(last.start) || !Number.isFinite(last.duration) || last.duration <= 0 || Math.abs(last.start + last.duration - previous.duration) > 0.05) return previous;
+          clips[clips.length - 1] = { ...last, duration: voiceEnd - last.start };
+          return { ...previous, duration: voiceEnd, clips };
+        });
+      }
+      setAudioLayers(previous => [...previous.filter(layer => layer.origin !== "studio-dialogue"), ...imported]);
+      setError(null);
+      setNotice("นำเข้าเสียงตัวละคร " + imported.length + " บรรทัดแล้ว · หากยังไม่มีภาพ กรุณาเพิ่มมาสเตอร์เฟรมก่อนส่งออก MP4 และบันทึกโปรเจกต์");
+      setStudioImportFeedback("นำเข้าเสียง " + imported.length + " บรรทัดสำเร็จ · อยู่ในแทร็กเสียง Timeline แล้ว");
+    } catch (error) {
+      showImportError("นำเข้าเสียงตัวละครไม่สำเร็จ: " + String(error));
+    }
+  };
+  const [studioScript, setStudioScript] = useState("");
+  const [studioSavedScript, setStudioSavedScript] = useState("");
+  const [studioScriptBusy, setStudioScriptBusy] = useState(false);
+  const studioScriptDirty = studioScript !== studioSavedScript;
+  useEffect(() => {
+    if (!studioScriptDirty) return;
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    return () => window.removeEventListener("beforeunload", warnBeforeUnload);
+  }, [studioScriptDirty]);
+  const openStudioEpisode = async (episodeId: string) => {
+    if (!studioSelectedId || studioScriptBusy) return;
+    if (studioScriptDirty && !window.confirm("บทที่แก้ไขยังไม่ได้บันทึก ต้องการทิ้งการแก้ไขหรือไม่?")) return;
+    setStudioScriptBusy(true);
+    try {
+      const loaded = await window.videoEditor.loadStudioEpisodeScript(studioSelectedId, episodeId);
+      setStudioEpisodeId(episodeId);
+      setStudioScript(loaded);
+      setStudioSavedScript(loaded);
+    } catch (error) { setError(String(error)); }
+    finally { setStudioScriptBusy(false); }
+  };
+  const saveStudioScript = async () => {
+    if (!studioSelectedId || !studioEpisodeId || studioScriptBusy) return;
+    setStudioScriptBusy(true);
+    try {
+      await window.videoEditor.saveStudioEpisodeScript(studioSelectedId, studioEpisodeId, studioScript);
+      setStudioSavedScript(studioScript);
+      setNotice("บันทึกบท EP เรียบร้อยแล้ว");
+    } catch (error) { setError(String(error)); }
+    finally { setStudioScriptBusy(false); }
+  };
+  const closeStudioEpisode = () => {
+    if (studioScriptDirty && !window.confirm("บทที่แก้ไขยังไม่ได้บันทึก ต้องการปิดโดยไม่บันทึกหรือไม่?")) return;
+    setStudioEpisodeId(null);
+    setStudioScript("");
+    setStudioSavedScript("");
+  };
+  const leaveStudioProject = () => {
+    if (studioScriptDirty && !window.confirm("บทที่แก้ไขยังไม่ได้บันทึก ต้องการออกจากโปรเจกต์หรือไม่?")) return;
+    setStudioEpisodeId(null);
+    setStudioScript("");
+    setStudioSavedScript("");
+    setStudioSelectedId(null);
+  };
+  const refreshStudioProjects = async () => {
+    setStudioProjects(await window.videoEditor.listStudioProjects());
+    setStudioTrash(await window.videoEditor.listStudioTrash());
+  };
+  useEffect(() => { void refreshStudioProjects().catch(e => setError(String(e))); }, []);
+  const restoreDeletedStudioItem = async (kind: "project" | "episode", archiveId: string, title: string) => {
+    if (studioBusy || studioScriptBusy || !window.confirm(`กู้คืน “${title}” จากถังสำรอง?`)) return;
+    setStudioBusy(true);
+    try {
+      await window.videoEditor.restoreStudioTrash(kind, archiveId);
+      await refreshStudioProjects();
+      setNotice(`กู้คืน “${title}” สำเร็จ`);
+    } catch (error) { setError(String(error)); }
+    finally { setStudioBusy(false); }
+  };
+  const addStudioProject = async () => {
+    if (!studioNewTitle.trim() || studioBusy || studioScriptBusy) return;
+    if (studioScriptDirty && !window.confirm("บท EP ปัจจุบันยังไม่ได้บันทึก ต้องการสร้างโปรเจกต์ใหม่และทิ้งการแก้ไขหรือไม่?")) return;
+    setStudioBusy(true);
+    try {
+      const created = await window.videoEditor.createStudioProject(studioNewTitle);
+      setStudioNewTitle("");
+      await refreshStudioProjects();
+      setStudioEpisodeId(null);
+      setStudioScript("");
+      setStudioSavedScript("");
+      setStudioSelectedId(created.id);
+    } catch(e) { setError(String(e)); }
+    finally { setStudioBusy(false); }
+  };
+  const addStudioEpisode = async () => {
+    if (!studioSelectedId || !studioNewEpisode.trim() || studioBusy || studioScriptBusy) return;
+    if (studioScriptDirty && !window.confirm("บท EP ปัจจุบันยังไม่ได้บันทึก ต้องการสร้างตอนใหม่และทิ้งการแก้ไขหรือไม่?")) return;
+    setStudioBusy(true);
+    try {
+      const created = await window.videoEditor.createStudioEpisode(studioSelectedId, studioNewEpisode);
+      setStudioNewEpisode("");
+      // openStudioEpisode is guarded by studioBusy, which is still true here.
+      // Load the newly created episode directly so the script selector and
+      // editor never remain pointed at the previous episode.
+      const createdScript = await window.videoEditor.loadStudioEpisodeScript(studioSelectedId, created.id);
+      await refreshStudioProjects();
+      setStudioEpisodeId(created.id);
+      setStudioScript(createdScript);
+      setStudioSavedScript(createdScript);
+      setActiveProductionTab("dashboard");
+      setNotice("เพิ่มตอนใหม่แล้ว · เปิดบท EP ด้านล่างเพื่อเขียนบท หรือเลือกสร้างเสียงตอนนี้");
+    } catch(e) { setError(String(e)); }
+    finally { setStudioBusy(false); }
+  };
+  const removeGeneratedVoice = async (lineId: string) => {
+    if (!studioSelectedId || !studioEpisodeId || studioBusy || studioScriptBusy) return;
+    const projectId = studioSelectedId;
+    const episodeId = studioEpisodeId;
+    // The voice inventory is tied to the script selection, not necessarily
+    // the currently opened timeline. Never invalidate another EP's tracks.
+    const editor = episodeEditorRef.current;
+    if (editor && (editor.projectId !== projectId || editor.episodeId !== episodeId)) {
+      setError("กรุณาเปิดไทม์ไลน์ของ EP ที่ต้องการลบเสียงก่อน เพื่อป้องกันการลบแทร็กผิดตอน");
+      return;
+    }
+    if (!window.confirm(`ลบเสียง AI บรรทัด “${lineId}” ออกจากรายการ?\nไฟล์ MP3 ต้นฉบับจะยังอยู่ แต่ต้องนำเสียงเข้าไทม์ไลน์ใหม่`)) return;
+    setStudioBusy(true);
+    try {
+      await window.videoEditor.removeStudioEpisodeVoiceAudio(projectId, episodeId, lineId);
+      // Re-read the authoritative manifest. Concurrent synthesis may have
+      // registered additional lines while the deletion was in flight.
+      const latest = await window.videoEditor.loadStudioEpisodeVoiceAudio(projectId, episodeId);
+      if (studioSelectedId === projectId && studioEpisodeId === episodeId) {
+        setStudioVoiceFiles(latest);
+      }
+      if (editor && episodeEditorRef.current?.projectId === projectId &&
+          episodeEditorRef.current?.episodeId === episodeId) {
+        setAudioLayers(previous => previous.filter(layer => layer.origin !== "studio-dialogue"));
+      }
+      setNotice(`ลบเสียง AI บรรทัด ${lineId} จากรายการแล้ว · ไฟล์ MP3 ยังอยู่ · นำเสียงเข้าไทม์ไลน์ใหม่เมื่อพร้อม`);
+    } catch (error) { setError(String(error)); }
+    finally { setStudioBusy(false); }
+  };
+  const deleteEpisode = async (episodeId: string, title: string) => {
+    if (!studioSelectedId || studioBusy || studioScriptBusy) return;
+    if (episodeEditorRef.current?.projectId === studioSelectedId &&
+        episodeEditorRef.current.episodeId === episodeId) {
+      setError("กรุณาปิดไทม์ไลน์ EP นี้ก่อนลบ เพื่อป้องกัน Autosave เขียนข้อมูลกลับเข้าโฟลเดอร์ที่ลบ");
+      return;
+    }
+    if (!window.confirm(`ย้ายตอน “${title}” พร้อมบท เสียง ภาพ วิดีโอ และไทม์ไลน์ไปโฟลเดอร์สำรอง?\nการลบนี้จะนำ EP ออกจากรายการ`)) return;
+    setStudioBusy(true);
+    try {
+      await window.videoEditor.deleteStudioEpisode(studioSelectedId, episodeId);
+      if (studioEpisodeId === episodeId) {
+        setStudioEpisodeId(null);
+        setStudioScript("");
+        setStudioSavedScript("");
+      }
+      await refreshStudioProjects();
+      setNotice(`ลบตอน “${title}” จากรายการแล้ว (เก็บไฟล์ไว้ใน .trash)`);
+    } catch (error) { setError(String(error)); }
+    finally { setStudioBusy(false); }
+  };
+  const deleteProject = async (projectId: string, title: string) => {
+    if (studioBusy || studioScriptBusy) return;
+    if (episodeEditorRef.current?.projectId === projectId) {
+      setError("กรุณาปิดไทม์ไลน์ของโปรเจกต์นี้ก่อนลบ เพื่อป้องกัน Autosave เขียนไฟล์กลับ");
+      return;
+    }
+    if (!window.confirm(`ย้ายโปรเจกต์ “${title}” และทุก EP ไปโฟลเดอร์สำรอง?\nโปรเจกต์จะหายจากรายการ แต่ไฟล์ยังถูกเก็บไว้ใน .trash`)) return;
+    setStudioBusy(true);
+    try {
+      await window.videoEditor.deleteStudioProject(projectId);
+      if (studioSelectedId === projectId) {
+        setStudioSelectedId(null);
+        setStudioEpisodeId(null);
+        setStudioScript("");
+        setStudioSavedScript("");
+      }
+      await refreshStudioProjects();
+      setNotice(`ลบโปรเจกต์ “${title}” จากรายการแล้ว (เก็บไฟล์ไว้ใน .trash)`);
+    } catch (error) { setError(String(error)); }
+    finally { setStudioBusy(false); }
+  };
+  const openEpisodeEditor = async (episodeId: string) => {
+    if (!studioSelectedId || studioBusy || studioScriptBusy) return;
+    if (hasProjectContent && !episodeEditorRef.current && !window.confirm("ไทม์ไลน์เดิมยังไม่ได้เชื่อมกับ EP กรุณาบันทึกไฟล์ .aivproj ก่อนเปลี่ยนตอน ต้องการดำเนินการต่อหรือไม่?")) return;
+    if (studioScriptDirty && !window.confirm("บท EP ที่แก้ไขยังไม่ได้บันทึก ต้องการเปลี่ยนตอนหรือไม่?")) return;
+    setStudioBusy(true);
+    try {
+      const previous = episodeEditorRef.current;
+      if (previous) {
+        if (projectDocument.id !== "episode-" + previous.episodeId) {
+          throw new Error("ข้อมูลไทม์ไลน์ไม่ตรงกับ EP เดิม ยกเลิกการสลับตอนเพื่อป้องกันการบันทึกผิด EP");
+        }
+        // Reopening the same EP must also flush edits before reading from disk;
+        // otherwise a pending debounce could make the screen revert to old data.
+        await queueEpisodeSave(previous.projectId, previous.episodeId, projectDocument);
+      }
+      // Complete all fallible reads before mutating the active editor state.
+      // Keep autosave alive if either read fails and we stay on the old EP.
+      const stored = await window.videoEditor.loadStudioEpisodeEditor(studioSelectedId, episodeId);
+      const episodeScript = await window.videoEditor.loadStudioEpisodeScript(studioSelectedId, episodeId);
+      // Validate the target's persisted identity before retiring the outgoing
+      // autosave generation. A corrupt/wrong-EP target must leave the old
+      // editor's pending autosave intact.
+      assertStudioEpisodeIdentity(stored?.id, episodeId);
+      // Both reads and identity validation succeeded; now switch scope.
+      ++autosaveGenerationRef.current;
+      if (stored) {
+        applyLoadedProject({ project: { ...stored, id: "episode-" + episodeId }, filePath: null, missingMedia: [] });
+      } else {
+        setProjectId("episode-" + episodeId);
+        setProjectTitle((selectedStudioProject?.title ?? "โปรเจกต์") + " · " + (selectedStudioProject?.episodes.find(ep => ep.id === episodeId)?.title ?? "EP"));
+        setProjectCreatedAt(new Date().toISOString());
+        setProjectPath(null);
+        setImages([]);
+        setเสียงบรรยาย(null);
+        setTranscript(null);
+        setEditingPlan(null);
+        setTimeline(null);
+        setAudioLayers([]);
+        setStudioFrameAnchors({});
+        setContentProject(null);
+        setRenderHistory([]);
+        setMissingMedia([]);
+      }
+      // The editor switch already confirmed unsaved-script changes above.
+      // Load the target script directly: openStudioEpisode may silently return
+      // while busy or prompt again, leaving a mismatched script/editor pair.
+      setStudioEpisodeId(episodeId);
+      setStudioScript(episodeScript);
+      setStudioSavedScript(episodeScript);
+      episodeEditorRef.current = { projectId: studioSelectedId, episodeId };
+      setEpisodeEditorScope({ projectId: studioSelectedId, episodeId });
+      setActiveProductionTab("editor");
+      setNotice("เปิดไทม์ไลน์เฉพาะ EP แล้ว · ใช้ปุ่มบันทึกไทม์ไลน์ EP เพื่อเก็บงานของตอนนี้");
+    } catch (error) { setError(String(error)); }
+    finally { setStudioBusy(false); }
+  };
+  const saveEpisodeEditor = async () => {
+    const target = episodeEditorRef.current;
+    if (!target || studioBusy) return;
+    if (projectDocument.id !== "episode-" + target.episodeId) {
+      setError("ไทม์ไลน์ยังไม่ตรงกับ EP ที่เปิดอยู่ กรุณาเปิด EP ใหม่จากรายการตอนก่อนบันทึก");
+      return;
+    }
+    setStudioBusy(true);
+    try {
+      await queueEpisodeSave(target.projectId, target.episodeId, projectDocument);
+      setNotice("บันทึกไทม์ไลน์ของ EP เรียบร้อยแล้ว");
+    } catch (error) { setError(String(error)); }
+    finally { setStudioBusy(false); }
+  };
+  const selectedStudioProject = studioProjects.find(p => p.id === studioSelectedId);
   const browserMode=document.documentElement.dataset.runtime==="browser";
+
+  const [activeProductionTab, setActiveProductionTab] = useState<"dashboard" | "settings" | "accounts" | "voices" | "script" | "editor">("dashboard");
+  const navigateStudioTab = (tab: typeof activeProductionTab) => {
+    if (tab !== activeProductionTab && studioScriptDirty && !window.confirm("บทที่แก้ไขยังไม่ได้บันทึก ต้องการเปลี่ยนเมนูโดยไม่บันทึกหรือไม่?")) return;
+    setActiveProductionTab(tab);
+  };
+  const [theme, setTheme] = useState(() => localStorage.getItem("studio-theme-v1") || "indigo");
+  const [fontStyle, setFontStyle] = useState(() => localStorage.getItem("studio-font-v1") || "modern");
+  const paletteOptions = [
+    { id: "default", name: "ค่าเริ่มต้น", background: "#101827", card: "#233047" },
+    { id: "ocean", name: "น้ำเงิน", background: "#101d3b", card: "#234a78" },
+    { id: "purple", name: "ม่วง", background: "#20162f", card: "#483568" },
+    { id: "forest", name: "เขียว", background: "#10261f", card: "#285342" },
+    { id: "cream", name: "ครีม", background: "#f4eee3", card: "#ffffff" },
+    { id: "rose", name: "ชมพู", background: "#301e2a", card: "#694257" }
+  ] as const;
+  type PaletteId = (typeof paletteOptions)[number]["id"];
+  const readPalette = (key: string): PaletteId => {
+    const saved = localStorage.getItem(key);
+    return paletteOptions.some(option => option.id === saved) ? saved as PaletteId : "default";
+  };
+  const [backgroundPalette, setBackgroundPalette] = useState<PaletteId>(() => readPalette("studio-background-v1"));
+  const [cardPalette, setCardPalette] = useState<PaletteId>(() => readPalette("studio-cards-v1"));
+  useEffect(() => {
+    localStorage.setItem("studio-background-v1", backgroundPalette);
+    localStorage.setItem("studio-cards-v1", cardPalette);
+  }, [backgroundPalette, cardPalette]);
+  const backgroundColor = paletteOptions.find(option => option.id === backgroundPalette)!.background;
+  const cardColor = paletteOptions.find(option => option.id === cardPalette)!.card;
+  const cardTextColor = cardPalette === "cream" ? "#192337" : "#f4f7ff";
+
+  useEffect(() => { localStorage.setItem("studio-theme-v1", theme); localStorage.setItem("studio-font-v1", fontStyle); }, [theme, fontStyle]);
 
   return (
     <>
       {browserMode && <div className="browserModeBanner"><strong>🌐 Browser Mode</strong><span>เปิดใช้งานจากเว็บได้แล้ว · งาน Render / AI / Publish จะย้ายไปทำผ่าน Backend Worker</span></div>}
-      <main className="shell editorWorkspace">
+      <div className={`studioLayout studioTheme-${theme} studioFont-${fontStyle} ${cardPalette === "cream" ? "studioLightCards" : ""}`} style={{ "--studio-user-background": backgroundColor, "--studio-user-card": cardColor, "--studio-user-card-text": cardTextColor } as React.CSSProperties}>
+      <aside className="studioSidebar" aria-label="เมนูหลัก">
+        <div className="studioBrand"><span className="studioBrandIcon">♫</span><div><strong>AI VOICE STUDIO</strong><small>สร้างเสียงพากย์ด้วย ElevenLabs</small></div></div>
+        <div className="studioSideLinks">
+          <button className={activeProductionTab === "dashboard" ? "selected" : ""} onClick={() => navigateStudioTab("dashboard")}>▦ โปรเจกต์ของฉัน</button>
+          <button className={activeProductionTab === "accounts" ? "selected" : ""} onClick={() => navigateStudioTab("accounts")}>♫ คลังเสียงตัวละคร</button>
+          <button className={activeProductionTab === "script" ? "selected" : ""} onClick={() => navigateStudioTab("script")}>♬ สร้างเสียงพากย์ · บท</button>
+          <button className={activeProductionTab === "editor" ? "selected" : ""} onClick={() => navigateStudioTab("editor")}>▣ ตัดต่อ · ส่งออก</button>
+        </div>
+        <div style={{marginTop:"auto"}} className="studioSideLinks">
+          <button className={activeProductionTab === "settings" ? "selected" : ""} onClick={() => navigateStudioTab("settings")}>⚙ ตั้งค่า</button>
+        </div>
+            </aside>
+      <main className="shell editorWorkspace studioMain">
       <header className="topbar">
         <div>
-          <p className="eyebrow">GANANAJAK LAB</p>
-          <h1>AI Video Editor</h1>
+          <p className="eyebrow">AI VOICE STUDIO · PRODUCTION WORKSPACE</p>
+          <h1>{activeProductionTab === "dashboard" ? "โปรเจกต์ของฉัน" : activeProductionTab === "settings" ? "ตั้งค่า" : activeProductionTab === "accounts" ? "คลังเสียงตัวละคร" : activeProductionTab === "voices" ? "คลังเสียงตัวละคร" : activeProductionTab === "script" ? "สร้างเสียงพากย์จากบท" : "AI Video Editor"}</h1>
         </div>
         <div className="status">
           <span className="statusDot" />
@@ -500,22 +1148,93 @@ export default function App() {
         </div>
       </header>
 
-      <nav className="editorNav" aria-label="พื้นที่ทำงาน">
-        <a href="#editor-media">สื่อ</a>
-        <a href="#editor-ai">AI วิเคราะห์</a>
-        <a href="#editor-preview">พรีวิว</a>
-        <a href="#editor-timeline">ไทม์ไลน์</a>
-      </nav>
 
-      <ProjectToolbar
+
+      {activeProductionTab === "dashboard" && <section className="compactTabContent studioProjectDashboard">
+        <h2>{selectedStudioProject ? selectedStudioProject.title : "โปรเจกต์ของฉัน"}</h2>
+        {selectedStudioProject ? <>
+          <button onClick={leaveStudioProject}>← กลับไปโปรเจกต์ทั้งหมด</button>
+          <h3>คลังเสียงตัวละคร</h3>
+          <p>คลังตัวละครของเรื่องนี้: {selectedStudioProject.folder}/characters</p>
+          <p>โปรเจกต์เรื่องและตอน (EP) อยู่ใน AI Voice Studio · ปุ่ม “เปิดโปรเจกต์” ของหน้าตัดต่อใช้เปิดไฟล์ .aivproj คนละประเภท ไม่ใช่การเปิดตอน</p>
+          <h3>ตอนทั้งหมด (EP)</h3>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}><input aria-label="ชื่อตอนใหม่" placeholder="พิมพ์ชื่อตอน เช่น EP02" value={studioNewEpisode} onChange={e=>setStudioNewEpisode(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); void addStudioEpisode(); } }} /><button type="button" disabled={studioBusy || studioScriptBusy || !studioNewEpisode.trim()} onClick={() => void addStudioEpisode()}>+ เพิ่ม EP</button></div><p>พิมพ์ชื่อตอนก่อนกดเพิ่ม EP · ระบบจะเปิดบทตอนใหม่ให้ทันที</p>
+          {selectedStudioProject.episodes.map(ep => <div key={ep.id} className="studioProjectRow"><strong>{ep.title}</strong><small>{ep.folder}</small><button type="button" disabled={studioScriptBusy} onClick={() => void openStudioEpisode(ep.id)}>{studioEpisodeId === ep.id ? "เปิดอยู่" : "เปิดบท EP"}</button><button type="button" disabled={studioScriptBusy} onClick={() => { void openStudioEpisode(ep.id).then(() => setActiveProductionTab("script")); }}>สร้างเสียงตอนนี้ →</button><button type="button" disabled={studioBusy || studioScriptBusy} onClick={() => { void openEpisodeEditor(ep.id); }}>🎬 เปิดไทม์ไลน์ EP</button><button type="button" disabled={studioBusy || studioScriptBusy} onClick={() => { void deleteEpisode(ep.id, ep.title); }}>🗑️ ลบ EP</button></div>)}
+          {studioEpisodeId && <section aria-label="แก้ไขบท EP">
+            <h3>บทละคร: {selectedStudioProject.episodes.find(ep => ep.id === studioEpisodeId)?.title}</h3>
+            <p>{studioScriptDirty ? "● มีการแก้ไขที่ยังไม่ได้บันทึก" : "บันทึกแล้ว"}</p>
+            <textarea aria-label="เนื้อหาบทละคร" rows={18} style={{width:"100%",boxSizing:"border-box"}} value={studioScript} onChange={e => setStudioScript(e.target.value)} disabled={studioScriptBusy} />
+            <div style={{display:"flex",gap:8}}>
+              <button type="button" disabled={studioScriptBusy || !studioScriptDirty} onClick={() => void saveStudioScript()}>บันทึกบท EP</button>
+              <button type="button" disabled={studioScriptBusy} onClick={closeStudioEpisode}>ปิดบท</button>
+            </div>
+          </section>}
+        </> : <>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}><input placeholder="ชื่อเรื่องใหม่" value={studioNewTitle} onChange={e=>setStudioNewTitle(e.target.value)} /><button disabled={studioBusy || !studioNewTitle.trim()} onClick={addStudioProject}>+ เพิ่มโปรเจกต์</button></div>
+          {studioProjects.length === 0 && <p>ยังไม่มีโปรเจกต์ในระบบใหม่ · งานเก่าของคุณยังอยู่ในระบบเดิม</p>}
+          {studioProjects.map(p => <div key={p.id} className="studioProjectRow"><button type="button" onClick={() => setStudioSelectedId(p.id)}><strong>{p.title}</strong><small>{p.episodes.length} EP · เปิดโปรเจกต์ →</small></button><button type="button" disabled={studioBusy || studioScriptBusy} onClick={() => { void deleteProject(p.id, p.title); }}>🗑️ ลบโปรเจกต์</button></div>)}
+          <details><summary>🗑️ ถังสำรองโปรเจกต์และ EP ({studioTrash.length})</summary>
+            <p>กู้คืนรายการที่ลบหลังอัปเดตนี้ได้ · รายการเก่าที่ไม่มีข้อมูลกำกับอาจไม่ปรากฏ</p>
+            {studioTrash.length === 0 ? <p>ไม่มีรายการที่กู้คืนได้</p> : studioTrash.map(item =>
+              <div className="studioProjectRow" key={item.archiveId}><strong>{item.kind === "project" ? "โปรเจกต์" : "EP"}: {item.title}</strong>
+                <button type="button" disabled={studioBusy || studioScriptBusy} onClick={() => { void restoreDeletedStudioItem(item.kind, item.archiveId, item.title); }}>↩️ กู้คืน</button>
+              </div>)}
+          </details>
+        </>}
+      </section>}
+      {activeProductionTab === "settings" && <section className="compactTabContent">
+        <h2>ตั้งค่า</h2>
+        <ElevenLabsSettingsPanel />
+        <div className="studioPaletteEditor">
+          <h3>🎨 สีพื้นหลังและสีการ์ด</h3>
+          <p>เลือกสีแยกกันได้ ระบบจะจำค่าบนเครื่องนี้และใช้กับทุกโปรเจกต์</p>
+          <div className="studioPaletteSections">
+            {([
+              { title: "พื้นหลังแอป", value: backgroundPalette, change: setBackgroundPalette },
+              { title: "พื้นหลังการ์ด", value: cardPalette, change: setCardPalette }
+            ] as const).map(section => (
+              <fieldset key={section.title} className="studioPaletteFieldset">
+                <legend>{section.title}</legend>
+                <div className="studioPaletteChoices">
+                  {paletteOptions.map(option => (
+                    <button type="button" key={option.id} className={`studioPaletteChoice ${section.value === option.id ? "active" : ""}`}
+                      aria-pressed={section.value === option.id} onClick={() => section.change(option.id)}>
+                      <span className="studioPaletteSample" style={{ background: section.title === "พื้นหลังแอป" ? option.background : option.card }} />
+                      <span>{option.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+            ))}
+          </div>
+          <button type="button" onClick={() => { setBackgroundPalette("default"); setCardPalette("default"); }}>คืนค่าสีเริ่มต้น</button>
+        </div>
+
+        <div className="studioThemeControls"><strong>🎨 ธีมแอป</strong><div className="studioThemeSwatches">{(["indigo","ocean","emerald","rose","amber","slate"] as const).map(color => <button key={color} type="button" className={`studioSwatch ${theme === color ? "chosen" : ""}`} data-color={color} aria-label={`เลือกธีม ${color}`} title={color} onClick={() => setTheme(color)} />)}</div><label>รูปแบบตัวอักษร<select value={fontStyle} onChange={event => setFontStyle(event.target.value)}><option value="modern">Modern</option><option value="rounded">Rounded</option><option value="classic">Elegant</option></select></label></div>
+      </section>}
+      {activeProductionTab === "editor" && episodeEditorScope && <p>🎬 โหมดไทม์ไลน์ EP: {studioProjects.find(project => project.id === episodeEditorScope.projectId)?.title ?? episodeEditorScope.projectId} / {studioProjects.find(project => project.id === episodeEditorScope.projectId)?.episodes.find(episode => episode.id === episodeEditorScope.episodeId)?.title ?? episodeEditorScope.episodeId} · บันทึกแยกตาม EP ไม่ใช้ไฟล์ .aivproj ส่วนกลาง</p>}
+      {activeProductionTab === "editor" && episodeEditorScope && <button type="button" disabled={studioBusy || projectDocument.id !== "episode-" + episodeEditorScope.episodeId} onClick={() => { void saveEpisodeEditor(); }}>💾 บันทึกไทม์ไลน์ EP ที่เปิดอยู่</button>}
+      {activeProductionTab === "editor" && !episodeEditorScope && <ProjectToolbar
         title={projectTitle}
         projectPath={projectPath}
         autosaveState={autosaveState}
         onTitleChange={setProjectTitle}
         onOpen={openProjectFile}
         onSave={saveProjectFile}
-      />
+      />}
 
+      <div className="compactTabContent" hidden={activeProductionTab !== "accounts" && activeProductionTab !== "voices"}><CharacterVoiceLibrary projectId={studioSelectedId} /></div>
+
+
+      <section className="compactTabContent" hidden={activeProductionTab !== "script"} aria-label="ขั้นตอนที่ 1 ใส่บท แยกบท และเตรียมเสียง">
+        <VoiceStudioPanel projectId={studioSelectedId} episodeId={studioEpisodeId} />
+      </section>
+
+      <section className="compactTabContent" hidden={activeProductionTab !== "editor"} aria-label="ขั้นตอนที่ 2 ถึง 7 ผลิตและส่งออกวิดีโอ">
+      <div className="aiSfxToggleBar">
+        <div><strong>🎧 AI เสียงเอฟเฟกต์ (SFX)</strong><p>{aiSfxEnabled ? "เปิดไว้สำหรับการวิเคราะห์ SFX เมื่อระบบพร้อมใช้งาน · ไม่มีการใช้เครดิตอัตโนมัติ" : "ปิดอยู่ · ไม่ต้องวิเคราะห์หรือค้นหา SFX ด้วย AI · เสียงที่เพิ่มเองยังใช้งานได้"}</p></div>
+        <label className="aiSfxToggleControl"><input type="checkbox" checked={aiSfxEnabled} onChange={(event) => setAiSfxEnabled(event.target.checked)} /><span>{aiSfxEnabled ? "เปิด" : "ปิด"}</span></label>
+      </div>
       <MediaRelinkPanel
         missingMedia={missingMedia}
         relinking={relinking}
@@ -534,18 +1253,17 @@ export default function App() {
         <div className="heroBadge">🎧</div>
       </details>
 
-      <ContentFactoryPanel
-        aiConfigured={aiStatus.configured}
-        project={contentProject}
-        onGenerated={(project) => {
-          setContentProject(project);
-          setProjectTitle(project.title);
-          setNotice(`AI Content Factory created ${project.scenes.length} planned scenes.`);
-          setError(null);
-        }}
-      />
-
-      <div className="editorThreePane">
+      <section className="studioTimelineDock" aria-label="ไทม์ไลน์ตัดต่อ">
+  <div className="studioTimelineTitle"><strong>🎬 ไทม์ไลน์ตัดต่อ</strong><span>{timeline ? `${timeline.clips.length} คลิป · ${formatTime(timeline.duration)}` : "ยังไม่มีคลิปในไทม์ไลน์"}</span></div>
+  <div className="studioTimelineRuler"><span>00:00</span><span>{timeline ? formatTime(timeline.duration / 4) : "00:15"}</span><span>{timeline ? formatTime(timeline.duration / 2) : "00:30"}</span><span>{timeline ? formatTime(timeline.duration * .75) : "00:45"}</span><span>{timeline ? formatTime(timeline.duration) : "01:00"}</span></div>
+  <div className="studioTimelineTrack"><strong>▧ ภาพ</strong><div className="studioTimelineLane">{timeline?.clips.length ? timeline.clips.slice(0, 24).map((clip, index) => <span key={clip.id} className="studioTimelineClip" style={{ flexGrow: Math.max(.6, clip.duration) }} title={`${fileName(clip.imagePath)} · ${clip.duration.toFixed(1)} วินาที`}>{index + 1}. {fileName(clip.imagePath)}</span>) : <em>เพิ่มภาพและสร้างไทม์ไลน์เพื่อเริ่มตัดต่อ</em>}{(timeline?.clips.length ?? 0) > 24 && <span className="studioTimelineClip">+{timeline!.clips.length - 24} ช็อต · ดูทั้งหมดในแผงตัดต่อด้านล่าง</span>}</div></div>
+  {timeline?.clips.length && studioVoiceSchedule.length ? <div className="studioVoiceInventory"><strong>🖼 จัดจังหวะภาพตามเสียง · {timeline.clips.length} ภาพ</strong><button type="button" onClick={() => setFrameAnchorExpanded(v => !v)}>{frameAnchorExpanded ? "ซ่อนการจัดจังหวะ" : "เปิดจัดจังหวะภาพ"}</button>{frameAnchorExpanded && <div><p>กำหนดภาพแต่ละภาพให้เริ่มที่บรรทัดเสียงใด ภาพก่อนหน้าจะค้างไว้จนถึงจุดเริ่มภาพใหม่ ระบบยังไม่เปลี่ยนไทม์ไลน์จริง</p>{timeline.clips.map((clip, index) => <label key={clip.id}>{index + 1}. {fileName(clip.imagePath)} <select value={studioFrameAnchors[clip.id] ?? (index === 0 ? studioVoiceSchedule[0].lineId : "")} onChange={event => setStudioFrameAnchors(previous => ({ ...previous, [clip.id]: event.target.value }))}><option value="">ไม่กำหนดจุดเริ่มภาพ</option>{studioVoiceSchedule.map(line => <option key={line.lineId} value={line.lineId}>{line.lineId} · {formatTime(line.start)}</option>)}</select></label>)}{studioFrameHoldPreview.error ? <p role="alert">{studioFrameHoldPreview.error}</p> : <ol>{studioFrameHoldPreview.holds.map(hold => <li key={hold.imageId}>{fileName(timeline.clips.find(clip => clip.id === hold.imageId)?.imagePath ?? hold.imageId)}: {formatTime(hold.start)}–{formatTime(hold.end)}</li>)}</ol>}<button type="button" onClick={applyStudioFrameHolds} disabled={Boolean(studioFrameHoldPreview.error) || studioFrameHoldPreview.holds.length !== timeline.clips.length || Boolean(narration) || timeline.subtitles.length > 0 || [...audioLayers, ...timeline.audioLayers].some(layer => layer.origin !== "studio-dialogue") || timeline.clips.some(clip => Boolean(clip.videoPath))}>ใช้ระยะเวลาภาพตามบทพูด</button></div>}</div> : null}
+  <div className="studioTimelineTrack"><strong>♫ เสียงพากย์</strong><div className="studioTimelineLane">{narration ? <span className="studioTimelineAudio">{fileName(narration)}</span> : <em>ยังไม่ได้เลือกไฟล์เสียงพากย์</em>}</div></div>
+  <div className="studioTimelineTrack"><strong>🎙 เสียงตัวละคร</strong><div className="studioTimelineLane">{Object.keys(studioVoiceFiles).length ? <div className="studioVoiceInventory"><strong>เสียง MP3 {Object.keys(studioVoiceFiles).length} บรรทัด · ตรวจระยะเวลา {voiceProbeProgress.done}/{voiceProbeProgress.total}</strong>{Object.keys(studioVoiceFiles).length > 12 && <button type="button" onClick={() => setVoiceListExpanded(v => !v)}>{voiceListExpanded ? "ย่อรายการเสียง" : "ดูไฟล์เสียงทั้งหมด"}</button>}{voiceListExpanded && <label>ค้นหาเสียงตามบรรทัด / ผู้พูด / ข้อความ <input value={voiceListSearch} onChange={event => { setVoiceListSearch(event.target.value); setVoiceListPage(0); }} placeholder="ค้นหาเสียง..." /></label>}<ol>{Object.entries(studioVoiceFiles).filter(([lineId, entry]) => (lineId + " " + (entry.speaker ?? "") + " " + (entry.text ?? "") + " " + fileName(entry.outputPath)).toLocaleLowerCase().includes(voiceListSearch.trim().toLocaleLowerCase())).sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true })).slice(voiceListExpanded ? voiceListPage * 25 : 0, voiceListExpanded ? (voiceListPage + 1) * 25 : 12).map(([lineId, entry]) => <li key={lineId} title={entry.outputPath}><button type="button" disabled={!timeline || !studioVoiceSchedule.some(item => item.lineId === lineId)} onClick={() => { const clip = studioVoiceSchedule.find(item => item.lineId === lineId); if (!clip) return; setVoiceSeekRequest({ id: Date.now(), seconds: clip.start }); document.getElementById("editor-timeline")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>↗ ไปยังเวลา</button> <button type="button" onClick={() => { void toggleVoicePreview(lineId, entry.outputPath); }}>{voicePreview?.lineId === lineId ? "■ ปิด" : "▶ ฟัง"}</button> <span>{lineId}</span> · <span>{fileName(entry.outputPath)}</span> · <span>{(() => { const slot = studioVoiceSchedule.find(item => item.lineId === lineId); return slot ? `${slot.start.toFixed(2)}–${slot.end.toFixed(2)} วินาที` : studioVoiceDurationErrors[lineId] ? `อ่านระยะเวลาไม่สำเร็จ: ${studioVoiceDurationErrors[lineId]}` : "กำลังอ่านระยะเวลา"; })()}</span> <button type="button" className="removeButton" disabled={studioBusy} onClick={() => { void removeGeneratedVoice(lineId); }}>🗑️ ลบเสียง</button></li>)}</ol>{voiceListExpanded && <div className="editorMediaPager"><button type="button" disabled={voiceListPage === 0} onClick={() => setVoiceListPage(p => Math.max(0, p - 1))}>ก่อนหน้า</button><span>หน้า {voiceListPage + 1} · 25 เสียงต่อหน้า</span><button type="button" disabled={(voiceListPage + 1) * 25 >= Object.entries(studioVoiceFiles).filter(([lineId, entry]) => (lineId + " " + (entry.speaker ?? "") + " " + (entry.text ?? "") + " " + fileName(entry.outputPath)).toLocaleLowerCase().includes(voiceListSearch.trim().toLocaleLowerCase())).length} onClick={() => setVoiceListPage(p => p + 1)}>ถัดไป</button></div>}{voicePreview && <audio key={voicePreview.url} controls autoPlay preload="metadata" src={voicePreview.url} onEnded={() => setVoicePreview(null)} onError={() => setVoicePreviewError("ไม่สามารถเล่น MP3 นี้ได้")} aria-label={"ฟังเสียง " + voicePreview.lineId} />}{voicePreviewError && <p role="alert">{voicePreviewError}</p>}<label>ระยะพักระหว่างเสียง (วินาที) <input type="number" min="0" max="5" step="0.1" value={studioDialogueGap} onChange={event => { const next = Number(event.target.value); if (Number.isFinite(next)) setStudioDialogueGap(Math.max(0, Math.min(5, next))); }} /></label><small>ใช้จังหวะตามผู้พูดและจบประโยคเมื่อ MP3 มีข้อมูลบทครบทุกบรรทัด มิฉะนั้นใช้ระยะพักคงที่เพื่อไม่เดาผู้พูด</small><button type="button" onClick={() => { void importStudioDialogueToTimeline(); }} disabled={!studioSelectedId || !studioEpisodeId || !studioVoiceSchedule.length || studioVoiceSchedule.length !== Object.keys(studioVoiceFiles).length}>นำเสียงตัวละครเข้าไทม์ไลน์</button>{studioImportFeedback && <p role="status" className="studioVoiceImportStatus">{studioImportFeedback}</p>}</div> : <em>ยังไม่มี MP3 ของตัวละครในตอนนี้</em>}</div></div>
+  <div className="studioTimelineTrack"><strong>▤ คำบรรยาย</strong><div className="studioTimelineLane">{timeline?.subtitles.length ? timeline.subtitles.map((cue, index) => <span key={cue.id} className="studioTimelineSubtitle" title={cue.text}>{index + 1}</span>) : <em>ยังไม่มีคำบรรยาย</em>}</div></div>
+  <p className="studioTimelineHint">นี่คือภาพรวมไทม์ไลน์ · เมื่อสร้างไทม์ไลน์แล้ว ใช้แผงแก้ไขช็อตด้านล่างเพื่อลากสลับคลิปและปรับจุดตัด</p>
+</section>
+<div className="editorThreePane">
         <div className="editorMediaPane">
           <section id="editor-media" className="grid">
         <article className="panel">
@@ -554,20 +1272,21 @@ export default function App() {
               <span className="step">01</span>
               <h3>ภาพประกอบเรื่อง</h3>
             </div>
-            <button onClick={chooseImages}>เลือกภาพ</button>
+            <button onClick={chooseImages}>เลือกภาพ</button>{timeline && timeline.clips.length === 0 && images.length > 0 && <button type="button" onClick={placeImagesOnAudioTimeline}>วางภาพลงไทม์ไลน์เสียง</button>}
           </div>
           <p className="muted">{summary}</p>
-          <div className="mediaList">
-            {images.slice(0, 8).map((image, index) => (
+          <input className="editorMediaSearch" aria-label="ค้นหาภาพ" placeholder="ค้นหาภาพ..." value={mediaSearch} onChange={event => { setMediaSearch(event.target.value); setMediaPage(0); }} />
+          <div className="mediaList editorMediaListCompact">
+            {mediaPageImages.map((image, index) => (
               <div className="mediaRow" key={image}>
-                <span>{String(index + 1).padStart(2, "0")}</span>
-                <strong>{fileName(image)}</strong>
+                <span>{String(mediaPageSafe * 24 + index + 1).padStart(3, "0")}</span>
+                <strong title={image}>{fileName(image)}</strong>
+                <button type="button" className="removeButton" onClick={() => removeImportedImage(image)}>🗑️ ลบ</button>
               </div>
             ))}
-            {images.length > 8 && (
-              <div className="mediaRow more">+ {images.length - 8} more</div>
-            )}
+
           </div>
+          {visibleImages.length > 24 && <div className="editorMediaPager"><button type="button" disabled={mediaPageSafe === 0} onClick={() => setMediaPage(mediaPageSafe - 1)}>ก่อนหน้า</button><span>{mediaPageSafe + 1}/{mediaPageCount} · {visibleImages.length} ภาพ</span><button type="button" disabled={mediaPageSafe >= mediaPageCount - 1} onClick={() => setMediaPage(mediaPageSafe + 1)}>ถัดไป</button></div>}
         </article>
 
         <article className="panel">
@@ -576,7 +1295,7 @@ export default function App() {
               <span className="step">02</span>
               <h3>เสียงบรรยาย</h3>
             </div>
-            <button onClick={chooseเสียงบรรยาย}>เลือกเสียง</button>
+            <div style={{display:"flex",gap:8}}><button onClick={chooseเสียงบรรยาย}>เลือกเสียง</button>{narration && <button type="button" className="removeButton" onClick={removeNarration}>🗑️ ลบเสียง</button>}</div>
           </div>
           <p className="muted">
             {narration ? fileName(narration) : "ยังไม่ได้เลือกเสียงบรรยาย"}
@@ -612,7 +1331,7 @@ export default function App() {
         )}
       </section>
 
-        <div className="editorInspectorPane">      <section id="editor-ai" className="aiPanel">
+        <div className={`editorInspectorPane ${inspectorExpanded ? "editorInspectorExpanded" : "editorInspectorCollapsed"}`}><button type="button" className="editorInspectorToggle" onClick={() => setInspectorExpanded(value => !value)}>{inspectorExpanded ? "ซ่อนเครื่องมือขั้นสูง ▴" : "เครื่องมือขั้นสูง ▾"}</button>      <section id="editor-ai" className="aiPanel">
         <div className="aiPanelHeader">
           <div>
             <p className="eyebrow">ระบบวิเคราะห์เสียง AI</p>
@@ -811,7 +1530,7 @@ export default function App() {
           </div>
 
           <div className="track">
-            {timeline.clips.map((clip, index) => (
+            {timeline.clips.slice(0, 24).map((clip, index) => (
               <div
                 className="clip"
                 key={clip.id}
@@ -830,10 +1549,12 @@ export default function App() {
           </p>
 
           <ExportSettingsPanel plan={timeline} onChange={setTimeline} />
-          <TimelineEditor plan={timeline} onChange={setTimeline} />
+          <TimelineEditor plan={timeline} onChange={setTimeline} seekRequest={voiceSeekRequest} />
         </section>
       )}
+      </section>
     </main>
+    </div>
     </>
   );
 }
