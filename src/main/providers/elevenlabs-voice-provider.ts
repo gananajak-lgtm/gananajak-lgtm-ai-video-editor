@@ -27,6 +27,7 @@ async function generateStudioVoiceLineUnchecked(
       !/^[a-zA-Z0-9_-]{1,100}$/.test(modelId)) {
     throw new Error("Invalid ElevenLabs voice generation request");
   }
+  if (modelId !== "eleven_v3" && modelId !== "eleven_v4") throw new Error("Select Eleven v3 or Eleven v4 for Thai Studio voice generation");
   const { resolveStudioEpisodeVoiceOutput, registerStudioEpisodeVoiceAudio, loadStudioEpisodeVoiceAudio } = await import("../studio-projects");
   const destination = await resolveStudioEpisodeVoiceOutput(projectId, episodeId, lineId);
   const existing = (await loadStudioEpisodeVoiceAudio(projectId, episodeId))[lineId];
