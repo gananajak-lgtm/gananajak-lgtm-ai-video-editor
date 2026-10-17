@@ -1443,7 +1443,7 @@ export default function App() {
         onTimelineReady={applyVisualTimeline}
       />
 
-      <AudioLayersPanel layers={audioLayers} onChange={setAudioLayers} />
+      <AudioLayersPanel layers={audioLayers} onChange={setAudioLayers} timelineDuration={timeline?.duration} />
 
       <EpisodeReadinessPanel
         plan={timeline ? { ...timeline, audioLayers } : null}
