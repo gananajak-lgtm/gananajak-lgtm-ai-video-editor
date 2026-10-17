@@ -20,7 +20,7 @@ async function generateStudioVoiceLineUnchecked(
   fingerprint: string,
   text: string,
   voiceId: string,
-  modelId = "eleven_multilingual_v2",
+  modelId = "eleven_v4",
   metadata: { jobId?: string; speaker?: string; emotion?: string } = {}
 ): Promise<{ outputPath: string }> {
   if (!text.trim() || text.length > 5000 || !/^[a-zA-Z0-9_-]{1,100}$/.test(voiceId) ||
@@ -62,7 +62,7 @@ const studioVoiceRequests = new Map<string, Promise<{ outputPath: string }>>();
 export async function generateStudioVoiceLine(
   projectId: string, episodeId: string, lineId: string,
   fingerprint: string, text: string, voiceId: string,
-  modelId = "eleven_multilingual_v2",
+  modelId = "eleven_v4",
   metadata: { jobId?: string; speaker?: string; emotion?: string } = {}
 ): Promise<{ outputPath: string }> {
   if (!projectId || !episodeId || !lineId || !fingerprint) throw new Error("Missing voice request identity");
@@ -86,7 +86,7 @@ export class ElevenLabsVoiceProvider implements AssetProvider {
     const apiKey = await getElevenLabsApiKey();
     if (!apiKey) throw new Error("ElevenLabs API key is not configured.");
 
-    const modelId = process.env.ELEVENLABS_MODEL_ID?.trim() || "eleven_multilingual_v2";
+    const modelId = process.env.ELEVENLABS_MODEL_ID?.trim() || "eleven_v4";
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${this.voiceId}`, {
       method: "POST",
       headers: {
