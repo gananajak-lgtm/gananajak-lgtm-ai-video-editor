@@ -71,9 +71,27 @@ export default function TimelineEditor({ plan, onChange }: Props) {
   const trackClips = plan.clips.map((clip, index) => ({ clip, index })).filter(({ clip }) =>
     clip.start + clip.duration >= trackVisibleStart && clip.start <= trackVisibleEnd
   );
+  const scrollTimelineTo = (left: number) => {
+    const viewport = trackViewportRef.current;
+    if (!viewport) return;
+    viewport.scrollLeft = Math.max(0, left);
+    setTrackViewport({ left: viewport.scrollLeft, width: viewport.clientWidth });
+  };
   const goToSelectedClip = () => {
     const clip = plan.clips[selectedClipIndex];
-    if (clip && trackViewportRef.current) trackViewportRef.current.scrollLeft = clip.start * pixelsPerSecond;
+    if (clip) scrollTimelineTo(clip.start * pixelsPerSecond);
+  };
+  const changeTimelineZoom = (zoom: number) => {
+    const viewport = trackViewportRef.current;
+    const centerSeconds = viewport
+      ? (viewport.scrollLeft + viewport.clientWidth / 2) / pixelsPerSecond
+      : playheadSeconds;
+    setTimelineZoom(zoom);
+    if (viewport) {
+      const left = Math.max(0, centerSeconds * 24 * zoom - viewport.clientWidth / 2);
+      viewport.scrollLeft = left;
+      setTrackViewport({ left: viewport.scrollLeft, width: viewport.clientWidth });
+    }
   };
   const SHOT_PAGE_SIZE = 25;
   const shotPages = Math.max(1, Math.ceil(plan.clips.length / SHOT_PAGE_SIZE));
@@ -285,7 +303,7 @@ export default function TimelineEditor({ plan, onChange }: Props) {
       <div className="editorTrackSurface">
         <div className="editorTrackToolbar">
           <strong>ไทม์ไลน์ภาพ</strong>
-          <label>ซูม <input type="range" min="0.5" max="3" step="0.25" value={timelineZoom} onChange={(event) => setTimelineZoom(Number(event.target.value))} /></label>
+          <label>ซูม <input type="range" min="0.5" max="3" step="0.25" value={timelineZoom} onChange={(event) => changeTimelineZoom(Number(event.target.value))} /></label>
           <span>{timelineZoom.toFixed(2)}×</span>
         </div>
         <div className="editorPlayheadControl">
