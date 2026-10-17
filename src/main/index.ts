@@ -279,6 +279,11 @@ ipcMain.handle("studio:load-voice-audio", (_event, projectId: string, episodeId:
     if (!verified) throw new Error("Dialogue MP3 is missing or invalid");
     return verified;
   });
+ipcMain.handle("studio:preview-voice-audio", async (_event, projectId: string, episodeId: string, relativePath: string) => {
+  const verified = await findReusableStudioEpisodeAudio(projectId, episodeId, relativePath);
+  if (!verified) throw new Error("Dialogue MP3 is missing or invalid");
+  return createPlaybackUrl(verified);
+});
 ipcMain.handle("studio:load-character-voices", (_event, projectId: string) => loadStudioCharacterVoices(projectId));
 ipcMain.handle("studio:save-character-voices", (_event, projectId: string, voices: Record<string, string>) => saveStudioCharacterVoices(projectId, voices));
 ipcMain.handle("studio:patch-character-voice", (_event, projectId: string, character: string, voiceId: string | null) => patchStudioCharacterVoice(projectId, character, voiceId));
