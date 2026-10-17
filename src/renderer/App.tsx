@@ -628,18 +628,29 @@ export default function App() {
     setStudioVoiceDurations({});
     setStudioVoiceDurationErrors({});
     if (!studioSelectedId || !studioEpisodeId) return () => { active = false; };
-    void Promise.all(Object.entries(studioVoiceFiles).map(async ([lineId, entry]) => {
-      try {
-        const seconds = await window.videoEditor.getStudioVoiceAudioDuration(studioSelectedId, studioEpisodeId, entry.outputPath);
-        return [lineId, seconds] as const;
-      } catch (error) {
-        return [lineId, error instanceof Error ? error.message : String(error)] as const;
-      }
-    })).then(results => {
+    const entries = Object.entries(studioVoiceFiles);
+    // Limit concurrent FFmpeg probes for large episodes (hundreds of voice files).
+    // Check cancellation between requests to avoid probing the previous EP.
+    void (async () => {
+      const durations: Record<string, number> = {};
+      const errors: Record<string, string> = {};
+      let cursor = 0;
+      const worker = async () => {
+        while (active && cursor < entries.length) {
+          const [lineId, entry] = entries[cursor++];
+          try {
+            const seconds = await window.videoEditor.getStudioVoiceAudioDuration(studioSelectedId, studioEpisodeId, entry.outputPath);
+            if (active) durations[lineId] = seconds;
+          } catch (error) {
+            if (active) errors[lineId] = error instanceof Error ? error.message : String(error);
+          }
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(4, entries.length) }, () => worker()));
       if (!active) return;
-      setStudioVoiceDurations(Object.fromEntries(results.filter((item): item is readonly [string, number] => typeof item?.[1] === "number") as readonly (readonly [string, number])[]));
-      setStudioVoiceDurationErrors(Object.fromEntries(results.filter((item): item is readonly [string, string] => typeof item?.[1] === "string") as readonly (readonly [string, string])[]));
-    });
+      setStudioVoiceDurations(durations);
+      setStudioVoiceDurationErrors(errors);
+    })();
     return () => { active = false; };
   }, [studioSelectedId, studioEpisodeId, studioVoiceFiles]);
   const [studioDialogueGap, setStudioDialogueGap] = useState(0.3);
