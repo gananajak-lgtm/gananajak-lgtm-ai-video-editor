@@ -138,7 +138,7 @@ assert.equal(planA.workspaceId, "workspace-A");
 assert.equal(planA.jobs[0].workspaceId, "workspace-A");
 assert.notEqual(planA.jobs[0].fingerprint, planB.jobs[0].fingerprint);
 const planOtherModel = buildVoiceProductionPlan("ตอนที่ 1", parsed, { "ผู้บรรยาย": "narrator", "พรานสิง": "hunter" }, {}, "workspace-A", "eleven_flash_v2_5");
-assert.equal(planA.modelId, "eleven_multilingual_v2");
+assert.equal(planA.modelId, "eleven_v4");
 assert.equal(planOtherModel.jobs[0].modelId, "eleven_flash_v2_5");
 assert.notEqual(planA.jobs[0].fingerprint, planOtherModel.jobs[0].fingerprint);
 
@@ -146,7 +146,7 @@ assert.notEqual(planA.jobs[0].fingerprint, planOtherModel.jobs[0].fingerprint);
 const { voiceFingerprint, reusableVoiceCache } = loadModule("src/renderer/voice-production-plan.ts");
 const speech = { id: "line-1", kind: "dialogue", speaker: "พรานสิง", text: "หยุดก่อน", emotion: "กระซิบ", needsReview: false };
 const cached = { "line-1": { fingerprint: voiceFingerprint(speech, "hunter", "workspace-A"), outputPath: "dialogue/line-1.mp3" } };
-const withCache = (line, voice = "hunter", workspace = "workspace-A", model = "eleven_multilingual_v2") =>
+const withCache = (line, voice = "hunter", workspace = "workspace-A", model = "eleven_v4") =>
   buildVoiceProductionPlan("ตอนที่ 1", [line], { [line.speaker]: voice }, cached, workspace, model);
 const unchanged = withCache(speech);
 assert.equal(unchanged.jobs[0].state, "completed");
