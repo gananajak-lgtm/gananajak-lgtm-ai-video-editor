@@ -2619,3 +2619,15 @@ label { font-size: 10px; }
 .studioLayout.studioLightCards .studioMain .panel :is(input,textarea,select),
 .studioLayout.studioLightCards .studioMain .compactTabContent :is(input,textarea,select){color:#f4f7ff}
 .studioLayout.studioLightCards .studioMain .studioPaletteEditor :is(h2,h3,strong,small,p,.muted){color:#f4f7ff}
+
+
+/* Compact editing workspace: advanced tools are opt-in, not a permanent wall of text. */
+.editorInspectorCollapsed { min-height: 0; align-self: start; }
+.editorInspectorCollapsed > :not(.editorInspectorToggle) { display: none !important; }
+.editorInspectorToggle { display: block; width: 100%; text-align: left; padding: 11px 12px; background: #222b36; color: #e5edf5; border: 1px solid #38485b; border-radius: 8px; cursor: pointer; font-weight: 600; }
+.editorMediaSearch { display: block; width: 100%; margin: 8px 0; padding: 9px; border-radius: 8px; background: #0f1721; color: #e5edf5; border: 1px solid #455266; }
+.editorMediaListCompact { max-height: 410px; overflow-y: auto; }
+.editorMediaListCompact .mediaRow { min-width: 0; }
+.editorMediaListCompact .mediaRow strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }
+.editorMediaPager { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; }
+.editorMediaPager button { padding: 7px 9px; font-size: 12px; }
