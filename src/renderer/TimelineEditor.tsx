@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   ShotMotion,
   SubtitleCue,
@@ -62,20 +62,19 @@ export default function TimelineEditor({ plan, onChange }: Props) {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [timelineZoom, setTimelineZoom] = useState(1);
   const [shotPage, setShotPage] = useState(0);
-  const [trackPage, setTrackPage] = useState(0);
-  const TRACK_PAGE_SIZE = 30;
-  const trackPages = Math.max(1, Math.ceil(plan.clips.length / TRACK_PAGE_SIZE));
-  const safeTrackPage = Math.min(trackPage, trackPages - 1);
-  const trackStart = safeTrackPage * TRACK_PAGE_SIZE;
-  const trackClips = plan.clips.slice(trackStart, trackStart + TRACK_PAGE_SIZE);
-  // Keep the visible timeline and shot list aligned with keyboard, playhead,
-  // or inspector selection. Paging is display-only and never mutates clips.
-  useEffect(() => {
-    setTrackPage(Math.floor(selectedClipIndex / TRACK_PAGE_SIZE));
-    setShotPage(Math.floor(selectedClipIndex / SHOT_PAGE_SIZE));
-  }, [selectedClipIndex]);
-
-
+  const trackViewportRef = useRef<HTMLDivElement | null>(null);
+  const [trackViewport, setTrackViewport] = useState({ left: 0, width: 900 });
+  const pixelsPerSecond = 24 * timelineZoom;
+  const trackWidth = Math.max(900, plan.duration * pixelsPerSecond);
+  const trackVisibleStart = Math.max(0, trackViewport.left / pixelsPerSecond - 6);
+  const trackVisibleEnd = (trackViewport.left + trackViewport.width) / pixelsPerSecond + 6;
+  const trackClips = plan.clips.map((clip, index) => ({ clip, index })).filter(({ clip }) =>
+    clip.start + clip.duration >= trackVisibleStart && clip.start <= trackVisibleEnd
+  );
+  const goToSelectedClip = () => {
+    const clip = plan.clips[selectedClipIndex];
+    if (clip && trackViewportRef.current) trackViewportRef.current.scrollLeft = clip.start * pixelsPerSecond;
+  };
   const SHOT_PAGE_SIZE = 25;
   const shotPages = Math.max(1, Math.ceil(plan.clips.length / SHOT_PAGE_SIZE));
   const currentShotPage = Math.min(shotPage, shotPages - 1);
@@ -295,34 +294,32 @@ export default function TimelineEditor({ plan, onChange }: Props) {
           <output htmlFor="timeline-playhead">{formatTime(playheadSeconds)} / {formatTime(plan.duration)}</output>
           <button type="button" disabled={!canSplitAtPlayhead} onClick={splitAtPlayhead} title="แบ่งช็อตที่ตำแหน่งหัวอ่านเวลาโดยรักษาระยะเวลารวม">✂ แยกช็อต</button>
         </div>
-        <div className="editorMediaPager" aria-label="เลื่อนช่วงคลิปไทม์ไลน์">
-          <button type="button" disabled={safeTrackPage === 0} onClick={() => setTrackPage(safeTrackPage - 1)}>◀ ก่อนหน้า</button>
-          <span>คลิป {plan.clips.length ? trackStart + 1 : 0}–{Math.min(trackStart + TRACK_PAGE_SIZE, plan.clips.length)} / {plan.clips.length}</span>
-          <button type="button" onClick={() => setTrackPage(Math.floor(selectedClipIndex / TRACK_PAGE_SIZE))}>ไปช็อตที่เลือก</button>
-          <button type="button" disabled={safeTrackPage >= trackPages - 1} onClick={() => setTrackPage(safeTrackPage + 1)}>ถัดไป ▶</button>
+        <div className="editorMediaPager" aria-label="เลื่อนไทม์ไลน์">
+          <span>แสดง {trackClips.length} จาก {plan.clips.length} คลิป · เลื่อนแนวนอนได้</span>
+          <button type="button" onClick={goToSelectedClip}>ไปช็อตที่เลือก</button>
         </div>
-        <div className="editorTrackScroller">
-          <div className="editorTrackClips" style={{ width: `${Math.max(100, timelineZoom * 100)}%` }}>
-            {trackClips.map((clip, pageIndex) => { const index = trackStart + pageIndex; return (
+        <div className="editorTrackScroller" ref={trackViewportRef} onScroll={event => setTrackViewport({ left: event.currentTarget.scrollLeft, width: event.currentTarget.clientWidth })}>
+          <div className="editorTrackClips" style={{ position: "relative", width: trackWidth + "px", minWidth: trackWidth + "px" }}>
+            {trackClips.map(({ clip, index }) => (
               <button
                 type="button"
                 key={clip.id}
                 draggable
-                onDragStart={(event) => { setDraggedClipIndex(index); event.dataTransfer.effectAllowed = "move"; }}
-                onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "move"; }}
-                onDrop={(event) => { event.preventDefault(); if (draggedClipIndex !== null) moveClip(draggedClipIndex, index); setDraggedClipIndex(null); }}
+                onDragStart={event => { setDraggedClipIndex(index); event.dataTransfer.effectAllowed = "move"; }}
+                onDragOver={event => { event.preventDefault(); event.dataTransfer.dropEffect = "move"; }}
+                onDrop={event => { event.preventDefault(); if (draggedClipIndex !== null) moveClip(draggedClipIndex, index); setDraggedClipIndex(null); }}
                 onDragEnd={() => setDraggedClipIndex(null)}
                 onClick={() => { setSelectedClipIndex(index); setPlayheadSeconds(clip.start); }}
                 aria-pressed={selectedClipIndex === index}
                 className={selectedClipIndex === index ? "editorTrackClip editorTrackClipSelected" : "editorTrackClip"}
-                style={{ flexGrow: Math.max(0.6, clip.duration), flexBasis: 0 }}
+                style={{ position: "absolute", left: clip.start * pixelsPerSecond, width: Math.max(1, clip.duration * pixelsPerSecond - 3), height: "100%" }}
                 title={`${fileName(clip.imagePath)} · ${formatTime(clip.start)} · ${clip.duration.toFixed(1)}s`}
               >
                 <span>{String(index + 1).padStart(2, "0")}</span>
                 <strong>{fileName(clip.imagePath)}</strong>
                 <small>{clip.duration.toFixed(1)}s</small>
               </button>
-            ); })}
+            ))}
           </div>
         </div>
         <p className="muted">คลิกเลือกช็อต · ลากช็อตเพื่อเปลี่ยนลำดับ · ปรับจุดตัดในแผงด้านล่าง</p>
