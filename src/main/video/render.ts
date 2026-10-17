@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import ffmpegPath from "ffmpeg-static";
+import { resolveBundledFfmpegPath } from "../studio-mp3-decode";
 import type {
   AudioLayer,
   RenderProgress,
@@ -383,7 +384,7 @@ function runFfmpeg(
       return;
     }
 
-    const process = spawn(ffmpegPath, args);
+    const process = spawn(resolveBundledFfmpegPath(ffmpegPath), args);
     let stderr = "";
     let progressBuffer = "";
     let lastPercent = -1;
