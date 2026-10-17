@@ -122,6 +122,11 @@ export default function AudioLayersPanel({ layers, onChange }: Props) {
                 />
               </label>
 
+              {layer.origin === "studio-dialogue" && <div className="editorMediaPager">
+                <button type="button" onClick={() => patchLayer(layer.id, { start: Math.max(0, Math.round((layer.start - 0.1) * 100) / 100) })}>◀ 0.1 วิ</button>
+                <span>{layer.voiceLineId ?? layer.label ?? "เสียงตัวละคร"} · {layer.start.toFixed(2)} วินาที</span>
+                <button type="button" onClick={() => patchLayer(layer.id, { start: Math.round((layer.start + 0.1) * 100) / 100 })}>0.1 วิ ▶</button>
+              </div>}
               <label>
                 ระดับเสียง
                 <input
