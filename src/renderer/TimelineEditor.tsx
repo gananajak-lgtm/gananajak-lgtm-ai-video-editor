@@ -61,6 +61,10 @@ export default function TimelineEditor({ plan, onChange }: Props) {
   const [preview, setPreview] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [timelineZoom, setTimelineZoom] = useState(1);
+  const [shotPage, setShotPage] = useState(0);
+  const SHOT_PAGE_SIZE = 25;
+  const shotPages = Math.max(1, Math.ceil(plan.clips.length / SHOT_PAGE_SIZE));
+  const currentShotPage = Math.min(shotPage, shotPages - 1);
   const [draggedClipIndex, setDraggedClipIndex] = useState<number | null>(null);
   const [playheadSeconds, setPlayheadSeconds] = useState(0);
 
@@ -379,12 +383,13 @@ export default function TimelineEditor({ plan, onChange }: Props) {
         </div>
 
         <div className="shotList">
+          <div className="editorMediaPager"><button type="button" disabled={currentShotPage === 0} onClick={() => setShotPage(currentShotPage - 1)}>ก่อนหน้า</button><span>ช็อต {currentShotPage * SHOT_PAGE_SIZE + 1}–{Math.min((currentShotPage + 1) * SHOT_PAGE_SIZE, plan.clips.length)} / {plan.clips.length}</span><button type="button" disabled={currentShotPage >= shotPages - 1} onClick={() => setShotPage(currentShotPage + 1)}>ถัดไป</button><button type="button" onClick={() => setShotPage(Math.floor(selectedClipIndex / SHOT_PAGE_SIZE))}>ไปช็อตที่เลือก</button></div>
           <div className="manualSectionTitle">
             <strong>Shots</strong>
             <small>Cut nudges preserve total runtime</small>
           </div>
 
-          {plan.clips.map((clip, index) => (
+          {plan.clips.slice(currentShotPage * SHOT_PAGE_SIZE, (currentShotPage + 1) * SHOT_PAGE_SIZE).map((clip, pageIndex) => { const index = currentShotPage * SHOT_PAGE_SIZE + pageIndex; return (
             <button
               className={
                 index === selectedClipIndex
@@ -403,7 +408,7 @@ export default function TimelineEditor({ plan, onChange }: Props) {
                 </small>
               </div>
             </button>
-          ))}
+          ); })}
         </div>
       </div>
 
