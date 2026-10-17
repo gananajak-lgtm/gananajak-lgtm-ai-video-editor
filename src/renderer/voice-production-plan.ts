@@ -29,7 +29,7 @@ export type VoiceProductionPlan = {
   sfxCues: Array<{ lineId: string; text: string; order: number }>;
 };
 
-export function voiceFingerprint(line: VoiceLine, voiceId: string, workspaceId = "", modelId = "eleven_multilingual_v2"): string {
+export function voiceFingerprint(line: VoiceLine, voiceId: string, workspaceId = "", modelId = "eleven_v4"): string {
   // Deterministic local comparison key; no secrets or API keys included.
   return JSON.stringify([line.text.trim(), line.emotion.trim(), voiceId.trim(), workspaceId.trim(), modelId.trim()]);
 }
@@ -40,7 +40,7 @@ export function buildVoiceProductionPlan(
   voiceIds: Record<string, string>,
   completed: Record<string, { fingerprint: string; outputPath: string }> = {},
   workspaceId: string | null = null,
-  modelId = "eleven_multilingual_v2"
+  modelId = "eleven_v4"
 ): VoiceProductionPlan {
   const jobs: VoiceJob[] = [];
   const sfxCues: VoiceProductionPlan["sfxCues"] = [];
