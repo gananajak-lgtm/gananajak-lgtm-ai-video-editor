@@ -68,6 +68,13 @@ export default function TimelineEditor({ plan, onChange }: Props) {
   const safeTrackPage = Math.min(trackPage, trackPages - 1);
   const trackStart = safeTrackPage * TRACK_PAGE_SIZE;
   const trackClips = plan.clips.slice(trackStart, trackStart + TRACK_PAGE_SIZE);
+  // Keep the visible timeline and shot list aligned with keyboard, playhead,
+  // or inspector selection. Paging is display-only and never mutates clips.
+  useEffect(() => {
+    setTrackPage(Math.floor(selectedClipIndex / TRACK_PAGE_SIZE));
+    setShotPage(Math.floor(selectedClipIndex / SHOT_PAGE_SIZE));
+  }, [selectedClipIndex]);
+
 
   const SHOT_PAGE_SIZE = 25;
   const shotPages = Math.max(1, Math.ceil(plan.clips.length / SHOT_PAGE_SIZE));
