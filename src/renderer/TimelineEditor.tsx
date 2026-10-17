@@ -9,6 +9,7 @@ import type {
 type Props = {
   plan: TimelinePlan;
   onChange: (plan: TimelinePlan) => void;
+  seekRequest?: { id: number; seconds: number } | null;
 };
 
 const MIN_CLIP_SECONDS = 0.6;
@@ -56,7 +57,7 @@ function motionLabel(motion: ShotMotion) {
   }
 }
 
-export default function TimelineEditor({ plan, onChange }: Props) {
+export default function TimelineEditor({ plan, onChange, seekRequest }: Props) {
   const [selectedClipIndex, setSelectedClipIndex] = useState(0);
   const [preview, setPreview] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -155,6 +156,11 @@ export default function TimelineEditor({ plan, onChange }: Props) {
       }
     }
   };
+
+  useEffect(() => {
+    if (seekRequest) seekTo(seekRequest.seconds);
+    // Each request has a unique id; ordinary timeline edits must not repeat seeks.
+  }, [seekRequest?.id]);
 
   const totalClipDuration = useMemo(
     () => plan.clips.reduce((sum, clip) => sum + clip.duration, 0),
