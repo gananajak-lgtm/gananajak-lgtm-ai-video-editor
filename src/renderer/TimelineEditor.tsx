@@ -62,6 +62,13 @@ export default function TimelineEditor({ plan, onChange }: Props) {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [timelineZoom, setTimelineZoom] = useState(1);
   const [shotPage, setShotPage] = useState(0);
+  const [trackPage, setTrackPage] = useState(0);
+  const TRACK_PAGE_SIZE = 30;
+  const trackPages = Math.max(1, Math.ceil(plan.clips.length / TRACK_PAGE_SIZE));
+  const safeTrackPage = Math.min(trackPage, trackPages - 1);
+  const trackStart = safeTrackPage * TRACK_PAGE_SIZE;
+  const trackClips = plan.clips.slice(trackStart, trackStart + TRACK_PAGE_SIZE);
+
   const SHOT_PAGE_SIZE = 25;
   const shotPages = Math.max(1, Math.ceil(plan.clips.length / SHOT_PAGE_SIZE));
   const currentShotPage = Math.min(shotPage, shotPages - 1);
@@ -281,9 +288,15 @@ export default function TimelineEditor({ plan, onChange }: Props) {
           <output htmlFor="timeline-playhead">{formatTime(playheadSeconds)} / {formatTime(plan.duration)}</output>
           <button type="button" disabled={!canSplitAtPlayhead} onClick={splitAtPlayhead} title="แบ่งช็อตที่ตำแหน่งหัวอ่านเวลาโดยรักษาระยะเวลารวม">✂ แยกช็อต</button>
         </div>
+        <div className="editorMediaPager" aria-label="เลื่อนช่วงคลิปไทม์ไลน์">
+          <button type="button" disabled={safeTrackPage === 0} onClick={() => setTrackPage(safeTrackPage - 1)}>◀ ก่อนหน้า</button>
+          <span>คลิป {plan.clips.length ? trackStart + 1 : 0}–{Math.min(trackStart + TRACK_PAGE_SIZE, plan.clips.length)} / {plan.clips.length}</span>
+          <button type="button" onClick={() => setTrackPage(Math.floor(selectedClipIndex / TRACK_PAGE_SIZE))}>ไปช็อตที่เลือก</button>
+          <button type="button" disabled={safeTrackPage >= trackPages - 1} onClick={() => setTrackPage(safeTrackPage + 1)}>ถัดไป ▶</button>
+        </div>
         <div className="editorTrackScroller">
           <div className="editorTrackClips" style={{ width: `${Math.max(100, timelineZoom * 100)}%` }}>
-            {plan.clips.map((clip, index) => (
+            {trackClips.map((clip, pageIndex) => { const index = trackStart + pageIndex; return (
               <button
                 type="button"
                 key={clip.id}
@@ -302,7 +315,7 @@ export default function TimelineEditor({ plan, onChange }: Props) {
                 <strong>{fileName(clip.imagePath)}</strong>
                 <small>{clip.duration.toFixed(1)}s</small>
               </button>
-            ))}
+            ); })}
           </div>
         </div>
         <p className="muted">คลิกเลือกช็อต · ลากช็อตเพื่อเปลี่ยนลำดับ · ปรับจุดตัดในแผงด้านล่าง</p>
