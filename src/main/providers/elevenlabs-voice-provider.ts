@@ -38,6 +38,7 @@ async function generateStudioVoiceLineUnchecked(
     headers: { "xi-api-key": apiKey, "Content-Type": "application/json", Accept: "audio/mpeg" },
     body: JSON.stringify({
       text, model_id: modelId,
+      ...(modelId.startsWith("eleven_v3") || modelId.startsWith("eleven_v4") ? { language_code: "th" } : {}),
       voice_settings: { stability: 0.5, similarity_boost: 0.75 }
     })
   });
