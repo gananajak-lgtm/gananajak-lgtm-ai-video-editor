@@ -64,6 +64,13 @@ export default function App() {
   const [missingMedia, setMissingMedia] = useState<string[]>([]);
   const [relinking, setRelinking] = useState(false);
   const [images, setImages] = useState<string[]>([]);
+  const [mediaSearch, setMediaSearch] = useState("");
+  const [mediaPage, setMediaPage] = useState(0);
+  const [inspectorExpanded, setInspectorExpanded] = useState(false);
+  const visibleImages = useMemo(() => images.filter(image => fileName(image).toLocaleLowerCase().includes(mediaSearch.trim().toLocaleLowerCase())), [images, mediaSearch]);
+  const mediaPageCount = Math.max(1, Math.ceil(visibleImages.length / 24));
+  const mediaPageSafe = Math.min(mediaPage, mediaPageCount - 1);
+  const mediaPageImages = visibleImages.slice(mediaPageSafe * 24, (mediaPageSafe + 1) * 24);
   const [narration, setเสียงบรรยาย] = useState<string | null>(null);
   const [timeline, setTimeline] = useState<TimelinePlan | null>(null);
   const [studioFrameAnchors, setStudioFrameAnchors] = useState<Record<string, string>>({});
@@ -1208,16 +1215,18 @@ export default function App() {
             <button onClick={chooseImages}>เลือกภาพ</button>{timeline && timeline.clips.length === 0 && images.length > 0 && <button type="button" onClick={placeImagesOnAudioTimeline}>วางภาพลงไทม์ไลน์เสียง</button>}
           </div>
           <p className="muted">{summary}</p>
-          <div className="mediaList">
-            {images.map((image, index) => (
+          <input className="editorMediaSearch" aria-label="ค้นหาภาพ" placeholder="ค้นหาภาพ..." value={mediaSearch} onChange={event => { setMediaSearch(event.target.value); setMediaPage(0); }} />
+          <div className="mediaList editorMediaListCompact">
+            {mediaPageImages.map((image, index) => (
               <div className="mediaRow" key={image}>
-                <span>{String(index + 1).padStart(2, "0")}</span>
-                <strong>{fileName(image)}</strong>
+                <span>{String(mediaPageSafe * 24 + index + 1).padStart(3, "0")}</span>
+                <strong title={image}>{fileName(image)}</strong>
                 <button type="button" className="removeButton" onClick={() => removeImportedImage(image)}>🗑️ ลบ</button>
               </div>
             ))}
 
           </div>
+          {visibleImages.length > 24 && <div className="editorMediaPager"><button type="button" disabled={mediaPageSafe === 0} onClick={() => setMediaPage(mediaPageSafe - 1)}>ก่อนหน้า</button><span>{mediaPageSafe + 1}/{mediaPageCount} · {visibleImages.length} ภาพ</span><button type="button" disabled={mediaPageSafe >= mediaPageCount - 1} onClick={() => setMediaPage(mediaPageSafe + 1)}>ถัดไป</button></div>}
         </article>
 
         <article className="panel">
@@ -1262,7 +1271,7 @@ export default function App() {
         )}
       </section>
 
-        <div className="editorInspectorPane">      <section id="editor-ai" className="aiPanel">
+        <div className={`editorInspectorPane ${inspectorExpanded ? "editorInspectorExpanded" : "editorInspectorCollapsed"}`}><button type="button" className="editorInspectorToggle" onClick={() => setInspectorExpanded(value => !value)}>{inspectorExpanded ? "ซ่อนเครื่องมือขั้นสูง ▴" : "เครื่องมือขั้นสูง ▾"}</button>      <section id="editor-ai" className="aiPanel">
         <div className="aiPanelHeader">
           <div>
             <p className="eyebrow">ระบบวิเคราะห์เสียง AI</p>
