@@ -70,6 +70,7 @@ export default function App() {
   const [voiceListExpanded, setVoiceListExpanded] = useState(false);
   const [voicePreview, setVoicePreview] = useState<{ lineId: string; url: string } | null>(null);
   const [voicePreviewError, setVoicePreviewError] = useState<string | null>(null);
+  const voicePreviewRequestRef = useRef(0);
   const [frameAnchorExpanded, setFrameAnchorExpanded] = useState(false);
   const visibleImages = useMemo(() => images.filter(image => fileName(image).toLocaleLowerCase().includes(mediaSearch.trim().toLocaleLowerCase())), [images, mediaSearch]);
   const mediaPageCount = Math.max(1, Math.ceil(visibleImages.length / 24));
@@ -623,17 +624,18 @@ export default function App() {
     window.addEventListener("studio-voice-audio-updated", refresh);
     return () => { active = false; window.removeEventListener("studio-voice-audio-updated", refresh); };
   }, [studioSelectedId, studioEpisodeId]);
-  useEffect(() => { setVoicePreview(null); setVoicePreviewError(null); }, [studioSelectedId, studioEpisodeId]);
+  useEffect(() => { voicePreviewRequestRef.current++; setVoicePreview(null); setVoicePreviewError(null); }, [studioSelectedId, studioEpisodeId]);
   const toggleVoicePreview = async (lineId: string, outputPath: string) => {
+    const request = ++voicePreviewRequestRef.current;
     if (voicePreview?.lineId === lineId) { setVoicePreview(null); return; }
     setVoicePreview(null);
     setVoicePreviewError(null);
     if (!studioSelectedId || !studioEpisodeId) return;
     try {
       const url = await window.videoEditor.previewStudioVoiceAudio(studioSelectedId, studioEpisodeId, outputPath);
-      setVoicePreview({ lineId, url });
+      if (request === voicePreviewRequestRef.current) setVoicePreview({ lineId, url });
     } catch (error) {
-      setVoicePreviewError("ฟังตัวอย่างไม่ได้: " + (error instanceof Error ? error.message : String(error)));
+      if (request === voicePreviewRequestRef.current) setVoicePreviewError("ฟังตัวอย่างไม่ได้: " + (error instanceof Error ? error.message : String(error)));
     }
   };
   const [studioVoiceDurationErrors, setStudioVoiceDurationErrors] = useState<Record<string, string>>({});
