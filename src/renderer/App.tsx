@@ -363,11 +363,37 @@ export default function App() {
     const picked = await window.videoEditor.selectImages();
     if (picked.length) {
       setImages(picked);
-      setTimeline(null);
-      setStudioFrameAnchors({});
+      if (timeline?.clips.length) {
+        setTimeline(null);
+        setStudioFrameAnchors({});
+      }
       setNotice(null);
       setError(null);
     }
+  };
+
+  const placeImagesOnAudioTimeline = () => {
+    if (!timeline || !images.length || timeline.clips.length > 0 || !Number.isFinite(timeline.duration) || timeline.duration <= 0) {
+      setError("ต้องมีภาพอย่างน้อยหนึ่งภาพและไทม์ไลน์เสียงที่ยังไม่มีคลิปภาพ");
+      return;
+    }
+    const duration = timeline.duration;
+    const clips = images.map((imagePath, index) => {
+      const start = duration * index / images.length;
+      const end = duration * (index + 1) / images.length;
+      return {
+        id: "studio-image-" + index + "-" + imagePath,
+        imagePath,
+        start,
+        duration: end - start,
+        motion: "hold" as const
+      };
+    });
+    setTimeline(previous => previous && previous === timeline && previous.clips.length === 0
+      ? { ...previous, clips, transitionDuration: 0 }
+      : previous);
+    setError(null);
+    setNotice("เพิ่มภาพ " + clips.length + " ภาพลง Timeline เสียงเดิมแล้ว · เสียงตัวละครยังอยู่ครบ กรุณาบันทึก EP");
   };
 
   const removeImportedImage = (imagePath: string) => {
@@ -1179,7 +1205,7 @@ export default function App() {
               <span className="step">01</span>
               <h3>ภาพประกอบเรื่อง</h3>
             </div>
-            <button onClick={chooseImages}>เลือกภาพ</button>
+            <button onClick={chooseImages}>เลือกภาพ</button>{timeline && timeline.clips.length === 0 && images.length > 0 && <button type="button" onClick={placeImagesOnAudioTimeline}>วางภาพลงไทม์ไลน์เสียง</button>}
           </div>
           <p className="muted">{summary}</p>
           <div className="mediaList">
