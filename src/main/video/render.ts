@@ -487,7 +487,13 @@ export async function renderTimeline(
     }
 
     const narrationInput = nextInput;
-    args.push("-i", plan.narration);
+    // Dialogue-first Studio timelines deliberately have no narration file.
+    // Supply a finite silent input so audio mixing retains stable input indexes.
+    if (plan.narration?.trim()) {
+      args.push("-i", plan.narration);
+    } else {
+      args.push("-f", "lavfi", "-t", fixed(plan.duration), "-i", "anullsrc=r=48000:cl=stereo");
+    }
 
     const activeLayers = (plan.audioLayers ?? []).filter(
       (layer) =>
