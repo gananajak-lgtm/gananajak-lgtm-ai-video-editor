@@ -4,13 +4,14 @@ import type { AudioLayer, AudioLayerKind } from "../shared/types";
 type Props = {
   layers: AudioLayer[];
   onChange: (layers: AudioLayer[]) => void;
+  timelineDuration?: number;
 };
 
 function fileName(filePath: string) {
   return filePath.split(/[\\/]/).pop() ?? filePath;
 }
 
-export default function AudioLayersPanel({ layers, onChange }: Props) {
+export default function AudioLayersPanel({ layers, onChange, timelineDuration }: Props) {
   const [page, setPage] = useState(0);
   const [filter, setFilter] = useState("");
   const [timingWarning, setTimingWarning] = useState<string | null>(null);
@@ -122,6 +123,10 @@ export default function AudioLayersPanel({ layers, onChange }: Props) {
                 />
               </label>
 
+              {layer.origin === "studio-dialogue" && <label>
+                ลากปรับตำแหน่งเสียง (วินาที)
+                <input type="range" min="0" max={Math.max(0.1, (timelineDuration ?? Math.max(...layers.map(item => item.start + item.duration), 1)) - layer.duration)} step="0.1" value={layer.start} onChange={event => patchLayer(layer.id, { start: Math.max(0, Number(event.target.value)) })} />
+              </label>}
               {layer.origin === "studio-dialogue" && <div className="editorMediaPager">
                 <button type="button" onClick={() => patchLayer(layer.id, { start: Math.max(0, Math.round((layer.start - 0.1) * 100) / 100) })}>◀ 0.1 วิ</button>
                 <span>{layer.voiceLineId ?? layer.label ?? "เสียงตัวละคร"} · {layer.start.toFixed(2)} วินาที</span>
