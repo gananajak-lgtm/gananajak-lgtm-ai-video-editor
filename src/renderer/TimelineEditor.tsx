@@ -141,8 +141,19 @@ export default function TimelineEditor({ plan, onChange }: Props) {
     const target = Math.max(0, Math.min(plan.duration, seconds));
     setPlayheadSeconds(target);
     const index = plan.clips.findIndex((clip) => target >= clip.start && target < clip.start + clip.duration);
-    if (index >= 0) setSelectedClipIndex(index);
-    else if (plan.clips.length > 0) setSelectedClipIndex(plan.clips.length - 1);
+    const nextIndex = index >= 0 ? index : plan.clips.length - 1;
+    if (nextIndex >= 0) {
+      setSelectedClipIndex(nextIndex);
+      const clip = plan.clips[nextIndex];
+      const viewport = trackViewportRef.current;
+      if (clip && viewport) {
+        const clipLeft = clip.start * pixelsPerSecond;
+        const clipRight = (clip.start + clip.duration) * pixelsPerSecond;
+        if (clipLeft < viewport.scrollLeft || clipLeft > viewport.scrollLeft + viewport.clientWidth || clipRight < viewport.scrollLeft) {
+          scrollTimelineTo(Math.max(0, clipLeft - viewport.clientWidth / 3));
+        }
+      }
+    }
   };
 
   const totalClipDuration = useMemo(
