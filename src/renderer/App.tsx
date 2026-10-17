@@ -623,10 +623,12 @@ export default function App() {
   }, [studioSelectedId, studioEpisodeId]);
   const [studioVoiceDurationErrors, setStudioVoiceDurationErrors] = useState<Record<string, string>>({});
   const [studioVoiceDurations, setStudioVoiceDurations] = useState<Record<string, number>>({});
+  const [voiceProbeProgress, setVoiceProbeProgress] = useState({ done: 0, total: 0 });
   useEffect(() => {
     let active = true;
     setStudioVoiceDurations({});
     setStudioVoiceDurationErrors({});
+    setVoiceProbeProgress({ done: 0, total: Object.keys(studioVoiceFiles).length });
     if (!studioSelectedId || !studioEpisodeId) return () => { active = false; };
     const entries = Object.entries(studioVoiceFiles);
     // Limit concurrent FFmpeg probes for large episodes (hundreds of voice files).
@@ -635,6 +637,13 @@ export default function App() {
       const durations: Record<string, number> = {};
       const errors: Record<string, string> = {};
       let cursor = 0;
+      let completed = 0;
+      const publish = () => {
+        if (!active) return;
+        setStudioVoiceDurations({ ...durations });
+        setStudioVoiceDurationErrors({ ...errors });
+        setVoiceProbeProgress({ done: completed, total: entries.length });
+      };
       const worker = async () => {
         while (active && cursor < entries.length) {
           const [lineId, entry] = entries[cursor++];
@@ -644,12 +653,13 @@ export default function App() {
           } catch (error) {
             if (active) errors[lineId] = error instanceof Error ? error.message : String(error);
           }
+          completed++;
+          if (completed % 4 === 0 || completed === entries.length) publish();
         }
       };
       await Promise.all(Array.from({ length: Math.min(4, entries.length) }, () => worker()));
       if (!active) return;
-      setStudioVoiceDurations(durations);
-      setStudioVoiceDurationErrors(errors);
+      publish();
     })();
     return () => { active = false; };
   }, [studioSelectedId, studioEpisodeId, studioVoiceFiles]);
@@ -1212,7 +1222,7 @@ export default function App() {
   <div className="studioTimelineTrack"><strong>▧ ภาพ</strong><div className="studioTimelineLane">{timeline?.clips.length ? timeline.clips.slice(0, 24).map((clip, index) => <span key={clip.id} className="studioTimelineClip" style={{ flexGrow: Math.max(.6, clip.duration) }} title={`${fileName(clip.imagePath)} · ${clip.duration.toFixed(1)} วินาที`}>{index + 1}. {fileName(clip.imagePath)}</span>) : <em>เพิ่มภาพและสร้างไทม์ไลน์เพื่อเริ่มตัดต่อ</em>}{(timeline?.clips.length ?? 0) > 24 && <span className="studioTimelineClip">+{timeline!.clips.length - 24} ช็อต · ดูทั้งหมดในแผงตัดต่อด้านล่าง</span>}</div></div>
   {timeline?.clips.length && studioVoiceSchedule.length ? <div className="studioVoiceInventory"><strong>🖼 จัดจังหวะภาพตามเสียง · {timeline.clips.length} ภาพ</strong><button type="button" onClick={() => setFrameAnchorExpanded(v => !v)}>{frameAnchorExpanded ? "ซ่อนการจัดจังหวะ" : "เปิดจัดจังหวะภาพ"}</button>{frameAnchorExpanded && <div><p>กำหนดภาพแต่ละภาพให้เริ่มที่บรรทัดเสียงใด ภาพก่อนหน้าจะค้างไว้จนถึงจุดเริ่มภาพใหม่ ระบบยังไม่เปลี่ยนไทม์ไลน์จริง</p>{timeline.clips.map((clip, index) => <label key={clip.id}>{index + 1}. {fileName(clip.imagePath)} <select value={studioFrameAnchors[clip.id] ?? (index === 0 ? studioVoiceSchedule[0].lineId : "")} onChange={event => setStudioFrameAnchors(previous => ({ ...previous, [clip.id]: event.target.value }))}><option value="">ไม่กำหนดจุดเริ่มภาพ</option>{studioVoiceSchedule.map(line => <option key={line.lineId} value={line.lineId}>{line.lineId} · {formatTime(line.start)}</option>)}</select></label>)}{studioFrameHoldPreview.error ? <p role="alert">{studioFrameHoldPreview.error}</p> : <ol>{studioFrameHoldPreview.holds.map(hold => <li key={hold.imageId}>{fileName(timeline.clips.find(clip => clip.id === hold.imageId)?.imagePath ?? hold.imageId)}: {formatTime(hold.start)}–{formatTime(hold.end)}</li>)}</ol>}<button type="button" onClick={applyStudioFrameHolds} disabled={Boolean(studioFrameHoldPreview.error) || studioFrameHoldPreview.holds.length !== timeline.clips.length || Boolean(narration) || timeline.subtitles.length > 0 || [...audioLayers, ...timeline.audioLayers].some(layer => layer.origin !== "studio-dialogue") || timeline.clips.some(clip => Boolean(clip.videoPath))}>ใช้ระยะเวลาภาพตามบทพูด</button></div>}</div> : null}
   <div className="studioTimelineTrack"><strong>♫ เสียงพากย์</strong><div className="studioTimelineLane">{narration ? <span className="studioTimelineAudio">{fileName(narration)}</span> : <em>ยังไม่ได้เลือกไฟล์เสียงพากย์</em>}</div></div>
-  <div className="studioTimelineTrack"><strong>🎙 เสียงตัวละคร</strong><div className="studioTimelineLane">{Object.keys(studioVoiceFiles).length ? <div className="studioVoiceInventory"><strong>MP3 ที่ตรวจสอบแล้ว {Object.keys(studioVoiceFiles).length} บรรทัด</strong>{Object.keys(studioVoiceFiles).length > 12 && <button type="button" onClick={() => setVoiceListExpanded(v => !v)}>{voiceListExpanded ? "ย่อรายการเสียง" : "ดูไฟล์เสียงทั้งหมด"}</button>}<ol>{Object.entries(studioVoiceFiles).sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true })).slice(0, voiceListExpanded ? undefined : 12).map(([lineId, entry]) => <li key={lineId} title={entry.outputPath}><span>{lineId}</span> · <span>{fileName(entry.outputPath)}</span> · <span>{(() => { const slot = studioVoiceSchedule.find(item => item.lineId === lineId); return slot ? `${slot.start.toFixed(2)}–${slot.end.toFixed(2)} วินาที` : studioVoiceDurationErrors[lineId] ? `อ่านระยะเวลาไม่สำเร็จ: ${studioVoiceDurationErrors[lineId]}` : "กำลังอ่านระยะเวลา"; })()}</span> <button type="button" className="removeButton" disabled={studioBusy} onClick={() => { void removeGeneratedVoice(lineId); }}>🗑️ ลบเสียง</button></li>)}</ol><label>ระยะพักระหว่างเสียง (วินาที) <input type="number" min="0" max="5" step="0.1" value={studioDialogueGap} onChange={event => { const next = Number(event.target.value); if (Number.isFinite(next)) setStudioDialogueGap(Math.max(0, Math.min(5, next))); }} /></label><small>ใช้จังหวะตามผู้พูดและจบประโยคเมื่อ MP3 มีข้อมูลบทครบทุกบรรทัด มิฉะนั้นใช้ระยะพักคงที่เพื่อไม่เดาผู้พูด</small><button type="button" onClick={() => { void importStudioDialogueToTimeline(); }} disabled={!studioSelectedId || !studioEpisodeId || !studioVoiceSchedule.length || studioVoiceSchedule.length !== Object.keys(studioVoiceFiles).length}>นำเสียงตัวละครเข้าไทม์ไลน์</button>{studioImportFeedback && <p role="status" className="studioVoiceImportStatus">{studioImportFeedback}</p>}</div> : <em>ยังไม่มี MP3 ของตัวละครในตอนนี้</em>}</div></div>
+  <div className="studioTimelineTrack"><strong>🎙 เสียงตัวละคร</strong><div className="studioTimelineLane">{Object.keys(studioVoiceFiles).length ? <div className="studioVoiceInventory"><strong>เสียง MP3 {Object.keys(studioVoiceFiles).length} บรรทัด · ตรวจระยะเวลา {voiceProbeProgress.done}/{voiceProbeProgress.total}</strong>{Object.keys(studioVoiceFiles).length > 12 && <button type="button" onClick={() => setVoiceListExpanded(v => !v)}>{voiceListExpanded ? "ย่อรายการเสียง" : "ดูไฟล์เสียงทั้งหมด"}</button>}<ol>{Object.entries(studioVoiceFiles).sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true })).slice(0, voiceListExpanded ? undefined : 12).map(([lineId, entry]) => <li key={lineId} title={entry.outputPath}><span>{lineId}</span> · <span>{fileName(entry.outputPath)}</span> · <span>{(() => { const slot = studioVoiceSchedule.find(item => item.lineId === lineId); return slot ? `${slot.start.toFixed(2)}–${slot.end.toFixed(2)} วินาที` : studioVoiceDurationErrors[lineId] ? `อ่านระยะเวลาไม่สำเร็จ: ${studioVoiceDurationErrors[lineId]}` : "กำลังอ่านระยะเวลา"; })()}</span> <button type="button" className="removeButton" disabled={studioBusy} onClick={() => { void removeGeneratedVoice(lineId); }}>🗑️ ลบเสียง</button></li>)}</ol><label>ระยะพักระหว่างเสียง (วินาที) <input type="number" min="0" max="5" step="0.1" value={studioDialogueGap} onChange={event => { const next = Number(event.target.value); if (Number.isFinite(next)) setStudioDialogueGap(Math.max(0, Math.min(5, next))); }} /></label><small>ใช้จังหวะตามผู้พูดและจบประโยคเมื่อ MP3 มีข้อมูลบทครบทุกบรรทัด มิฉะนั้นใช้ระยะพักคงที่เพื่อไม่เดาผู้พูด</small><button type="button" onClick={() => { void importStudioDialogueToTimeline(); }} disabled={!studioSelectedId || !studioEpisodeId || !studioVoiceSchedule.length || studioVoiceSchedule.length !== Object.keys(studioVoiceFiles).length}>นำเสียงตัวละครเข้าไทม์ไลน์</button>{studioImportFeedback && <p role="status" className="studioVoiceImportStatus">{studioImportFeedback}</p>}</div> : <em>ยังไม่มี MP3 ของตัวละครในตอนนี้</em>}</div></div>
   <div className="studioTimelineTrack"><strong>▤ คำบรรยาย</strong><div className="studioTimelineLane">{timeline?.subtitles.length ? timeline.subtitles.map((cue, index) => <span key={cue.id} className="studioTimelineSubtitle" title={cue.text}>{index + 1}</span>) : <em>ยังไม่มีคำบรรยาย</em>}</div></div>
   <p className="studioTimelineHint">นี่คือภาพรวมไทม์ไลน์ · เมื่อสร้างไทม์ไลน์แล้ว ใช้แผงแก้ไขช็อตด้านล่างเพื่อลากสลับคลิปและปรับจุดตัด</p>
 </section>
