@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type {
+  AudioLayer,
   ShotMotion,
   SubtitleCue,
   TimelineClip,
@@ -10,6 +11,8 @@ type Props = {
   plan: TimelinePlan;
   onChange: (plan: TimelinePlan) => void;
   seekRequest?: { id: number; seconds: number } | null;
+  audioLayers?: AudioLayer[];
+  onAudioLayersChange?: (layers: AudioLayer[]) => void;
 };
 
 const MIN_CLIP_SECONDS = 0.6;
@@ -57,7 +60,7 @@ function motionLabel(motion: ShotMotion) {
   }
 }
 
-export default function TimelineEditor({ plan, onChange, seekRequest }: Props) {
+export default function TimelineEditor({ plan, onChange, seekRequest, audioLayers = [], onAudioLayersChange }: Props) {
   const [selectedClipIndex, setSelectedClipIndex] = useState(0);
   const [preview, setPreview] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -65,6 +68,27 @@ export default function TimelineEditor({ plan, onChange, seekRequest }: Props) {
   const [shotPage, setShotPage] = useState(0);
   const trackViewportRef = useRef<HTMLDivElement | null>(null);
   const [trackViewport, setTrackViewport] = useState({ left: 0, width: 900 });
+  const [draggedAudioId, setDraggedAudioId] = useState<string | null>(null);
+  const [audioDragError, setAudioDragError] = useState<string | null>(null);
+  const studioAudio = audioLayers.filter(layer => layer.origin === "studio-dialogue");
+  const dropStudioAudio = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const id = draggedAudioId;
+    setDraggedAudioId(null);
+    if (!id || !onAudioLayersChange) return;
+    const target = studioAudio.find(layer => layer.id === id);
+    if (!target) return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const rawStart = (event.clientX - bounds.left) / pixelsPerSecond;
+    const start = Math.round(Math.max(0, Math.min(Math.max(0, plan.duration - target.duration), rawStart)) * 10) / 10;
+    const collision = studioAudio.some(other => other.id !== id && start < other.start + other.duration - 0.001 && start + target.duration > other.start + 0.001);
+    if (collision) {
+      setAudioDragError("ไม่สามารถวางเสียงทับบรรทัดอื่นได้ กรุณาเลือกตำแหน่งว่าง");
+      return;
+    }
+    setAudioDragError(null);
+    onAudioLayersChange(audioLayers.map(layer => layer.id === id ? { ...layer, start } : layer));
+  };
   const pixelsPerSecond = 24 * timelineZoom;
   const trackWidth = Math.max(900, plan.duration * pixelsPerSecond);
   const trackVisibleStart = Math.max(0, trackViewport.left / pixelsPerSecond - 6);
@@ -356,7 +380,13 @@ export default function TimelineEditor({ plan, onChange, seekRequest }: Props) {
               </button>
             ))}
           </div>
+          {studioAudio.length > 0 && <div className="editorTrackClips" aria-label="ลากเสียงตัวละคร" onDragOver={event => { if (draggedAudioId) event.preventDefault(); }} onDrop={dropStudioAudio} style={{ position: "relative", width: trackWidth + "px", height: 54, borderTop: "1px solid #777" }}>
+            {studioAudio.filter(layer => layer.start + layer.duration >= trackVisibleStart && layer.start <= trackVisibleEnd).map(layer => <button type="button" draggable key={layer.id} className="editorTrackClip" onDragStart={event => { setDraggedAudioId(layer.id); event.dataTransfer.effectAllowed = "move"; }} onDragEnd={() => setDraggedAudioId(null)} onClick={() => seekTo(layer.start)} style={{ position: "absolute", left: layer.start * pixelsPerSecond, width: Math.max(12, layer.duration * pixelsPerSecond - 2), height: 48, overflow: "hidden" }} title={(layer.voiceLineId ?? layer.label ?? "เสียงตัวละคร") + " · " + formatTime(layer.start)}>
+              <span>🎙 {layer.voiceLineId ?? layer.label ?? "เสียง"}</span>
+            </button>)}
+          </div>}
         </div>
+        {audioDragError && <p role="alert">{audioDragError}</p>}
         <p className="muted">คลิกเลือกช็อต · ลากช็อตเพื่อเปลี่ยนลำดับ · ปรับจุดตัดในแผงด้านล่าง</p>
       </div>
 
