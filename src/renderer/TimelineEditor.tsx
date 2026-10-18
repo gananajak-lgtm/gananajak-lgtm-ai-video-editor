@@ -378,6 +378,9 @@ export default function TimelineEditor({ plan, onChange, seekRequest, audioLayer
           <strong>🎬 Timeline · ภาพ {plan.clips.length} · เสียง {studioAudio.length}</strong>
           <label>ซูม <input type="range" min="0.5" max="3" step="0.25" value={timelineZoom} onChange={(event) => changeTimelineZoom(Number(event.target.value))} /></label>
           <span>{timelineZoom.toFixed(2)}×</span>
+          <button type="button" onClick={() => changeTimelineZoom(0.5)} aria-label="ซูมออกเพื่อดูภาพรวม">ภาพรวม 0.5×</button>
+          <button type="button" onClick={() => changeTimelineZoom(1)} aria-label="ซูมระดับปกติ">ปกติ 1×</button>
+          <button type="button" onClick={() => changeTimelineZoom(2)} aria-label="ซูมเข้าเพื่อปรับเสียง">ละเอียด 2×</button>
         </div>
         <div className="editorPlayheadControl">
           <label htmlFor="timeline-playhead">หัวอ่านเวลา</label>
