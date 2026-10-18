@@ -78,6 +78,12 @@ export default function TimelineEditor({ plan, onChange, seekRequest, audioLayer
   const selectedAudio = studioAudio.find(layer => layer.id === selectedAudioId);
   const orderedStudioAudio = [...studioAudio].sort((a, b) => a.start - b.start || a.id.localeCompare(b.id));
   const selectedAudioIndex = orderedStudioAudio.findIndex(layer => layer.id === selectedAudioId);
+  const focusSelectedAudio = () => {
+    if (!selectedAudio) return;
+    seekTo(selectedAudio.start);
+    const viewport = trackViewportRef.current;
+    if (viewport) scrollTimelineTo(Math.max(0, selectedAudio.start * pixelsPerSecond - viewport.clientWidth / 3));
+  };
   const selectAdjacentAudio = (offset: number) => {
     const index = selectedAudioIndex < 0 ? 0 : selectedAudioIndex + offset;
     const layer = orderedStudioAudio[index];
@@ -417,9 +423,9 @@ export default function TimelineEditor({ plan, onChange, seekRequest, audioLayer
           <strong>🎙 {selectedAudio.voiceLineId ?? selectedAudio.label ?? "เสียงตัวละคร"}</strong>
           <button type="button" disabled={selectedAudioIndex < 0 || selectedAudioIndex >= orderedStudioAudio.length - 1} onClick={() => selectAdjacentAudio(1)} title="เลือกเสียงถัดไป">เสียงถัดไป ▶</button>
           <button type="button" onClick={() => moveSelectedAudio(-0.1)} disabled={!onAudioLayersChange}>◀ 0.1 วิ</button>
-          <span>เริ่ม {formatTime(selectedAudio.start)} · ยาว {selectedAudio.duration.toFixed(1)} วิ</span>
+          <span>บรรทัด {selectedAudioIndex + 1}/{studioAudio.length} · เริ่ม {formatTime(selectedAudio.start)} · สิ้นสุด {formatTime(selectedAudio.start + selectedAudio.duration)} · ยาว {selectedAudio.duration.toFixed(1)} วิ</span>
           <button type="button" onClick={() => moveSelectedAudio(0.1)} disabled={!onAudioLayersChange}>0.1 วิ ▶</button>
-          <button type="button" onClick={() => seekTo(selectedAudio.start)}>ไปยังเสียง</button>
+          <button type="button" onClick={focusSelectedAudio}>◎ แสดงคลิปในจอ</button>
         </div>}
         {audioDragError && <p role="alert">{audioDragError}</p>}
         <p className="muted">แทร็กบน: ภาพ (ลากเพื่อจัดลำดับ) · แทร็กล่าง: เสียงตัวละคร (ลากเพื่อปรับเวลา) · คลิกเสียงเพื่อปรับละเอียด ±0.1 วินาที</p>
