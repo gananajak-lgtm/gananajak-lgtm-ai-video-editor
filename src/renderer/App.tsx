@@ -1549,7 +1549,7 @@ export default function App() {
           </p>
 
           <ExportSettingsPanel plan={timeline} onChange={setTimeline} />
-          <TimelineEditor plan={timeline} onChange={setTimeline} seekRequest={voiceSeekRequest} />
+          <TimelineEditor plan={timeline} onChange={setTimeline} seekRequest={voiceSeekRequest} audioLayers={audioLayers} onAudioLayersChange={setAudioLayers} />
         </section>
       )}
       </section>
