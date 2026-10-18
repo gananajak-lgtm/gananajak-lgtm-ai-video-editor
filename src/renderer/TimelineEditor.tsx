@@ -376,11 +376,13 @@ export default function TimelineEditor({ plan, onChange, seekRequest, audioLayer
       <div className="editorTrackSurface">
         <div className="editorTrackToolbar">
           <strong>🎬 Timeline · ภาพ {plan.clips.length} · เสียง {studioAudio.length}</strong>
-          <label>ซูม <input type="range" min="0.5" max="3" step="0.25" value={timelineZoom} onChange={(event) => changeTimelineZoom(Number(event.target.value))} /></label>
-          <span>{timelineZoom.toFixed(2)}×</span>
-          <button type="button" onClick={() => changeTimelineZoom(0.5)} aria-label="ซูมออกเพื่อดูภาพรวม">ภาพรวม 0.5×</button>
-          <button type="button" onClick={() => changeTimelineZoom(1)} aria-label="ซูมระดับปกติ">ปกติ 1×</button>
-          <button type="button" onClick={() => changeTimelineZoom(2)} aria-label="ซูมเข้าเพื่อปรับเสียง">ละเอียด 2×</button>
+          <div className="editorMediaPager" role="group" aria-label="ควบคุมการซูมไทม์ไลน์">
+            <button type="button" aria-pressed={timelineZoom === 0.5} onClick={() => changeTimelineZoom(0.5)} title="ภาพรวม 0.5 เท่า">− ภาพรวม</button>
+            <button type="button" aria-pressed={timelineZoom === 1} onClick={() => changeTimelineZoom(1)} title="ขนาดปกติ">1×</button>
+            <button type="button" aria-pressed={timelineZoom === 2} onClick={() => changeTimelineZoom(2)} title="ปรับเสียงละเอียด 2 เท่า">+ ละเอียด</button>
+            <label>ซูม <input aria-label="ระดับซูมไทม์ไลน์" type="range" min="0.5" max="3" step="0.25" value={timelineZoom} onChange={(event) => changeTimelineZoom(Number(event.target.value))} /></label>
+            <output>{timelineZoom.toFixed(2)}×</output>
+          </div>
         </div>
         <div className="editorPlayheadControl">
           <label htmlFor="timeline-playhead">หัวอ่านเวลา</label>
@@ -390,7 +392,7 @@ export default function TimelineEditor({ plan, onChange, seekRequest, audioLayer
         </div>
         <div className="editorMediaPager" aria-label="เลื่อนไทม์ไลน์">
           <span>🎞 ภาพ {trackClips.length}/{plan.clips.length} · 🎙 เสียง {studioAudio.filter(layer => layer.start + layer.duration >= trackVisibleStart && layer.start <= trackVisibleEnd).length}/{studioAudio.length} · เลื่อนแนวนอนได้</span>
-          <button type="button" onClick={goToSelectedClip}>ไปช็อตที่เลือก</button>
+          <button type="button" onClick={goToSelectedClip} title="เลื่อนแทร็กไปยังภาพที่เลือก">◎ ภาพที่เลือก</button>
         </div>
         <div className="editorTrackScroller" ref={trackViewportRef} onScroll={event => setTrackViewport({ left: event.currentTarget.scrollLeft, width: event.currentTarget.clientWidth })}>
           <div className="editorTrackClips" aria-label="แทร็กภาพ" style={{ position: "relative", width: trackWidth + "px", minWidth: trackWidth + "px" }}>
