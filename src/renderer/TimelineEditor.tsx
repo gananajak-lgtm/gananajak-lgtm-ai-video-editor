@@ -73,7 +73,19 @@ export default function TimelineEditor({ plan, onChange, seekRequest, audioLayer
   const audioDragOffsetRef = useRef(0);
   const draggedAudioIdRef = useRef<string | null>(null);
   const [audioDragError, setAudioDragError] = useState<string | null>(null);
+  const [selectedAudioId, setSelectedAudioId] = useState<string | null>(null);
   const studioAudio = audioLayers.filter(layer => layer.origin === "studio-dialogue");
+  const selectedAudio = studioAudio.find(layer => layer.id === selectedAudioId);
+  const moveSelectedAudio = (delta: number) => {
+    if (!selectedAudio || !onAudioLayersChange) return;
+    const start = Math.round(Math.max(0, Math.min(Math.max(0, plan.duration - selectedAudio.duration), selectedAudio.start + delta)) * 100) / 100;
+    if (studioAudio.some(other => other.id !== selectedAudio.id && start < other.start + other.duration - 0.001 && start + selectedAudio.duration > other.start + 0.001)) {
+      setAudioDragError("ไม่สามารถเลื่อนเสียงทับบรรทัดอื่นได้");
+      return;
+    }
+    setAudioDragError(null);
+    onAudioLayersChange(audioLayers.map(layer => layer.id === selectedAudio.id ? { ...layer, start } : layer));
+  };
   const dropStudioAudio = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     const id = draggedAudioIdRef.current;
@@ -91,6 +103,7 @@ export default function TimelineEditor({ plan, onChange, seekRequest, audioLayer
       return;
     }
     setAudioDragError(null);
+    setSelectedAudioId(id);
     onAudioLayersChange(audioLayers.map(layer => layer.id === id ? { ...layer, start } : layer));
   };
   const pixelsPerSecond = 24 * timelineZoom;
@@ -385,11 +398,18 @@ export default function TimelineEditor({ plan, onChange, seekRequest, audioLayer
             ))}
           </div>
           {studioAudio.length > 0 && <div className="editorTrackClips" aria-label="ลากเสียงตัวละคร" onDragOver={event => { if (draggedAudioIdRef.current) event.preventDefault(); }} onDrop={dropStudioAudio} style={{ position: "relative", width: trackWidth + "px", height: 54, borderTop: "1px solid #777" }}>
-            {studioAudio.filter(layer => layer.start + layer.duration >= trackVisibleStart && layer.start <= trackVisibleEnd).map(layer => <button type="button" draggable key={layer.id} className="editorTrackClip" onDragStart={event => { audioDragOffsetRef.current = (event.clientX - event.currentTarget.getBoundingClientRect().left) / pixelsPerSecond; draggedAudioIdRef.current = layer.id; setDraggedAudioId(layer.id); event.dataTransfer.effectAllowed = "move"; }} onDragEnd={() => { draggedAudioIdRef.current = null; setDraggedAudioId(null); }} onClick={() => seekTo(layer.start)} style={{ position: "absolute", left: layer.start * pixelsPerSecond, width: Math.max(12, layer.duration * pixelsPerSecond - 2), height: 48, overflow: "hidden" }} title={(layer.voiceLineId ?? layer.label ?? "เสียงตัวละคร") + " · " + formatTime(layer.start)}>
+            {studioAudio.filter(layer => layer.start + layer.duration >= trackVisibleStart && layer.start <= trackVisibleEnd).map(layer => <button type="button" draggable key={layer.id} className={selectedAudioId === layer.id ? "editorTrackClip editorTrackClipSelected" : "editorTrackClip"} aria-pressed={selectedAudioId === layer.id} onDragStart={event => { audioDragOffsetRef.current = (event.clientX - event.currentTarget.getBoundingClientRect().left) / pixelsPerSecond; draggedAudioIdRef.current = layer.id; setDraggedAudioId(layer.id); event.dataTransfer.effectAllowed = "move"; }} onDragEnd={() => { draggedAudioIdRef.current = null; setDraggedAudioId(null); }} onClick={() => { setSelectedAudioId(layer.id); seekTo(layer.start); }} style={{ position: "absolute", left: layer.start * pixelsPerSecond, width: Math.max(12, layer.duration * pixelsPerSecond - 2), height: 48, overflow: "hidden" }} title={(layer.voiceLineId ?? layer.label ?? "เสียงตัวละคร") + " · " + formatTime(layer.start)}>
               <span>🎙 {layer.voiceLineId ?? layer.label ?? "เสียง"}</span>
             </button>)}
           </div>}
         </div>
+        {selectedAudio && <div className="editorMediaPager" aria-label="แก้เสียงตัวละครที่เลือก">
+          <strong>🎙 {selectedAudio.voiceLineId ?? selectedAudio.label ?? "เสียงตัวละคร"}</strong>
+          <button type="button" onClick={() => moveSelectedAudio(-0.1)} disabled={!onAudioLayersChange}>◀ 0.1 วิ</button>
+          <span>เริ่ม {formatTime(selectedAudio.start)} · ยาว {selectedAudio.duration.toFixed(1)} วิ</span>
+          <button type="button" onClick={() => moveSelectedAudio(0.1)} disabled={!onAudioLayersChange}>0.1 วิ ▶</button>
+          <button type="button" onClick={() => seekTo(selectedAudio.start)}>ไปยังเสียง</button>
+        </div>}
         {audioDragError && <p role="alert">{audioDragError}</p>}
         <p className="muted">คลิกเลือกช็อต · ลากช็อตเพื่อเปลี่ยนลำดับ · ปรับจุดตัดในแผงด้านล่าง</p>
       </div>
