@@ -360,7 +360,7 @@ export default function TimelineEditor({ plan, onChange, seekRequest, audioLayer
 
       <div className="editorTrackSurface">
         <div className="editorTrackToolbar">
-          <strong>ไทม์ไลน์ภาพ</strong>
+          <strong>🎬 Timeline · ภาพ {plan.clips.length} · เสียง {studioAudio.length}</strong>
           <label>ซูม <input type="range" min="0.5" max="3" step="0.25" value={timelineZoom} onChange={(event) => changeTimelineZoom(Number(event.target.value))} /></label>
           <span>{timelineZoom.toFixed(2)}×</span>
         </div>
@@ -371,11 +371,11 @@ export default function TimelineEditor({ plan, onChange, seekRequest, audioLayer
           <button type="button" disabled={!canSplitAtPlayhead} onClick={splitAtPlayhead} title="แบ่งช็อตที่ตำแหน่งหัวอ่านเวลาโดยรักษาระยะเวลารวม">✂ แยกช็อต</button>
         </div>
         <div className="editorMediaPager" aria-label="เลื่อนไทม์ไลน์">
-          <span>แสดง {trackClips.length} จาก {plan.clips.length} คลิป · เลื่อนแนวนอนได้</span>
+          <span>🎞 ภาพ {trackClips.length}/{plan.clips.length} · 🎙 เสียง {studioAudio.filter(layer => layer.start + layer.duration >= trackVisibleStart && layer.start <= trackVisibleEnd).length}/{studioAudio.length} · เลื่อนแนวนอนได้</span>
           <button type="button" onClick={goToSelectedClip}>ไปช็อตที่เลือก</button>
         </div>
         <div className="editorTrackScroller" ref={trackViewportRef} onScroll={event => setTrackViewport({ left: event.currentTarget.scrollLeft, width: event.currentTarget.clientWidth })}>
-          <div className="editorTrackClips" style={{ position: "relative", width: trackWidth + "px", minWidth: trackWidth + "px" }}>
+          <div className="editorTrackClips" aria-label="แทร็กภาพ" style={{ position: "relative", width: trackWidth + "px", minWidth: trackWidth + "px" }}>
             {trackClips.map(({ clip, index }) => (
               <button
                 type="button"
@@ -397,7 +397,7 @@ export default function TimelineEditor({ plan, onChange, seekRequest, audioLayer
               </button>
             ))}
           </div>
-          {studioAudio.length > 0 && <div className="editorTrackClips" aria-label="ลากเสียงตัวละคร" onDragOver={event => { if (draggedAudioIdRef.current) event.preventDefault(); }} onDrop={dropStudioAudio} style={{ position: "relative", width: trackWidth + "px", height: 54, borderTop: "1px solid #777" }}>
+          {studioAudio.length > 0 && <div className="editorTrackClips" aria-label="แทร็กเสียงตัวละคร · ลากคลิปเพื่อปรับเวลา" onDragOver={event => { if (draggedAudioIdRef.current) event.preventDefault(); }} onDrop={dropStudioAudio} style={{ position: "relative", width: trackWidth + "px", height: 54, borderTop: "1px solid #777" }}>
             {studioAudio.filter(layer => layer.start + layer.duration >= trackVisibleStart && layer.start <= trackVisibleEnd).map(layer => <button type="button" draggable key={layer.id} className={selectedAudioId === layer.id ? "editorTrackClip editorTrackClipSelected" : "editorTrackClip"} aria-pressed={selectedAudioId === layer.id} onDragStart={event => { audioDragOffsetRef.current = (event.clientX - event.currentTarget.getBoundingClientRect().left) / pixelsPerSecond; draggedAudioIdRef.current = layer.id; setDraggedAudioId(layer.id); event.dataTransfer.effectAllowed = "move"; }} onDragEnd={() => { draggedAudioIdRef.current = null; setDraggedAudioId(null); }} onClick={() => { setSelectedAudioId(layer.id); seekTo(layer.start); }} style={{ position: "absolute", left: layer.start * pixelsPerSecond, width: Math.max(12, layer.duration * pixelsPerSecond - 2), height: 48, overflow: "hidden" }} title={(layer.voiceLineId ?? layer.label ?? "เสียงตัวละคร") + " · " + formatTime(layer.start)}>
               <span>🎙 {layer.voiceLineId ?? layer.label ?? "เสียง"}</span>
             </button>)}
@@ -411,7 +411,7 @@ export default function TimelineEditor({ plan, onChange, seekRequest, audioLayer
           <button type="button" onClick={() => seekTo(selectedAudio.start)}>ไปยังเสียง</button>
         </div>}
         {audioDragError && <p role="alert">{audioDragError}</p>}
-        <p className="muted">คลิกเลือกช็อต · ลากช็อตเพื่อเปลี่ยนลำดับ · ปรับจุดตัดในแผงด้านล่าง</p>
+        <p className="muted">แทร็กบน: ภาพ (ลากเพื่อจัดลำดับ) · แทร็กล่าง: เสียงตัวละคร (ลากเพื่อปรับเวลา) · คลิกเสียงเพื่อปรับละเอียด ±0.1 วินาที</p>
       </div>
 
       <div className="manualEditorGrid">
