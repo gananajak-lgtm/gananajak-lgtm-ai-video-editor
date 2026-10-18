@@ -74,9 +74,9 @@ export default function TimelineEditor({ plan, onChange, seekRequest, audioLayer
   const draggedAudioIdRef = useRef<string | null>(null);
   const [audioDragError, setAudioDragError] = useState<string | null>(null);
   const [selectedAudioId, setSelectedAudioId] = useState<string | null>(null);
-  const studioAudio = audioLayers.filter(layer => layer.origin === "studio-dialogue");
+  const studioAudio = useMemo(() => audioLayers.filter(layer => layer.origin === "studio-dialogue"), [audioLayers]);
   const selectedAudio = studioAudio.find(layer => layer.id === selectedAudioId);
-  const orderedStudioAudio = [...studioAudio].sort((a, b) => a.start - b.start || a.id.localeCompare(b.id));
+  const orderedStudioAudio = useMemo(() => [...studioAudio].sort((a, b) => a.start - b.start || a.id.localeCompare(b.id)), [studioAudio]);
   const selectedAudioIndex = orderedStudioAudio.findIndex(layer => layer.id === selectedAudioId);
   const focusSelectedAudio = () => {
     if (!selectedAudio) return;
@@ -125,9 +125,12 @@ export default function TimelineEditor({ plan, onChange, seekRequest, audioLayer
   const trackWidth = Math.max(900, plan.duration * pixelsPerSecond);
   const trackVisibleStart = Math.max(0, trackViewport.left / pixelsPerSecond - 6);
   const trackVisibleEnd = (trackViewport.left + trackViewport.width) / pixelsPerSecond + 6;
-  const trackClips = plan.clips.map((clip, index) => ({ clip, index })).filter(({ clip }) =>
+  const trackClips = useMemo(() => plan.clips.map((clip, index) => ({ clip, index })).filter(({ clip }) =>
     clip.start + clip.duration >= trackVisibleStart && clip.start <= trackVisibleEnd
-  );
+  ), [plan.clips, trackVisibleStart, trackVisibleEnd]);
+  const visibleStudioAudio = useMemo(() => studioAudio.filter(layer =>
+    layer.start + layer.duration >= trackVisibleStart && layer.start <= trackVisibleEnd
+  ), [studioAudio, trackVisibleStart, trackVisibleEnd]);
   const scrollTimelineTo = (left: number) => {
     const viewport = trackViewportRef.current;
     if (!viewport) return;
@@ -391,7 +394,7 @@ export default function TimelineEditor({ plan, onChange, seekRequest, audioLayer
           <button type="button" disabled={!canSplitAtPlayhead} onClick={splitAtPlayhead} title="แบ่งช็อตที่ตำแหน่งหัวอ่านเวลาโดยรักษาระยะเวลารวม">✂ แยกช็อต</button>
         </div>
         <div className="editorMediaPager" aria-label="เลื่อนไทม์ไลน์">
-          <span>🎞 ภาพ {trackClips.length}/{plan.clips.length} · 🎙 เสียง {studioAudio.filter(layer => layer.start + layer.duration >= trackVisibleStart && layer.start <= trackVisibleEnd).length}/{studioAudio.length} · เลื่อนแนวนอนได้</span>
+          <span>🎞 ภาพ {trackClips.length}/{plan.clips.length} · 🎙 เสียง {visibleStudioAudio.length}/{studioAudio.length} · เลื่อนแนวนอนได้</span>
           <button type="button" onClick={goToSelectedClip} title="เลื่อนแทร็กไปยังภาพที่เลือก">◎ ภาพที่เลือก</button>
         </div>
         <div className="editorTrackScroller" ref={trackViewportRef} onScroll={event => setTrackViewport({ left: event.currentTarget.scrollLeft, width: event.currentTarget.clientWidth })}>
@@ -418,7 +421,7 @@ export default function TimelineEditor({ plan, onChange, seekRequest, audioLayer
             ))}
           </div>
           {studioAudio.length > 0 && <div className="editorTrackClips" aria-label="แทร็กเสียงตัวละคร · ลากคลิปเพื่อปรับเวลา" onDragOver={event => { if (draggedAudioIdRef.current) event.preventDefault(); }} onDrop={dropStudioAudio} style={{ position: "relative", width: trackWidth + "px", height: 54, borderTop: "1px solid #777" }}>
-            {studioAudio.filter(layer => layer.start + layer.duration >= trackVisibleStart && layer.start <= trackVisibleEnd).map(layer => <button type="button" draggable key={layer.id} className={selectedAudioId === layer.id ? "editorTrackClip editorTrackClipSelected" : "editorTrackClip"} aria-pressed={selectedAudioId === layer.id} onDragStart={event => { audioDragOffsetRef.current = (event.clientX - event.currentTarget.getBoundingClientRect().left) / pixelsPerSecond; draggedAudioIdRef.current = layer.id; setDraggedAudioId(layer.id); event.dataTransfer.effectAllowed = "move"; }} onDragEnd={() => { draggedAudioIdRef.current = null; setDraggedAudioId(null); }} onClick={() => { setSelectedAudioId(layer.id); seekTo(layer.start); }} style={{ position: "absolute", left: layer.start * pixelsPerSecond, width: Math.max(12, layer.duration * pixelsPerSecond - 2), height: 48, overflow: "hidden" }} title={(layer.voiceLineId ?? layer.label ?? "เสียงตัวละคร") + " · " + formatTime(layer.start)}>
+            {visibleStudioAudio.map(layer => <button type="button" draggable key={layer.id} className={selectedAudioId === layer.id ? "editorTrackClip editorTrackClipSelected" : "editorTrackClip"} aria-pressed={selectedAudioId === layer.id} onDragStart={event => { audioDragOffsetRef.current = (event.clientX - event.currentTarget.getBoundingClientRect().left) / pixelsPerSecond; draggedAudioIdRef.current = layer.id; setDraggedAudioId(layer.id); event.dataTransfer.effectAllowed = "move"; }} onDragEnd={() => { draggedAudioIdRef.current = null; setDraggedAudioId(null); }} onClick={() => { setSelectedAudioId(layer.id); seekTo(layer.start); }} style={{ position: "absolute", left: layer.start * pixelsPerSecond, width: Math.max(12, layer.duration * pixelsPerSecond - 2), height: 48, overflow: "hidden" }} title={(layer.voiceLineId ?? layer.label ?? "เสียงตัวละคร") + " · " + formatTime(layer.start)}>
               <span>🎙 {layer.voiceLineId ?? layer.label ?? "เสียง"}</span>
             </button>)}
           </div>}
