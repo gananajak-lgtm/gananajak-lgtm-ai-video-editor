@@ -71,11 +71,13 @@ export default function TimelineEditor({ plan, onChange, seekRequest, audioLayer
   const [trackViewport, setTrackViewport] = useState({ left: 0, width: 900 });
   const [draggedAudioId, setDraggedAudioId] = useState<string | null>(null);
   const audioDragOffsetRef = useRef(0);
+  const draggedAudioIdRef = useRef<string | null>(null);
   const [audioDragError, setAudioDragError] = useState<string | null>(null);
   const studioAudio = audioLayers.filter(layer => layer.origin === "studio-dialogue");
   const dropStudioAudio = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    const id = draggedAudioId;
+    const id = draggedAudioIdRef.current;
+    draggedAudioIdRef.current = null;
     setDraggedAudioId(null);
     if (!id || !onAudioLayersChange) return;
     const target = studioAudio.find(layer => layer.id === id);
@@ -382,8 +384,8 @@ export default function TimelineEditor({ plan, onChange, seekRequest, audioLayer
               </button>
             ))}
           </div>
-          {studioAudio.length > 0 && <div className="editorTrackClips" aria-label="ลากเสียงตัวละคร" onDragOver={event => { if (draggedAudioId) event.preventDefault(); }} onDrop={dropStudioAudio} style={{ position: "relative", width: trackWidth + "px", height: 54, borderTop: "1px solid #777" }}>
-            {studioAudio.filter(layer => layer.start + layer.duration >= trackVisibleStart && layer.start <= trackVisibleEnd).map(layer => <button type="button" draggable key={layer.id} className="editorTrackClip" onDragStart={event => { audioDragOffsetRef.current = (event.clientX - event.currentTarget.getBoundingClientRect().left) / pixelsPerSecond; setDraggedAudioId(layer.id); event.dataTransfer.effectAllowed = "move"; }} onDragEnd={() => setDraggedAudioId(null)} onClick={() => seekTo(layer.start)} style={{ position: "absolute", left: layer.start * pixelsPerSecond, width: Math.max(12, layer.duration * pixelsPerSecond - 2), height: 48, overflow: "hidden" }} title={(layer.voiceLineId ?? layer.label ?? "เสียงตัวละคร") + " · " + formatTime(layer.start)}>
+          {studioAudio.length > 0 && <div className="editorTrackClips" aria-label="ลากเสียงตัวละคร" onDragOver={event => { if (draggedAudioIdRef.current) event.preventDefault(); }} onDrop={dropStudioAudio} style={{ position: "relative", width: trackWidth + "px", height: 54, borderTop: "1px solid #777" }}>
+            {studioAudio.filter(layer => layer.start + layer.duration >= trackVisibleStart && layer.start <= trackVisibleEnd).map(layer => <button type="button" draggable key={layer.id} className="editorTrackClip" onDragStart={event => { audioDragOffsetRef.current = (event.clientX - event.currentTarget.getBoundingClientRect().left) / pixelsPerSecond; draggedAudioIdRef.current = layer.id; setDraggedAudioId(layer.id); event.dataTransfer.effectAllowed = "move"; }} onDragEnd={() => { draggedAudioIdRef.current = null; setDraggedAudioId(null); }} onClick={() => seekTo(layer.start)} style={{ position: "absolute", left: layer.start * pixelsPerSecond, width: Math.max(12, layer.duration * pixelsPerSecond - 2), height: 48, overflow: "hidden" }} title={(layer.voiceLineId ?? layer.label ?? "เสียงตัวละคร") + " · " + formatTime(layer.start)}>
               <span>🎙 {layer.voiceLineId ?? layer.label ?? "เสียง"}</span>
             </button>)}
           </div>}
