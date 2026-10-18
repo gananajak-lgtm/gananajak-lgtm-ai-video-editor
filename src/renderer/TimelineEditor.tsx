@@ -76,6 +76,15 @@ export default function TimelineEditor({ plan, onChange, seekRequest, audioLayer
   const [selectedAudioId, setSelectedAudioId] = useState<string | null>(null);
   const studioAudio = audioLayers.filter(layer => layer.origin === "studio-dialogue");
   const selectedAudio = studioAudio.find(layer => layer.id === selectedAudioId);
+  const orderedStudioAudio = [...studioAudio].sort((a, b) => a.start - b.start || a.id.localeCompare(b.id));
+  const selectedAudioIndex = orderedStudioAudio.findIndex(layer => layer.id === selectedAudioId);
+  const selectAdjacentAudio = (offset: number) => {
+    const index = selectedAudioIndex < 0 ? 0 : selectedAudioIndex + offset;
+    const layer = orderedStudioAudio[index];
+    if (!layer) return;
+    setSelectedAudioId(layer.id);
+    seekTo(layer.start);
+  };
   const moveSelectedAudio = (delta: number) => {
     if (!selectedAudio || !onAudioLayersChange) return;
     const start = Math.round(Math.max(0, Math.min(Math.max(0, plan.duration - selectedAudio.duration), selectedAudio.start + delta)) * 100) / 100;
@@ -404,7 +413,9 @@ export default function TimelineEditor({ plan, onChange, seekRequest, audioLayer
           </div>}
         </div>
         {selectedAudio && <div className="editorMediaPager" aria-label="แก้เสียงตัวละครที่เลือก">
+          <button type="button" disabled={selectedAudioIndex <= 0} onClick={() => selectAdjacentAudio(-1)} title="เลือกเสียงก่อนหน้า">◀ เสียงก่อน</button>
           <strong>🎙 {selectedAudio.voiceLineId ?? selectedAudio.label ?? "เสียงตัวละคร"}</strong>
+          <button type="button" disabled={selectedAudioIndex < 0 || selectedAudioIndex >= orderedStudioAudio.length - 1} onClick={() => selectAdjacentAudio(1)} title="เลือกเสียงถัดไป">เสียงถัดไป ▶</button>
           <button type="button" onClick={() => moveSelectedAudio(-0.1)} disabled={!onAudioLayersChange}>◀ 0.1 วิ</button>
           <span>เริ่ม {formatTime(selectedAudio.start)} · ยาว {selectedAudio.duration.toFixed(1)} วิ</span>
           <button type="button" onClick={() => moveSelectedAudio(0.1)} disabled={!onAudioLayersChange}>0.1 วิ ▶</button>
