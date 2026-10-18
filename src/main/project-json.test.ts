@@ -280,3 +280,31 @@ test("wrong-episode saved file is rejected without changing the original EP", as
     await fs.rm(directory, { recursive: true, force: true });
   }
 });
+
+test("dragged Studio dialogue timing survives save, reopen, and a second edit without changing MP3 metadata", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "studio-dialogue-timing-"));
+  const file = path.join(directory, "ep1", "timeline", "editor.aivproj");
+  try {
+    const initial: ProjectDocument = {
+      schemaVersion: 1, id: "episode-ep1", title: "EP 1",
+      createdAt: "2026-10-18T00:00:00Z", updatedAt: "2026-10-18T00:00:00Z",
+      images: [], narration: null, transcript: null, editingPlan: null,
+      timeline: null,
+      audioLayers: [
+        { id: "studio-dialogue:ep1:line-1", filePath: "/voice/line-1.mp3", kind: "dialogue", origin: "studio-dialogue", voiceLineId: "line-1", voiceJobId: "v4-job-1", start: 0, duration: 1.5, volume: 1, loop: false, fadeIn: 0, fadeOut: 0 },
+        { id: "studio-dialogue:ep1:line-2", filePath: "/voice/line-2.mp3", kind: "dialogue", origin: "studio-dialogue", voiceLineId: "line-2", voiceJobId: "v4-job-2", start: 2, duration: 2, volume: 1, loop: false, fadeIn: 0, fadeOut: 0 }
+      ]
+    };
+    await writeProject(file, initial);
+    const before = await readProjectFile(file);
+    const moved = { ...before, audioLayers: before.audioLayers.map(layer => layer.voiceLineId === "line-2" ? { ...layer, start: 2.7 } : layer) };
+    await writeProject(file, moved);
+    const reopened = await readProjectFile(file);
+    assert.equal(reopened.audioLayers.find(layer => layer.voiceLineId === "line-2")?.start, 2.7);
+    assert.deepEqual(reopened.audioLayers.map(({ filePath, voiceJobId, duration }) => ({ filePath, voiceJobId, duration })), initial.audioLayers.map(({ filePath, voiceJobId, duration }) => ({ filePath, voiceJobId, duration })));
+    await writeProject(file, { ...reopened, audioLayers: reopened.audioLayers.map(layer => layer.voiceLineId === "line-2" ? { ...layer, start: 3.1 } : layer) });
+    assert.equal((await readProjectFile(file)).audioLayers[1].start, 3.1);
+  } finally {
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+});
