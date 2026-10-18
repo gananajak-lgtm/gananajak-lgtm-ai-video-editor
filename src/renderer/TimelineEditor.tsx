@@ -392,7 +392,15 @@ export default function TimelineEditor({ plan, onChange, seekRequest, audioLayer
           <span>🎞 ภาพ {trackClips.length}/{plan.clips.length} · 🎙 เสียง {visibleStudioAudio.length}/{studioAudio.length} · เลื่อนแนวนอนได้</span>
           <button type="button" onClick={goToSelectedClip} title="เลื่อนแทร็กไปยังภาพที่เลือก">◎ ภาพที่เลือก</button>
         </div>
-        <div className="editorTrackScroller" ref={trackViewportRef} onScroll={event => setTrackViewport({ left: event.currentTarget.scrollLeft, width: event.currentTarget.clientWidth })}>
+        <div className="editorTrackScroller" ref={trackViewportRef} onScroll={event => {
+          const { scrollLeft: left, clientWidth: width } = event.currentTarget;
+          // Viewport clips include a six-second overscan; skip tiny scroll
+          // updates without affecting what is rendered at the viewport edges.
+          setTrackViewport(previous =>
+            Math.floor(previous.left / 48) === Math.floor(left / 48) && previous.width === width
+              ? previous : { left, width }
+          );
+        }}>
           <div className="editorTrackClips" aria-label="แทร็กภาพ" style={{ position: "relative", width: trackWidth + "px", minWidth: trackWidth + "px" }}>
             {trackClips.map(({ clip, index }) => (
               <button
