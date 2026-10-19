@@ -49,3 +49,13 @@ test("invalid sidecar cues are rejected rather than silently ignored",()=>{
     assert.throws(()=>parseMyCutStoryboardLineCue(cue,3),/storyboard line cue/i);
   }
 });
+
+
+test("CRLF sidecar line cues are parsed without swallowing following text",()=>{
+  assert.equal(parseMyCutStoryboardLineCue("บรรทัด: 2\r\nรายละเอียดภาพ",3),1);
+  assert.equal(parseMyCutStoryboardLineCue("line: 1\r\nportrait",3),0);
+});
+test("duplicate explicit storyboard line cues are rejected",()=>{
+  assert.throws(()=>parseMyCutStoryboardLineCue("line: 1\nบรรทัด: 2",3),/Duplicate storyboard line cues/);
+  assert.throws(()=>parseMyCutStoryboardLineCue("line: 1\r\nline: 1",3),/Duplicate storyboard line cues/);
+});
