@@ -588,7 +588,13 @@ export function suggestMyCutImageOrder(
   );
   const lines = narration.map(line => tokens(line.text || ""));
   const proposals = images.map((image, originalIndex) => {
-    const words = tokens((descriptions[image] || "") + " " + path.parse(image).name);
+    const caption = descriptions[image] || "";
+    const explicit = caption.match(/(?:^|\\n)\\s*(?:line|บรรทัด)\\s*[:：=]\\s*(\\d+)\\s*(?:\\n|$)/i);
+    const specified = explicit ? Number(explicit[1]) - 1 : -1;
+    if (Number.isInteger(specified) && specified >= 0 && specified < narration.length) {
+      return { image, lineIndex: specified, score: 100, matched: true, originalIndex };
+    }
+    const words = tokens(caption + " " + path.parse(image).name);
     const scores = lines.map(wordsInLine => [...words].filter(word => wordsInLine.has(word)).length);
     const high = Math.max(0, ...scores);
     const winners = scores.reduce<number[]>((list, score, index) => {
