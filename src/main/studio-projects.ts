@@ -676,7 +676,7 @@ export async function exportStudioEpisodeToMyCut(
         const sidecar = image + ".txt";
         if ((await stat(sidecar)).size > 8192) { cues.push(null); continue; }
         const caption = await readSidecar(sidecar, "utf8");
-        const match = caption.match(/(?:^|\\n)\\s*(?:line|บรรทัด)\\s*[:：=]\\s*(\\d+)\\s*(?:\\n|$)/i);
+        const match = caption.match(/(?:^|\n)\s*(?:line|บรรทัด)\s*[:：=]\s*(\d+)\s*(?:\n|$)/i);
         const line = match ? Number(match[1]) - 1 : -1;
         cues.push(Number.isInteger(line) && line >= 0 && line < lineCount ? line : null);
       } catch (error) {
