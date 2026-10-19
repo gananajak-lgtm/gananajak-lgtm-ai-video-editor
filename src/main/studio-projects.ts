@@ -576,9 +576,10 @@ export async function prepareStudioEpisodeMyCutVoiceManifest(projectId: string, 
 /** Conservative Thai/English filename ↔ narration matching, not visual AI. */
 export function suggestMyCutImageOrder(
   images: string[],
-  narration: Array<{ text: string }>
+  narration: Array<{ text: string }>,
+  descriptions: Record<string, string> = {}
 ): Array<{ image: string; lineIndex: number; score: number; matched: boolean }> {
-  // Conservative heuristic: require two distinct words in both filename and dialogue.
+  // Optional sidecar captions are read locally; never sent to an external provider.\n  // Conservative heuristic: require two distinct words in both filename and dialogue.
   // Unmatched/ambiguous pictures retain their original slots and order.
   const tokens = (value: string) => new Set(
     value.toLowerCase().normalize("NFKC")
@@ -587,7 +588,7 @@ export function suggestMyCutImageOrder(
   );
   const lines = narration.map(line => tokens(line.text || ""));
   const proposals = images.map((image, originalIndex) => {
-    const words = tokens(path.parse(image).name);
+    const words = tokens((descriptions[image] || "") + " " + path.parse(image).name);
     const scores = lines.map(wordsInLine => [...words].filter(word => wordsInLine.has(word)).length);
     const high = Math.max(0, ...scores);
     const winners = scores.reduce<number[]>((list, score, index) => {
