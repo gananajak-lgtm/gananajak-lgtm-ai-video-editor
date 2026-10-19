@@ -319,14 +319,28 @@ ipcMain.handle("studio:export-mycut", async (_event, projectId: string, episodeI
     const narration = orderedLineIds.length
       ? orderedLineIds.map(id => lineLookup.get(id)).filter((line): line is NonNullable<typeof line> => !!line)
       : suggestion.lines;
-    const matches = suggestMyCutImageOrder(imagePaths, narration);
+    // Optional local sidecar caption: shot-001.png.txt (UTF-8).
+    // The image itself is not uploaded and no paid vision API is invoked.
+    const { readFile } = await import("node:fs/promises");
+    const descriptions: Record<string, string> = {};
+    for (const file of imagePaths) {
+      try {
+        const sidecar = file + ".txt";
+        const { stat } = await import("node:fs/promises");
+        if ((await stat(sidecar)).size > 8192) continue;
+        descriptions[file] = (await readFile(sidecar, "utf8")).slice(0, 8192);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      }
+    }
+    const matches = suggestMyCutImageOrder(imagePaths, narration, descriptions);
     const hitCount = matches.filter(item => item.matched).length;
     if (hitCount > 0) {
       const choice = await dialog.showMessageBox({
         type: "question",
         title: "Optional image ordering suggestion",
         message: "Use suggested order based on filenames and narration?",
-        detail: `Conservative filename-word matching only (at least 2 words, one best line). Uncertain images retain their positions. This is NOT visual AI.\nMatched: ${hitCount}/${imagePaths.length}\n\nSuggested order:\n${matches.slice(0, 15).map((m, i) => `${i + 1}. ${path.basename(m.image)} ${m.matched ? "(text match)" : "(no match)"}`).join("\n")}`,
+        detail: `Conservative filename / optional .png.txt caption matching (2 words, one best line). Uncertain images retain their positions. This is NOT visual AI.\nMatched: ${hitCount}/${imagePaths.length}\n\nSuggested order:\n${matches.slice(0, 15).map((m, i) => `${i + 1}. ${path.basename(m.image)} ${m.matched ? "(text match)" : "(no match)"}`).join("\n")}`,
         buttons: ["Keep selected order", "Use suggested order", "Cancel export"],
         defaultId: 0,
         cancelId: 2,
