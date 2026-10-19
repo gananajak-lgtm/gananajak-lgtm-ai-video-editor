@@ -699,7 +699,10 @@ export async function exportStudioEpisodeToMyCut(
       // Never allow a cue to cross the previous image or leave no time
       // for the remaining images.
       const safe = pinned > cuts[index - 1] && pinned < cursor ? pinned : proposal;
-      cuts.push(Math.max(cuts[index - 1], Math.min(cursor, safe)));
+      if (!(safe > cuts[index - 1] && safe < cursor)) {
+        throw new Error("Storyboard cues result in an invalid image duration");
+      }
+      cuts.push(safe);
     }
     cuts.push(cursor);
     imagePaths.forEach((file, index) => {
