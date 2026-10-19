@@ -537,3 +537,38 @@ export async function registerStudioEpisodeVoiceAudio(
   try { await pending; }
   finally { if (voiceManifestQueues.get(key) === pending) voiceManifestQueues.delete(key); }
 }
+
+/**
+ * Read-only bridge for MyCut interchange. Only already validated MP3 files are included.
+ * Missing audio is never regenerated automatically (no ElevenLabs calls or credit use).
+ */
+export async function prepareStudioEpisodeMyCutVoiceManifest(projectId: string, episodeId: string) {
+  const project = (await readIndex()).find(item => item.id === projectId);
+  const episode = project?.episodes.find(item => item.id === episodeId);
+  if (!project || !episode) throw new Error("Episode not found");
+  const entries = await loadStudioEpisodeVoiceAudio(projectId, episodeId);
+  const lines: Array<{ lineId: string; audio: string; duration: number; speaker: string; text: string }> = [];
+  for (const [lineId, entry] of Object.entries(entries)) {
+    const audio = await findReusableStudioEpisodeAudio(projectId, episodeId, entry.outputPath);
+    if (!audio) continue;
+    const duration = await getStudioVoiceAudioDuration(projectId, episodeId, entry.outputPath);
+    if (!Number.isFinite(duration) || duration <= 0) continue;
+    lines.push({ lineId, audio, duration, speaker: entry.speaker ?? "ผู้บรรยาย", text: entry.text ?? "" });
+  }
+  // Preserve declared generation order if available; never sort by a random line UUID.
+  lines.sort((a, b) => {
+    const aOrder = Number(a.lineId.match(/(?:^|[-_])line[-_](\\d+)$/i)?.[1]);
+    const bOrder = Number(b.lineId.match(/(?:^|[-_])line[-_](\\d+)$/i)?.[1]);
+    return Number.isFinite(aOrder) && Number.isFinite(bOrder) ? aOrder - bOrder : 0;
+  });
+  return {
+    title: `${project.title} — ${episode.title}`,
+    width: 1080,
+    height: 1920,
+    fps: 30,
+    gapSeconds: 0.3,
+    lines,
+    visuals: [],
+    note: "Only existing verified MP3 assets. Add frames before export to avoid blank video."
+  };
+}
