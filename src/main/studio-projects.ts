@@ -1,4 +1,4 @@
-import { computeMyCutImageCuts } from "../shared/mycut-image-cuts";
+import { computeMyCutImageCuts, parseMyCutStoryboardLineCue } from "../shared/mycut-image-cuts";
 import { app } from "electron";
 import { mkdir, readFile, writeFile, rename, readdir, access, unlink } from "node:fs/promises";
 import { readProjectFile, writeProject } from "./project-json";
@@ -669,7 +669,7 @@ export async function exportStudioEpisodeToMyCut(
     const imageCount = imagePaths.length;
     // Explicit sidecar cues ("line: 3" / "บรรทัด: 3") control *time*, not only image order.
     // Missing cues keep voice-boundary distribution. Invalid / non-monotonic cues
-    // are ignored to avoid negative-duration or overlapping V1 clips.
+    // are rejected before writing a project, rather than silently shifting a shot.
     const { readFile: readSidecar } = await import("node:fs/promises");
     const cues: Array<number | null> = [];
     for (const image of imagePaths) {
@@ -677,9 +677,7 @@ export async function exportStudioEpisodeToMyCut(
         const sidecar = image + ".txt";
         if ((await stat(sidecar)).size > 8192) { cues.push(null); continue; }
         const caption = await readSidecar(sidecar, "utf8");
-        const match = caption.match(/(?:^|\n)\s*(?:line|บรรทัด)\s*[:：=]\s*(\d+)\s*(?:\n|$)/i);
-        const line = match ? Number(match[1]) - 1 : -1;
-        cues.push(Number.isInteger(line) && line >= 0 && line < lineCount ? line : null);
+        cues.push(parseMyCutStoryboardLineCue(caption, lineCount));
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
         cues.push(null);
