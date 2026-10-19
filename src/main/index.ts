@@ -340,7 +340,7 @@ ipcMain.handle("studio:export-mycut", async (_event, projectId: string, episodeI
         type: "question",
         title: "Optional image ordering suggestion",
         message: "Use suggested order based on filenames and narration?",
-        detail: `Conservative filename / optional .png.txt caption matching (2 words, one best line). Uncertain images retain their positions. This is NOT visual AI.\nMatched: ${hitCount}/${imagePaths.length}\n\nSuggested order:\n${matches.slice(0, 15).map((m, i) => `${i + 1}. ${path.basename(m.image)} ${m.matched ? "(text match)" : "(no match)"}`).join("\n")}`,
+        detail: `Optional image-name.txt captions support line: 3 or บรรทัด: 3 for exact placement. Otherwise require 2 matching words. Uncertain images retain their positions. This is NOT visual AI.\nMatched: ${hitCount}/${imagePaths.length}\n\nSuggested order:\n${matches.slice(0, 15).map((m, i) => `${i + 1}. ${path.basename(m.image)} ${m.matched ? "(text match)" : "(no match)"}`).join("\n")}`,
         buttons: ["Keep selected order", "Use suggested order", "Cancel export"],
         defaultId: 0,
         cancelId: 2,
