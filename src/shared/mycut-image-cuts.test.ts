@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { computeMyCutImageCuts } from "./mycut-image-cuts";
+import { computeMyCutImageCuts, parseMyCutStoryboardLineCue } from "./mycut-image-cuts";
 
 test("V1 covers the 0.3-second voice pause with no gaps", () => {
   const cuts=computeMyCutImageCuts([0,4.3,7.3],11,3,[null,null,null]);
@@ -37,4 +37,15 @@ test("first image may explicitly reference line one at zero",()=>{
 });
 test("invalid first image cue rejects even a single full-length image",()=>{
   assert.throws(()=>computeMyCutImageCuts([0,4.3],8,1,[2]),/Conflicting storyboard line cue at image 1/);
+});
+
+test("sidecar line cues recognize English and Thai locations",()=>{
+  assert.equal(parseMyCutStoryboardLineCue("line: 2\nwalking",3),1);
+  assert.equal(parseMyCutStoryboardLineCue("บรรทัด: 3\nฉากป่า",3),2);
+  assert.equal(parseMyCutStoryboardLineCue("plain caption",3),null);
+});
+test("invalid sidecar cues are rejected rather than silently ignored",()=>{
+  for (const cue of ["line: 0","line: 999","line: abc","บรรทัด: -1","line: 1.5"]) {
+    assert.throws(()=>parseMyCutStoryboardLineCue(cue,3),/storyboard line cue/i);
+  }
 });
