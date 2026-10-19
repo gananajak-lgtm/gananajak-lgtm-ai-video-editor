@@ -575,7 +575,7 @@ export async function prepareStudioEpisodeMyCutVoiceManifest(projectId: string, 
 
 /** Write a new MyCut project directly from existing MP3 assets; never generate paid audio. */
 export async function exportStudioEpisodeToMyCut(
-  projectId: string, episodeId: string, orderedLineIds: string[], destination: string
+  projectId: string, episodeId: string, orderedLineIds: string[], destination: string, imagePaths: string[] = []
 ): Promise<{ path: string; audioClips: number; duration: number }> {
   if (!Array.isArray(orderedLineIds) || orderedLineIds.length > 10000 ||
       orderedLineIds.some(value => typeof value !== "string" || !value || value.length > 250) ||
@@ -608,6 +608,31 @@ export async function exportStudioEpisodeToMyCut(
       track: "A1", start: cursor, in: 0, dur: line.duration, thumb: null });
     cursor += line.duration + (index === selected.length - 1 ? 0 : 0.3);
   });
+  // Fill V1 for the entire voice timeline, including the 0.3-second speech pauses.
+  // The user selects images explicitly; no scene matching or paid AI call occurs here.
+  if (!Array.isArray(imagePaths) || imagePaths.length > 500 ||
+      imagePaths.some(file => typeof file !== "string" || !file ||
+        ![".png", ".jpg", ".jpeg", ".webp", ".bmp"].includes(path.extname(file).toLowerCase()))) {
+    throw new Error("Invalid image selection");
+  }
+  const { stat } = await import("node:fs/promises");
+  for (const file of imagePaths) {
+    if (!(await stat(file)).isFile()) throw new Error("Image not found: " + path.basename(file));
+  }
+  if (imagePaths.length > 0) {
+    const slice = cursor / imagePaths.length;
+    imagePaths.forEach((file, index) => {
+      const start = index * slice;
+      const end = index === imagePaths.length - 1 ? cursor : (index + 1) * slice;
+      const mediaId = "m-" + randomUUID();
+      media.push({ id: mediaId, path: file, name: path.basename(file),
+        kind: "image", dur: 0, w: 1080, h: 1920, hasAudio: false });
+      clips.push({ ...defaults, id: "c-" + randomUUID(), kind: "image",
+        mediaId, path: file, name: path.basename(file),
+        w: 1080, h: 1920, hasAudio: false, srcDur: end - start,
+        track: "V1", start, in: 0, dur: end - start, thumb: null });
+    });
+  }
   const project = {
     id: "p-" + randomUUID(), name: manifest.title,
     created: Date.now(), updated: Date.now(),
