@@ -48,9 +48,10 @@ export function computeMyCutImageCuts(
 
 /** Read an optional 1-based line cue without silently discarding invalid references. */
 export function parseMyCutStoryboardLineCue(caption: string, lineCount: number): number | null {
-  const match = caption.match(/(?:^|\n)\s*(?:line|บรรทัด)\s*[:：=]\s*([^\r\n]*)/i);
-  if (!match) return null;
-  const value = match[1].trim();
+  const matches = [...caption.matchAll(/(?:^|\r?\n)[ \t]*(?:line|บรรทัด)[ \t]*[:：=][ \t]*([^\r\n]*)/gi)];
+  if (!matches.length) return null;
+  if (matches.length > 1) throw new Error("Duplicate storyboard line cues");
+  const value = matches[0][1].trim();
   if (!/^\d+$/.test(value)) throw new Error("Invalid storyboard line cue");
   const oneBased = Number(value);
   if (!Number.isSafeInteger(oneBased) || oneBased < 1 || oneBased > lineCount) {
