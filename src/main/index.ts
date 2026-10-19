@@ -300,14 +300,14 @@ ipcMain.handle("studio:export-mycut", async (_event, projectId: string, episodeI
   const total = selectedDurations.reduce((sum, duration) => sum + duration, 0) +
     Math.max(0, selectedDurations.length - 1) * 0.3;
   const imageSummary = imagePaths.length
-    ? imagePaths.slice(0, 12).map((file, index) => `${index + 1}. ${path.basename(file)}`).join("\\n") +
-      (imagePaths.length > 12 ? `\\n... and ${imagePaths.length - 12} more images` : "")
+    ? imagePaths.slice(0, 12).map((file, index) => `${index + 1}. ${path.basename(file)}`).join("\n") +
+      (imagePaths.length > 12 ? `\n... and ${imagePaths.length - 12} more images` : "")
     : "No images selected; V1 will be empty.";
   const approval = await dialog.showMessageBox({
     type: "question",
     title: "Review MyCut timeline before export",
     message: "Confirm new MyCut project?",
-    detail: `${selectedDurations.length} voice lines on A1 (0.3s pauses)\\n${imagePaths.length} images on continuous V1\\nDuration: ${total.toFixed(2)} seconds\\n\\nImage order:\\n${imageSummary}\\n\\nNo TTS credits. Existing projects will not be overwritten.`,
+    detail: `${selectedDurations.length} voice lines on A1 (0.3s pauses)\n${imagePaths.length} images on continuous V1\nDuration: ${total.toFixed(2)} seconds\n\nImage order:\n${imageSummary}\n\nNo TTS credits. Existing projects will not be overwritten.`,
     buttons: ["Cancel", "Confirm export"],
     defaultId: 0,
     cancelId: 0,
