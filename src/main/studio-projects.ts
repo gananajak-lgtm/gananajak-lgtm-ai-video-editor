@@ -598,7 +598,9 @@ export async function exportStudioEpisodeToMyCut(
     rot: 0, cropL: 0, cropR: 0, cropT: 0, cropB: 0
   };
   let cursor = 0;
+  const lineStarts: number[] = [];
   selected.forEach((line, index) => {
+    lineStarts.push(cursor);
     const mediaId = "m-" + randomUUID();
     media.push({ id: mediaId, path: line.audio, name: path.basename(line.audio),
       kind: "audio", dur: 0, w: 0, h: 0, hasAudio: false });
@@ -620,10 +622,24 @@ export async function exportStudioEpisodeToMyCut(
     if (!(await stat(file)).isFile()) throw new Error("Image not found: " + path.basename(file));
   }
   if (imagePaths.length > 0) {
-    const slice = cursor / imagePaths.length;
+    // Distribute images across spoken lines, and place cuts on their boundaries.
+    // If there are more images than lines, subdivide within each allocated line.
+    // The next image always begins where the previous ends: V1 never has pauses.
+    const lineCount = selected.length;
+    const imageCount = imagePaths.length;
+    const cuts: number[] = [0];
+    for (let index = 1; index < imageCount; index++) {
+      const scaled = index * lineCount / imageCount;
+      const lineIndex = Math.floor(scaled);
+      const fraction = scaled - lineIndex;
+      const start = lineStarts[lineIndex];
+      const end = lineIndex + 1 < lineCount ? lineStarts[lineIndex + 1] : cursor;
+      cuts.push(start + (end - start) * fraction);
+    }
+    cuts.push(cursor);
     imagePaths.forEach((file, index) => {
-      const start = index * slice;
-      const end = index === imagePaths.length - 1 ? cursor : (index + 1) * slice;
+      const start = cuts[index];
+      const end = cuts[index + 1];
       const mediaId = "m-" + randomUUID();
       media.push({ id: mediaId, path: file, name: path.basename(file),
         kind: "image", dur: 0, w: 1080, h: 1920, hasAudio: false });
@@ -645,5 +661,5 @@ export async function exportStudioEpisodeToMyCut(
   };
   // Exclusive creation: never overwrite an existing user's MyCut edit.
   await writeFile(destination, JSON.stringify(project, null, 2), { flag: "wx" });
-  return { path: destination, audioClips: clips.length, duration: cursor };
+  return { path: destination, audioClips: selected.length, duration: cursor };
 }
