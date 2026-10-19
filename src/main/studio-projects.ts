@@ -578,22 +578,31 @@ export function suggestMyCutImageOrder(
   images: string[],
   narration: Array<{ text: string }>
 ): Array<{ image: string; lineIndex: number; score: number; matched: boolean }> {
+  // Conservative heuristic: require two distinct words in both filename and dialogue.
+  // Unmatched/ambiguous pictures retain their original slots and order.
   const tokens = (value: string) => new Set(
     value.toLowerCase().normalize("NFKC")
       .replace(/[._-]+/g, " ")
       .match(/[\p{L}\p{N}]+/gu)?.filter(word => word.length >= 2) ?? []
   );
-  const ordered = images.map((image, index) => {
-    const nameWords = tokens(path.parse(image).name);
-    let best = { lineIndex: index, score: 0 };
-    narration.forEach((line, lineIndex) => {
-      const lineWords = tokens(line.text || "");
-      const score = [...nameWords].filter(word => lineWords.has(word)).length;
-      if (score > best.score) best = { lineIndex, score };
-    });
-    return { image, ...best, matched: best.score > 0 };
+  const lines = narration.map(line => tokens(line.text || ""));
+  const proposals = images.map((image, originalIndex) => {
+    const words = tokens(path.parse(image).name);
+    const scores = lines.map(wordsInLine => [...words].filter(word => wordsInLine.has(word)).length);
+    const high = Math.max(0, ...scores);
+    const winners = scores.reduce<number[]>((list, score, index) => {
+      if (score === high && high >= 2) list.push(index);
+      return list;
+    }, []);
+    const matched = winners.length === 1;
+    return { image, lineIndex: matched ? winners[0] : originalIndex, score: high, matched, originalIndex };
   });
-  return ordered.sort((a, b) => (a.matched && b.matched ? a.lineIndex - b.lineIndex : 0));
+  const matchedSlots = proposals.map((item, index) => item.matched ? index : -1).filter(index => index >= 0);
+  const orderedMatches = proposals.filter(item => item.matched)
+    .sort((a, b) => a.lineIndex - b.lineIndex || a.originalIndex - b.originalIndex);
+  const result = proposals.slice();
+  matchedSlots.forEach((slot, i) => { result[slot] = orderedMatches[i]; });
+  return result.map(({ image, lineIndex, score, matched }) => ({ image, lineIndex, score, matched }));
 }
 
 /** Write a new MyCut project directly from existing MP3 assets; never generate paid audio. */
