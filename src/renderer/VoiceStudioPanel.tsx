@@ -402,7 +402,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
       }
       const result = await window.videoEditor.exportStudioEpisodeToMyCut(activeProjectId, activeEpisodeId, ordered, withImages);
       setPlanMessage(result
-        ? `สร้างโปรเจกต์ MyCut ใหม่แล้ว: ${result.audioClips} คลิปเสียง · ${result.duration.toFixed(2)} วินาที · ${result.path} (ยังไม่มีภาพบน V1)`
+        ? `สร้างโปรเจกต์ MyCut ใหม่แล้ว: ${result.audioClips} คลิปเสียง · ${result.duration.toFixed(2)} วินาที · ${result.path}${withImages ? " (เพิ่มภาพบน V1 แล้ว)" : " (ยังไม่มีภาพบน V1)"}`
         : "ยกเลิกการส่งออก MyCut แล้ว");
     } catch (error) {
       setPlanMessage(`สร้างโปรเจกต์ MyCut ไม่สำเร็จ: ${error instanceof Error ? error.message : String(error)}`);
