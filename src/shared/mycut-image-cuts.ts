@@ -45,3 +45,16 @@ export function computeMyCutImageCuts(
   cuts.push(totalDuration);
   return cuts;
 }
+
+/** Read an optional 1-based line cue without silently discarding invalid references. */
+export function parseMyCutStoryboardLineCue(caption: string, lineCount: number): number | null {
+  const match = caption.match(/(?:^|\n)\s*(?:line|บรรทัด)\s*[:：=]\s*([^\r\n]*)/i);
+  if (!match) return null;
+  const value = match[1].trim();
+  if (!/^\d+$/.test(value)) throw new Error("Invalid storyboard line cue");
+  const oneBased = Number(value);
+  if (!Number.isSafeInteger(oneBased) || oneBased < 1 || oneBased > lineCount) {
+    throw new Error("Storyboard line cue is outside the episode voice lines");
+  }
+  return oneBased - 1;
+}
