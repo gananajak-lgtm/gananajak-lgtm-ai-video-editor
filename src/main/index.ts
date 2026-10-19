@@ -287,6 +287,33 @@ ipcMain.handle("studio:export-mycut", async (_event, projectId: string, episodeI
     if (selection.canceled || !selection.filePaths.length) return null;
     imagePaths = selection.filePaths;
   }
+  // Preview and require explicit approval before creating any MyCut file.
+  // Filename/order matching is not AI visual analysis; selected images remain in their given order.
+  const durations = new Map(suggestion.lines.map(line => [line.lineId, line.duration]));
+  const selectedDurations = orderedLineIds.length
+    ? orderedLineIds.map(id => {
+        const duration = durations.get(id);
+        if (duration === undefined) throw new Error("Voice line missing: " + id);
+        return duration;
+      })
+    : suggestion.lines.map(line => line.duration);
+  const total = selectedDurations.reduce((sum, duration) => sum + duration, 0) +
+    Math.max(0, selectedDurations.length - 1) * 0.3;
+  const imageSummary = imagePaths.length
+    ? imagePaths.slice(0, 12).map((file, index) => `${index + 1}. ${path.basename(file)}`).join("\\n") +
+      (imagePaths.length > 12 ? `\\n... and ${imagePaths.length - 12} more images` : "")
+    : "No images selected; V1 will be empty.";
+  const approval = await dialog.showMessageBox({
+    type: "question",
+    title: "Review MyCut timeline before export",
+    message: "Confirm new MyCut project?",
+    detail: `${selectedDurations.length} voice lines on A1 (0.3s pauses)\\n${imagePaths.length} images on continuous V1\\nDuration: ${total.toFixed(2)} seconds\\n\\nImage order:\\n${imageSummary}\\n\\nNo TTS credits. Existing projects will not be overwritten.`,
+    buttons: ["Cancel", "Confirm export"],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true
+  });
+  if (approval.response !== 1) return null;
   const result = await dialog.showSaveDialog({
     title: "Export voice clips to a new MyCut project",
     defaultPath: "AI-Video-Voice.mycut",
