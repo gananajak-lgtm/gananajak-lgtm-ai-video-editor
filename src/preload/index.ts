@@ -27,6 +27,7 @@ const api: DesktopApi = {
   saveStudioEpisodeScript: (projectId, episodeId, script) => ipcRenderer.invoke("studio:save-episode-script", projectId, episodeId, script),
   generateStudioVoiceLine: (request) => ipcRenderer.invoke("studio:generate-voice-line", request),
   loadStudioEpisodeVoiceAudio: (projectId, episodeId) => ipcRenderer.invoke("studio:load-voice-audio", projectId, episodeId),
+  prepareStudioEpisodeMyCutVoiceManifest: (projectId, episodeId) => ipcRenderer.invoke("studio:prepare-mycut-voice-manifest", projectId, episodeId),
   removeStudioEpisodeVoiceAudio: (projectId, episodeId, lineId) => ipcRenderer.invoke("studio:remove-voice-audio", projectId, episodeId, lineId),
   getStudioVoiceAudioDuration: (projectId, episodeId, relativePath) => ipcRenderer.invoke("studio:voice-audio-duration", projectId, episodeId, relativePath),
   resolveStudioVoiceAudio: (projectId, episodeId, relativePath) => ipcRenderer.invoke("studio:resolve-voice-audio", projectId, episodeId, relativePath),
