@@ -589,7 +589,7 @@ export function suggestMyCutImageOrder(
   const lines = narration.map(line => tokens(line.text || ""));
   const proposals = images.map((image, originalIndex) => {
     const caption = descriptions[image] || "";
-    const explicit = caption.match(/(?:^|\\n)\\s*(?:line|บรรทัด)\\s*[:：=]\\s*(\\d+)\\s*(?:\\n|$)/i);
+    const explicit = caption.match(/(?:^|\n)\s*(?:line|บรรทัด)\s*[:：=]\s*(\d+)\s*(?:\n|$)/i);
     const specified = explicit ? Number(explicit[1]) - 1 : -1;
     if (Number.isInteger(specified) && specified >= 0 && specified < narration.length) {
       return { image, lineIndex: specified, score: 100, matched: true, originalIndex };
