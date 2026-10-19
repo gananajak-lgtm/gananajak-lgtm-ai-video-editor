@@ -629,7 +629,9 @@ export async function exportStudioEpisodeToMyCut(
     const imageCount = imagePaths.length;
     const cuts: number[] = [0];
     for (let index = 1; index < imageCount; index++) {
-      const scaled = index * lineCount / imageCount;
+      const scaled = imageCount <= lineCount
+        ? Math.ceil(index * lineCount / imageCount)
+        : index * lineCount / imageCount;
       const lineIndex = Math.floor(scaled);
       const fraction = scaled - lineIndex;
       const start = lineStarts[lineIndex];
