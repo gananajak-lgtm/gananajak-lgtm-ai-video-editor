@@ -96,3 +96,14 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Baseline tested commit: `f48dcecd8586a0093b690046c77fcd251470076b`
 - Baseline CI: `https://github.com/gananajak-lgtm/gananajak-lgtm-ai-video-editor/actions/runs/39309674085` — success on both jobs.
 - After this file is committed, the *documentation commit* becomes newer HEAD; start all future work by fresh-fetching branch.
+
+## Session checkpoint — 2026-10-20 (first-image cue safety)
+- Refreshed working branch HEAD at session entry: `c13600c358f0fe7a03d433b3adaaa8e49831a710`.
+- Checked prior regression source CI #2191: Linux Validate **success**, Windows Package **in progress at inspection**. Handoff HEAD CI #2192 was **in progress** when initially checked.
+- Fixed `computeMyCutImageCuts` to reject an explicit first-image cue targeting any line other than first voice line: first V1 image must start at t=0; formerly an invalid cue could be silently ignored.
+- Added three regression tests for invalid non-first-line first cue, valid first-line cue, and one-image invalid cue.
+- Code commits: `0f61eff97912fb4bdb36c1f2b59b17db5458e62c` (initial change), `8f449c12d90a77f969ef98c69fda4d7a1c10cbf6` (correct formatting), `081a26f174cdc24784443ad60772913b86f85b8c` (tests).
+- Files changed: `src/shared/mycut-image-cuts.ts`, `src/shared/mycut-image-cuts.test.ts`, this handoff.
+- Test status: new tests committed, **CI not yet verified for latest code**. The GitHub Actions run must be checked before calling them passed.
+- Windows MyCut 1.0.1 real media playback and MP4 export still **not manually verified**. Existing project 1019 remains untouched.
+- Next: review GitHub Actions after this documentation commit; then obtain real Windows GUI acceptance using verified MP3 plus 2–3 images. After acceptance, develop editable thumbnail/shot review with explicit Apply and locked-shot safety.
