@@ -666,6 +666,24 @@ export async function exportStudioEpisodeToMyCut(
     // The next image always begins where the previous ends: V1 never has pauses.
     const lineCount = selected.length;
     const imageCount = imagePaths.length;
+    // Explicit sidecar cues ("line: 3" / "บรรทัด: 3") control *time*, not only image order.
+    // Missing cues keep voice-boundary distribution. Invalid / non-monotonic cues
+    // are ignored to avoid negative-duration or overlapping V1 clips.
+    const { readFile: readSidecar } = await import("node:fs/promises");
+    const cues: Array<number | null> = [];
+    for (const image of imagePaths) {
+      try {
+        const sidecar = image + ".txt";
+        if ((await stat(sidecar)).size > 8192) { cues.push(null); continue; }
+        const caption = await readSidecar(sidecar, "utf8");
+        const match = caption.match(/(?:^|\\n)\\s*(?:line|บรรทัด)\\s*[:：=]\\s*(\\d+)\\s*(?:\\n|$)/i);
+        const line = match ? Number(match[1]) - 1 : -1;
+        cues.push(Number.isInteger(line) && line >= 0 && line < lineCount ? line : null);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+        cues.push(null);
+      }
+    }
     const cuts: number[] = [0];
     for (let index = 1; index < imageCount; index++) {
       const scaled = imageCount <= lineCount
@@ -675,7 +693,13 @@ export async function exportStudioEpisodeToMyCut(
       const fraction = scaled - lineIndex;
       const start = lineStarts[lineIndex];
       const end = lineIndex + 1 < lineCount ? lineStarts[lineIndex + 1] : cursor;
-      cuts.push(start + (end - start) * fraction);
+      const proposal = start + (end - start) * fraction;
+      const cue = cues[index];
+      const pinned = cue === null ? proposal : lineStarts[cue];
+      // Never allow a cue to cross the previous image or leave no time
+      // for the remaining images.
+      const safe = pinned > cuts[index - 1] && pinned < cursor ? pinned : proposal;
+      cuts.push(Math.max(cuts[index - 1], Math.min(cursor, safe)));
     }
     cuts.push(cursor);
     imagePaths.forEach((file, index) => {
