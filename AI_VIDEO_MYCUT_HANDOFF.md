@@ -118,3 +118,14 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Changed files: `src/shared/mycut-image-cuts.ts`, `src/main/studio-projects.ts`, `src/shared/mycut-image-cuts.test.ts`, and this handoff.
 - New code CI pending/not yet verified at documentation write. Check HEAD GitHub Actions and `test:mycut` before marking tested. No Windows GUI test performed; project 1019 remains untouched.
 - Next: verify CI, conduct installed MyCut 1.0.1 playback/MP4 acceptance with real MP3 + images, then build richer editable thumbnail review gated on explicit approval.
+
+## Session checkpoint — 2026-10-20 (duplicate sidecar cues and CRLF)
+- Starting HEAD: `f966fd7a95d5eb9728147a7d937d06988bb7c511`.
+- Verified CI #2200 for starting HEAD **success**.
+- Updated the sidecar cue parser to support CRLF line separators from Windows text editors and reject more than one explicit `line:` / `บรรทัด:` cue in the same description. Previously only the first matching line was accepted silently.
+- Added pure regression tests for Windows CRLF and repeated or conflicting cues.
+- Source commits: `7b006361de0aaff825f68518091a1ceded74e38d`, `06e6bdcdcf6a98d51885e5a7d28e42d4b58f2108`.
+- Files changed: `src/shared/mycut-image-cuts.ts`, `src/shared/mycut-image-cuts.test.ts`, and this handoff.
+- CI for new code: pending at handoff write; inspect workflow run and jobs before marking verified.
+- Still no hands-on validation of standalone MyCut 1.0.1 MP3 playback or MP4 export. User's project 1019 was not modified.
+- NEXT: check current HEAD CI; validate in installed Windows MyCut with verified voice and 2-3 images; then develop thumbnail-based editable shot review with explicit Apply and locked media preservation.
