@@ -81,6 +81,16 @@ or `line: 3`. Matching uses local filename/sidecar keywords and explicit positio
 ## For assistant taking over
 Do not request users to repeat all project history. Read this document, inspect actual GitHub source and CI, then continue the latest task. When user says "ต่อ", perform concrete scoped development if tools permit and update this handoff afterwards. If the environment cannot commit, say exactly what was not persisted. Distinguish saved code from untested promises.
 
+## Latest session checkpoint — 2026-10-20 (desktop/mobile handoff)
+- Started by reading this handoff and fresh GitHub branch files.
+- Verified documentation commit `1fb71c8`: CI #2190 finished **success** on both Validate and Windows Package.
+- Added regression tests to `src/shared/mycut-image-cuts.test.ts` for conflicting duplicate storyboard cues, out-of-range voice line target, and one-image full narration continuity.
+- Source/test commit: `a95ded9a6f42ea24dadc38a9445c8b99ee3ce882`.
+- CI for that source/test commit is **not yet verified at the time of this checkpoint**; look up the workflow at fresh HEAD and inspect failures.
+- No MyCut user GUI validation or new AI Vision integration took place this session.
+- Next priorities: review latest CI; perform hands-on export with real MP3 plus 2-3 user images in installed MyCut; only then add optional permission-gated Vision matching or richer editable shot review.
+- Never represent handoff-only commits or CI as proof of manual MyCut playback/export.
+
 ## Handoff checkpoint
 - Documentation created 2026-10-20 to support switching ChatGPT mobile ↔ desktop.
 - Baseline tested commit: `f48dcecd8586a0093b690046c77fcd251470076b`
