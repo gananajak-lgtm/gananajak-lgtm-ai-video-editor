@@ -14,7 +14,7 @@ export function computeMyCutImageCuts(
     (index > 0 && time <= lineStarts[index - 1]))) {
     throw new Error("Invalid voice line starts");
   }
-  const lineCount = lineStarts.length;
+  // Image one always begins at zero; a later voice-line cue cannot be honored.\n  if (cues[0] !== null && cues[0] !== 0) {\n    throw new Error("Conflicting storyboard line cue at image 1");\n  }\n  const lineCount = lineStarts.length;
   const cuts = [0];
   for (let index = 1; index < imageCount; index++) {
     const scaled = imageCount <= lineCount
