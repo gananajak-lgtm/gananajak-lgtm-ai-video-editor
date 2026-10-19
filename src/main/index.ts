@@ -1,5 +1,5 @@
 import { generateStudioVoiceLine } from "./providers/elevenlabs-voice-provider";
-import { listStudioProjects, createStudioProject, createStudioEpisode, deleteStudioProject, deleteStudioEpisode, listStudioTrash, restoreStudioTrash, loadStudioEpisodeEditor, saveStudioEpisodeEditor, loadStudioEpisodeScript, saveStudioEpisodeScript, loadStudioCharacterVoices, saveStudioCharacterVoices, patchStudioCharacterVoice, loadStudioEpisodeVoiceAudio, removeStudioEpisodeVoiceAudio, getStudioVoiceAudioDuration, findReusableStudioEpisodeAudio, prepareStudioEpisodeMyCutVoiceManifest } from "./studio-projects";
+import { listStudioProjects, createStudioProject, createStudioEpisode, deleteStudioProject, deleteStudioEpisode, listStudioTrash, restoreStudioTrash, loadStudioEpisodeEditor, saveStudioEpisodeEditor, loadStudioEpisodeScript, saveStudioEpisodeScript, loadStudioCharacterVoices, saveStudioCharacterVoices, patchStudioCharacterVoice, loadStudioEpisodeVoiceAudio, removeStudioEpisodeVoiceAudio, getStudioVoiceAudioDuration, findReusableStudioEpisodeAudio, prepareStudioEpisodeMyCutVoiceManifest, exportStudioEpisodeToMyCut } from "./studio-projects";
 import { checkProviderConnection } from "./provider-connection";
 import { createMetaBrokerSession, exchangeMetaBrokerSession, validateMetaBrokerConfig } from "./meta-auth-broker";
 import { explainAffiliateProduct } from "./affiliate-product-search";
@@ -274,6 +274,17 @@ ipcMain.handle("studio:generate-voice-line", async (_event, request: {
 ipcMain.handle("studio:remove-voice-audio", (_event, projectId: string, episodeId: string, lineId: string) => removeStudioEpisodeVoiceAudio(projectId, episodeId, lineId));
 ipcMain.handle("studio:load-voice-audio", (_event, projectId: string, episodeId: string) => loadStudioEpisodeVoiceAudio(projectId, episodeId));
 ipcMain.handle("studio:prepare-mycut-voice-manifest", (_event, projectId: string, episodeId: string) => prepareStudioEpisodeMyCutVoiceManifest(projectId, episodeId));
+ipcMain.handle("studio:export-mycut", async (_event, projectId: string, episodeId: string, orderedLineIds: string[]) => {
+  const suggestion = await prepareStudioEpisodeMyCutVoiceManifest(projectId, episodeId);
+  if (!suggestion.lines.length) throw new Error("No completed MP3 files to export");
+  const result = await dialog.showSaveDialog({
+    title: "Export voice clips to a new MyCut project",
+    defaultPath: "AI-Video-Voice.mycut",
+    filters: [{ name: "MyCut project", extensions: ["mycut"] }]
+  });
+  if (result.canceled || !result.filePath) return null;
+  return exportStudioEpisodeToMyCut(projectId, episodeId, orderedLineIds, result.filePath);
+});
   ipcMain.handle("studio:voice-audio-duration", (_event, projectId: string, episodeId: string, relativePath: string) => getStudioVoiceAudioDuration(projectId, episodeId, relativePath));
   ipcMain.handle("studio:resolve-voice-audio", async (_event, projectId: string, episodeId: string, relativePath: string) => {
     const verified = await findReusableStudioEpisodeAudio(projectId, episodeId, relativePath);
