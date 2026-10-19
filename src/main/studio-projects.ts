@@ -573,6 +573,29 @@ export async function prepareStudioEpisodeMyCutVoiceManifest(projectId: string, 
   };
 }
 
+/** Conservative Thai/English filename ↔ narration matching, not visual AI. */
+export function suggestMyCutImageOrder(
+  images: string[],
+  narration: Array<{ text: string }>
+): Array<{ image: string; lineIndex: number; score: number; matched: boolean }> {
+  const tokens = (value: string) => new Set(
+    value.toLowerCase().normalize("NFKC")
+      .replace(/[._\\-]+/g, " ")
+      .match(/[\\p{L}\\p{N}]+/gu)?.filter(word => word.length >= 2) ?? []
+  );
+  const ordered = images.map((image, index) => {
+    const nameWords = tokens(path.parse(image).name);
+    let best = { lineIndex: index, score: 0 };
+    narration.forEach((line, lineIndex) => {
+      const lineWords = tokens(line.text || "");
+      const score = [...nameWords].filter(word => lineWords.has(word)).length;
+      if (score > best.score) best = { lineIndex, score };
+    });
+    return { image, ...best, matched: best.score > 0 };
+  });
+  return ordered.sort((a, b) => (a.matched && b.matched ? a.lineIndex - b.lineIndex : 0));
+}
+
 /** Write a new MyCut project directly from existing MP3 assets; never generate paid audio. */
 export async function exportStudioEpisodeToMyCut(
   projectId: string, episodeId: string, orderedLineIds: string[], destination: string, imagePaths: string[] = []
