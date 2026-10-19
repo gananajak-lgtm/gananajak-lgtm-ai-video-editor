@@ -326,7 +326,7 @@ ipcMain.handle("studio:export-mycut", async (_event, projectId: string, episodeI
         type: "question",
         title: "Optional image ordering suggestion",
         message: "Use suggested order based on filenames and narration?",
-        detail: `This matches WORDS in filenames, not visual image content.\\nMatched: ${hitCount}/${imagePaths.length}\\n\\nSuggested order:\\n${matches.slice(0, 15).map((m, i) => `${i + 1}. ${path.basename(m.image)} ${m.matched ? "(text match)" : "(no match)"}`).join("\\n")}`,
+        detail: `This matches WORDS in filenames, not visual image content.\nMatched: ${hitCount}/${imagePaths.length}\n\nSuggested order:\n${matches.slice(0, 15).map((m, i) => `${i + 1}. ${path.basename(m.image)} ${m.matched ? "(text match)" : "(no match)"}`).join("\n")}`,
         buttons: ["Keep selected order", "Use suggested order", "Cancel export"],
         defaultId: 0,
         cancelId: 2,
