@@ -18,3 +18,13 @@ test("more images than lines are subdivided without zero duration",()=>{
   assert.equal(cuts[0],0);assert.equal(cuts.at(-1),8);
   assert.ok(cuts.every((n,i)=>i===0||n>cuts[i-1]));
 });
+
+test("conflicting consecutive image cues reject duplicate line starts",()=>{
+  assert.throws(()=>computeMyCutImageCuts([0,4.3,7.3],11,3,[null,1,1]),/Conflicting/);
+});
+test("out of range image cue is rejected",()=>{
+  assert.throws(()=>computeMyCutImageCuts([0,4.3],8,2,[null,3]),/Conflicting/);
+});
+test("single visual covers the entire narration",()=>{
+  assert.deepEqual(computeMyCutImageCuts([0,4.3,7.3],11,1,[null]),[0,11]);
+});
