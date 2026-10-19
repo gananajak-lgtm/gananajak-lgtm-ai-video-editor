@@ -107,3 +107,14 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Test status: new tests committed, **CI not yet verified for latest code**. The GitHub Actions run must be checked before calling them passed.
 - Windows MyCut 1.0.1 real media playback and MP4 export still **not manually verified**. Existing project 1019 remains untouched.
 - Next: review GitHub Actions after this documentation commit; then obtain real Windows GUI acceptance using verified MP3 plus 2–3 images. After acceptance, develop editable thumbnail/shot review with explicit Apply and locked-shot safety.
+
+## Session checkpoint — 2026-10-20 (strict image sidecar cues)
+- Fresh starting HEAD: `32f8cb664c7ce113dd028ada31c4df816fb604ec`.
+- Prior code CI #2195 **success** (source test commit `081a26f`).
+- Found that explicit invalid sidecar positions (e.g. `line: 999`) could be silently treated as no cue and automatically distributed.
+- Added pure `parseMyCutStoryboardLineCue` with 1-based English/Thai sidecar syntax; invalid positions or malformed explicit values now throw before `.mycut` write. Absent cue still falls back to automatic timing.
+- Wired parser into `src/main/studio-projects.ts`; updated misleading comment; added regression tests for English/Thai valid cues, absent cue, and malformed/out-of-range positions.
+- Source commits: `e239591c43c916d60a9c721f4243311a8e5ba037`, `356af3e1670d95c03fd575fa11bf799cb07e09b6`, `961b5a53d28a2474daad76fb3cfa848380dc4939`.
+- Changed files: `src/shared/mycut-image-cuts.ts`, `src/main/studio-projects.ts`, `src/shared/mycut-image-cuts.test.ts`, and this handoff.
+- New code CI pending/not yet verified at documentation write. Check HEAD GitHub Actions and `test:mycut` before marking tested. No Windows GUI test performed; project 1019 remains untouched.
+- Next: verify CI, conduct installed MyCut 1.0.1 playback/MP4 acceptance with real MP3 + images, then build richer editable thumbnail review gated on explicit approval.
