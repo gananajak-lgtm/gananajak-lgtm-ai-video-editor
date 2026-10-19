@@ -274,16 +274,26 @@ ipcMain.handle("studio:generate-voice-line", async (_event, request: {
 ipcMain.handle("studio:remove-voice-audio", (_event, projectId: string, episodeId: string, lineId: string) => removeStudioEpisodeVoiceAudio(projectId, episodeId, lineId));
 ipcMain.handle("studio:load-voice-audio", (_event, projectId: string, episodeId: string) => loadStudioEpisodeVoiceAudio(projectId, episodeId));
 ipcMain.handle("studio:prepare-mycut-voice-manifest", (_event, projectId: string, episodeId: string) => prepareStudioEpisodeMyCutVoiceManifest(projectId, episodeId));
-ipcMain.handle("studio:export-mycut", async (_event, projectId: string, episodeId: string, orderedLineIds: string[]) => {
+ipcMain.handle("studio:export-mycut", async (_event, projectId: string, episodeId: string, orderedLineIds: string[], withImages = false) => {
   const suggestion = await prepareStudioEpisodeMyCutVoiceManifest(projectId, episodeId);
   if (!suggestion.lines.length) throw new Error("No completed MP3 files to export");
+  let imagePaths: string[] = [];
+  if (withImages) {
+    const selection = await dialog.showOpenDialog({
+      title: "Select images in Timeline order (V1)",
+      properties: ["openFile", "multiSelections"],
+      filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "webp", "bmp"] }]
+    });
+    if (selection.canceled || !selection.filePaths.length) return null;
+    imagePaths = selection.filePaths;
+  }
   const result = await dialog.showSaveDialog({
     title: "Export voice clips to a new MyCut project",
     defaultPath: "AI-Video-Voice.mycut",
     filters: [{ name: "MyCut project", extensions: ["mycut"] }]
   });
   if (result.canceled || !result.filePath) return null;
-  return exportStudioEpisodeToMyCut(projectId, episodeId, orderedLineIds, result.filePath);
+  return exportStudioEpisodeToMyCut(projectId, episodeId, orderedLineIds, result.filePath, imagePaths);
 });
   ipcMain.handle("studio:voice-audio-duration", (_event, projectId: string, episodeId: string, relativePath: string) => getStudioVoiceAudioDuration(projectId, episodeId, relativePath));
   ipcMain.handle("studio:resolve-voice-audio", async (_event, projectId: string, episodeId: string, relativePath: string) => {
