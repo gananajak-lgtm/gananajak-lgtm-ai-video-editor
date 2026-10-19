@@ -1,5 +1,5 @@
 import { generateStudioVoiceLine } from "./providers/elevenlabs-voice-provider";
-import { listStudioProjects, createStudioProject, createStudioEpisode, deleteStudioProject, deleteStudioEpisode, listStudioTrash, restoreStudioTrash, loadStudioEpisodeEditor, saveStudioEpisodeEditor, loadStudioEpisodeScript, saveStudioEpisodeScript, loadStudioCharacterVoices, saveStudioCharacterVoices, patchStudioCharacterVoice, loadStudioEpisodeVoiceAudio, removeStudioEpisodeVoiceAudio, getStudioVoiceAudioDuration, findReusableStudioEpisodeAudio, prepareStudioEpisodeMyCutVoiceManifest, exportStudioEpisodeToMyCut } from "./studio-projects";
+import { listStudioProjects, createStudioProject, createStudioEpisode, deleteStudioProject, deleteStudioEpisode, listStudioTrash, restoreStudioTrash, loadStudioEpisodeEditor, saveStudioEpisodeEditor, loadStudioEpisodeScript, saveStudioEpisodeScript, loadStudioCharacterVoices, saveStudioCharacterVoices, patchStudioCharacterVoice, loadStudioEpisodeVoiceAudio, removeStudioEpisodeVoiceAudio, getStudioVoiceAudioDuration, findReusableStudioEpisodeAudio, prepareStudioEpisodeMyCutVoiceManifest, exportStudioEpisodeToMyCut, suggestMyCutImageOrder } from "./studio-projects";
 import { checkProviderConnection } from "./provider-connection";
 import { createMetaBrokerSession, exchangeMetaBrokerSession, validateMetaBrokerConfig } from "./meta-auth-broker";
 import { explainAffiliateProduct } from "./affiliate-product-search";
@@ -314,6 +314,28 @@ ipcMain.handle("studio:export-mycut", async (_event, projectId: string, episodeI
     noLink: true
   });
   if (approval.response !== 1) return null;
+  if (imagePaths.length > 1) {
+    const lineLookup = new Map(suggestion.lines.map(line => [line.lineId, line]));
+    const narration = orderedLineIds.length
+      ? orderedLineIds.map(id => lineLookup.get(id)).filter((line): line is NonNullable<typeof line> => !!line)
+      : suggestion.lines;
+    const matches = suggestMyCutImageOrder(imagePaths, narration);
+    const hitCount = matches.filter(item => item.matched).length;
+    if (hitCount > 0) {
+      const choice = await dialog.showMessageBox({
+        type: "question",
+        title: "Optional image ordering suggestion",
+        message: "Use suggested order based on filenames and narration?",
+        detail: `This matches WORDS in filenames, not visual image content.\\nMatched: ${hitCount}/${imagePaths.length}\\n\\nSuggested order:\\n${matches.slice(0, 15).map((m, i) => `${i + 1}. ${path.basename(m.image)} ${m.matched ? "(text match)" : "(no match)"}`).join("\\n")}`,
+        buttons: ["Keep selected order", "Use suggested order", "Cancel export"],
+        defaultId: 0,
+        cancelId: 2,
+        noLink: true
+      });
+      if (choice.response === 2) return null;
+      if (choice.response === 1) imagePaths = matches.map(item => item.image);
+    }
+  }
   const result = await dialog.showSaveDialog({
     title: "Export voice clips to a new MyCut project",
     defaultPath: "AI-Video-Voice.mycut",
