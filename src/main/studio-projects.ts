@@ -1,3 +1,4 @@
+import { computeMyCutImageCuts } from "../shared/mycut-image-cuts";
 import { app } from "electron";
 import { mkdir, readFile, writeFile, rename, readdir, access, unlink } from "node:fs/promises";
 import { readProjectFile, writeProject } from "./project-json";
@@ -684,27 +685,7 @@ export async function exportStudioEpisodeToMyCut(
         cues.push(null);
       }
     }
-    const cuts: number[] = [0];
-    for (let index = 1; index < imageCount; index++) {
-      const scaled = imageCount <= lineCount
-        ? Math.ceil(index * lineCount / imageCount)
-        : index * lineCount / imageCount;
-      const lineIndex = Math.floor(scaled);
-      const fraction = scaled - lineIndex;
-      const start = lineStarts[lineIndex];
-      const end = lineIndex + 1 < lineCount ? lineStarts[lineIndex + 1] : cursor;
-      const proposal = start + (end - start) * fraction;
-      const cue = cues[index];
-      const pinned = cue === null ? proposal : lineStarts[cue];
-      // Never allow a cue to cross the previous image or leave no time
-      // for the remaining images.
-      const safe = pinned > cuts[index - 1] && pinned < cursor ? pinned : proposal;
-      if (!(safe > cuts[index - 1] && safe < cursor)) {
-        throw new Error("Storyboard cues result in an invalid image duration");
-      }
-      cuts.push(safe);
-    }
-    cuts.push(cursor);
+    const cuts = computeMyCutImageCuts(lineStarts, cursor, imageCount, cues);
     imagePaths.forEach((file, index) => {
       const start = cuts[index];
       const end = cuts[index + 1];
