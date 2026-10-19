@@ -28,3 +28,13 @@ test("out of range image cue is rejected",()=>{
 test("single visual covers the entire narration",()=>{
   assert.deepEqual(computeMyCutImageCuts([0,4.3,7.3],11,1,[null]),[0,11]);
 });
+
+test("first image cannot be pinned to a later voice line",()=>{
+  assert.throws(()=>computeMyCutImageCuts([0,4.3,7.3],11,2,[1,null]),/Conflicting storyboard line cue at image 1/);
+});
+test("first image may explicitly reference line one at zero",()=>{
+  assert.deepEqual(computeMyCutImageCuts([0,4.3],8,2,[0,null]),[0,4.3,8]);
+});
+test("invalid first image cue rejects even a single full-length image",()=>{
+  assert.throws(()=>computeMyCutImageCuts([0,4.3],8,1,[2]),/Conflicting storyboard line cue at image 1/);
+});
