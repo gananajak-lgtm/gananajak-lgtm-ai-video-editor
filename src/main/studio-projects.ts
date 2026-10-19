@@ -572,3 +572,53 @@ export async function prepareStudioEpisodeMyCutVoiceManifest(projectId: string, 
     note: "Only existing verified MP3 assets. Add frames before export to avoid blank video."
   };
 }
+
+/** Write a new MyCut project directly from existing MP3 assets; never generate paid audio. */
+export async function exportStudioEpisodeToMyCut(
+  projectId: string, episodeId: string, orderedLineIds: string[], destination: string
+): Promise<{ path: string; audioClips: number; duration: number }> {
+  if (!Array.isArray(orderedLineIds) || orderedLineIds.length > 10000 ||
+      orderedLineIds.some(value => typeof value !== "string" || !value || value.length > 250) ||
+      new Set(orderedLineIds).size !== orderedLineIds.length) throw new Error("Invalid MyCut line order");
+  if (path.extname(destination).toLowerCase() !== ".mycut") throw new Error("Output must be .mycut");
+  const manifest = await prepareStudioEpisodeMyCutVoiceManifest(projectId, episodeId);
+  const byId = new Map(manifest.lines.map(line => [line.lineId, line]));
+  const selected = orderedLineIds.length ? orderedLineIds.map(id => {
+    const line = byId.get(id);
+    if (!line) throw new Error("MP3 unavailable for selected line: " + id);
+    return line;
+  }) : manifest.lines;
+  if (!selected.length) throw new Error("No verified MP3 files for this episode");
+  const media: Array<Record<string, unknown>> = [];
+  const clips: Array<Record<string, unknown>> = [];
+  const defaults = {
+    speed: 1, volume: 1, opacity: 1, bright: 0, contrast: 1, sat: 1, sepia: 0,
+    hue: 0, fadeIn: 0, fadeOut: 0, scale: 1, px: 0, py: 0, filter: "none",
+    chroma: false, chromaColor: "#00b140", chromaSim: 0.15, chromaBlend: 0.08,
+    rot: 0, cropL: 0, cropR: 0, cropT: 0, cropB: 0
+  };
+  let cursor = 0;
+  selected.forEach((line, index) => {
+    const mediaId = "m-" + randomUUID();
+    media.push({ id: mediaId, path: line.audio, name: path.basename(line.audio),
+      kind: "audio", dur: 0, w: 0, h: 0, hasAudio: false });
+    clips.push({ ...defaults, id: "c-" + randomUUID(), kind: "audio",
+      mediaId, path: line.audio, name: `${line.speaker} · ${index + 1}`,
+      w: 0, h: 0, hasAudio: true, srcDur: line.duration,
+      track: "A1", start: cursor, in: 0, dur: line.duration, thumb: null });
+    cursor += line.duration + (index === selected.length - 1 ? 0 : 0.3);
+  });
+  const project = {
+    id: "p-" + randomUUID(), name: manifest.title,
+    created: Date.now(), updated: Date.now(),
+    w: 1080, h: 1920, fps: 30, media, clips,
+    magnet: true, snap: true, dur: cursor, thumb: null,
+    tracks: [
+      { id: "V1", type: "video", main: true, hide: false, mute: false, lock: false },
+      { id: "A1", type: "audio", main: false, hide: false, mute: false, lock: false }
+    ]
+  };
+  // Exclusive creation: never overwrite an existing user's MyCut edit.
+  await writeFile(destination, JSON.stringify(project, null, 2), { flag: "wx" });
+  return { path: destination, audioClips: clips.length, duration: cursor };
+}
