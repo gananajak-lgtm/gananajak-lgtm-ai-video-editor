@@ -1,5 +1,5 @@
 import { generateStudioVoiceLine } from "./providers/elevenlabs-voice-provider";
-import { listStudioProjects, createStudioProject, createStudioEpisode, deleteStudioProject, deleteStudioEpisode, listStudioTrash, restoreStudioTrash, loadStudioEpisodeEditor, saveStudioEpisodeEditor, loadStudioEpisodeScript, saveStudioEpisodeScript, loadStudioCharacterVoices, saveStudioCharacterVoices, patchStudioCharacterVoice, loadStudioEpisodeVoiceAudio, removeStudioEpisodeVoiceAudio, getStudioVoiceAudioDuration, findReusableStudioEpisodeAudio } from "./studio-projects";
+import { listStudioProjects, createStudioProject, createStudioEpisode, deleteStudioProject, deleteStudioEpisode, listStudioTrash, restoreStudioTrash, loadStudioEpisodeEditor, saveStudioEpisodeEditor, loadStudioEpisodeScript, saveStudioEpisodeScript, loadStudioCharacterVoices, saveStudioCharacterVoices, patchStudioCharacterVoice, loadStudioEpisodeVoiceAudio, removeStudioEpisodeVoiceAudio, getStudioVoiceAudioDuration, findReusableStudioEpisodeAudio, prepareStudioEpisodeMyCutVoiceManifest } from "./studio-projects";
 import { checkProviderConnection } from "./provider-connection";
 import { createMetaBrokerSession, exchangeMetaBrokerSession, validateMetaBrokerConfig } from "./meta-auth-broker";
 import { explainAffiliateProduct } from "./affiliate-product-search";
@@ -273,6 +273,7 @@ ipcMain.handle("studio:generate-voice-line", async (_event, request: {
 });
 ipcMain.handle("studio:remove-voice-audio", (_event, projectId: string, episodeId: string, lineId: string) => removeStudioEpisodeVoiceAudio(projectId, episodeId, lineId));
 ipcMain.handle("studio:load-voice-audio", (_event, projectId: string, episodeId: string) => loadStudioEpisodeVoiceAudio(projectId, episodeId));
+ipcMain.handle("studio:prepare-mycut-voice-manifest", (_event, projectId: string, episodeId: string) => prepareStudioEpisodeMyCutVoiceManifest(projectId, episodeId));
   ipcMain.handle("studio:voice-audio-duration", (_event, projectId: string, episodeId: string, relativePath: string) => getStudioVoiceAudioDuration(projectId, episodeId, relativePath));
   ipcMain.handle("studio:resolve-voice-audio", async (_event, projectId: string, episodeId: string, relativePath: string) => {
     const verified = await findReusableStudioEpisodeAudio(projectId, episodeId, relativePath);
