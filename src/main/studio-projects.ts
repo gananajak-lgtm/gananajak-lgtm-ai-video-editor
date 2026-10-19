@@ -580,8 +580,8 @@ export function suggestMyCutImageOrder(
 ): Array<{ image: string; lineIndex: number; score: number; matched: boolean }> {
   const tokens = (value: string) => new Set(
     value.toLowerCase().normalize("NFKC")
-      .replace(/[._\\-]+/g, " ")
-      .match(/[\\p{L}\\p{N}]+/gu)?.filter(word => word.length >= 2) ?? []
+      .replace(/[._-]+/g, " ")
+      .match(/[\p{L}\p{N}]+/gu)?.filter(word => word.length >= 2) ?? []
   );
   const ordered = images.map((image, index) => {
     const nameWords = tokens(path.parse(image).name);
