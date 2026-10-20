@@ -70,3 +70,27 @@ export function assertMyCutContinuousVisualCuts(cuts: number[], totalDuration: n
     throw new Error("Invalid MyCut V1 continuity: image clips must cover the timeline without gaps");
   }
 }
+
+/** Assert A1 voice clips are sequential with exactly the requested inter-line silence. */
+export function assertMyCutVoiceTimeline(
+  starts: number[], durations: number[], totalDuration: number, gapSeconds = 0.3
+): void {
+  const tolerance = 1e-6;
+  if (!starts.length || starts.length !== durations.length ||
+      !Number.isFinite(totalDuration) || totalDuration <= 0 ||
+      !Number.isFinite(gapSeconds) || gapSeconds < 0 ||
+      starts.some(value => !Number.isFinite(value)) ||
+      durations.some(value => !Number.isFinite(value) || value <= 0) ||
+      Math.abs(starts[0]) > tolerance) {
+    throw new Error("Invalid MyCut A1 voice timeline");
+  }
+  for (let i = 1; i < starts.length; i++) {
+    const expected = starts[i - 1] + durations[i - 1] + gapSeconds;
+    if (Math.abs(starts[i] - expected) > tolerance) {
+      throw new Error("Invalid MyCut A1 voice gap at line " + (i + 1));
+    }
+  }
+  if (Math.abs(starts[starts.length - 1] + durations[durations.length - 1] - totalDuration) > tolerance) {
+    throw new Error("Invalid MyCut A1 end time");
+  }
+}
