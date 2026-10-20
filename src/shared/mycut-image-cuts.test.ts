@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { computeMyCutImageCuts, parseMyCutStoryboardLineCue } from "./mycut-image-cuts";
+import { assertMyCutContinuousVisualCuts, computeMyCutImageCuts, parseMyCutStoryboardLineCue } from "./mycut-image-cuts";
 
 test("V1 covers the 0.3-second voice pause with no gaps", () => {
   const cuts=computeMyCutImageCuts([0,4.3,7.3],11,3,[null,null,null]);
@@ -58,4 +58,14 @@ test("CRLF sidecar line cues are parsed without swallowing following text",()=>{
 test("duplicate explicit storyboard line cues are rejected",()=>{
   assert.throws(()=>parseMyCutStoryboardLineCue("line: 1\nบรรทัด: 2",3),/Duplicate storyboard line cues/);
   assert.throws(()=>parseMyCutStoryboardLineCue("line: 1\r\nline: 1",3),/Duplicate storyboard line cues/);
+});
+
+test("V1 continuity validator accepts computed cuts covering narration pauses",()=>{
+  const cuts = computeMyCutImageCuts([0,4.3,7.3],11,3,[null,null,null]);
+  assert.doesNotThrow(()=>assertMyCutContinuousVisualCuts(cuts,11));
+});
+test("V1 continuity validator rejects zero-length, missing boundaries and bad times",()=>{
+  for (const cuts of [[0,0,11],[0,4,4,11],[0,8,7,11],[1,5,11],[0,5,10],[0,NaN,11],[0,Infinity,11]]) {
+    assert.throws(()=>assertMyCutContinuousVisualCuts(cuts,11),/V1 continuity/);
+  }
 });
