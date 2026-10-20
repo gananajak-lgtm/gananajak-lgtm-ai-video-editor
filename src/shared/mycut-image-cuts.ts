@@ -59,3 +59,14 @@ export function parseMyCutStoryboardLineCue(caption: string, lineCount: number):
   }
   return oneBased - 1;
 }
+
+/** Validate a gapless V1 cut plan before serializing any MyCut clips. */
+export function assertMyCutContinuousVisualCuts(cuts: number[], totalDuration: number): void {
+  if (!Array.isArray(cuts) || cuts.length < 2 ||
+      !Number.isFinite(totalDuration) || totalDuration <= 0 ||
+      cuts[0] !== 0 || cuts[cuts.length - 1] !== totalDuration ||
+      cuts.some((cut, index) => !Number.isFinite(cut) ||
+        (index > 0 && cut <= cuts[index - 1]))) {
+    throw new Error("Invalid MyCut V1 continuity: image clips must cover the timeline without gaps");
+  }
+}
