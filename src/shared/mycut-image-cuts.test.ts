@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { assertMyCutContinuousVisualCuts, assertMyCutVoiceTimeline, buildMyCutShotReview, computeMyCutImageCuts, parseMyCutStoryboardLineCue } from "./mycut-image-cuts";
+import { assertMyCutContinuousVisualCuts, assertMyCutVoiceTimeline, buildMyCutShotReview, moveMyCutReviewShot, computeMyCutImageCuts, parseMyCutStoryboardLineCue } from "./mycut-image-cuts";
 
 test("V1 covers the 0.3-second voice pause with no gaps", () => {
   const cuts=computeMyCutImageCuts([0,4.3,7.3],11,3,[null,null,null]);
@@ -95,4 +95,21 @@ test("shot review rejects mismatched image counts, empty names and invalid cuts"
   assert.throws(()=>buildMyCutShotReview(["a.png"],[0,5,11],11),/shot review/);
   assert.throws(()=>buildMyCutShotReview([""],[0,11],11),/shot review/);
   assert.throws(()=>buildMyCutShotReview(["a.png","b.png"],[0,6,6],11),/shot review|continuity/);
+});
+
+test("reordering review shots changes only a copied proposal",()=>{
+  const original=["a.png","b.png","c.png"];
+  assert.deepEqual(moveMyCutReviewShot(original,0,2),["b.png","c.png","a.png"]);
+  assert.deepEqual(original,["a.png","b.png","c.png"]);
+});
+test("locked shots block direct moves and shifts across their positions",()=>{
+  assert.throws(()=>moveMyCutReviewShot(["a","b","c","d"],0,3,[1]),/locked/);
+  assert.throws(()=>moveMyCutReviewShot(["a","b","c"],1,2,[1]),/locked/);
+  assert.deepEqual(moveMyCutReviewShot(["a","b","c","d"],2,3,[1]),["a","b","d","c"]);
+});
+test("shot reorder rejects invalid indices and returns copy for no-op",()=>{
+  assert.throws(()=>moveMyCutReviewShot(["a","b"],0,2),/Invalid/);
+  assert.throws(()=>moveMyCutReviewShot(["a","b"],0,1,[3]),/Invalid/);
+  const original=["a"];
+  assert.notStrictEqual(moveMyCutReviewShot(original,0,0),original);
 });
