@@ -1,4 +1,4 @@
-import { assertMyCutContinuousVisualCuts, computeMyCutImageCuts, parseMyCutStoryboardLineCue } from "../shared/mycut-image-cuts";
+import { assertMyCutContinuousVisualCuts, assertMyCutVoiceTimeline, computeMyCutImageCuts, parseMyCutStoryboardLineCue } from "../shared/mycut-image-cuts";
 import { app } from "electron";
 import { mkdir, readFile, writeFile, rename, readdir, access, unlink } from "node:fs/promises";
 import { readProjectFile, writeProject } from "./project-json";
@@ -650,6 +650,7 @@ export async function exportStudioEpisodeToMyCut(
       track: "A1", start: cursor, in: 0, dur: line.duration, thumb: null });
     cursor += line.duration + (index === selected.length - 1 ? 0 : 0.3);
   });
+  assertMyCutVoiceTimeline(lineStarts, selected.map(line => line.duration), cursor, 0.3);
   // Fill V1 for the entire voice timeline, including the 0.3-second speech pauses.
   // The user selects images explicitly; no scene matching or paid AI call occurs here.
   if (!Array.isArray(imagePaths) || imagePaths.length > 500 ||
