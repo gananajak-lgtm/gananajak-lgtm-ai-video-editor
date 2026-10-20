@@ -150,3 +150,13 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Files: `src/shared/mycut-image-cuts.ts`, `src/main/studio-projects.ts`, `src/shared/mycut-image-cuts.test.ts`, this handoff.
 - CI for new changes must be checked; no local test claim. No Windows user-GUI .mycut playback or MP4 manual validation done. Existing MyCut project 1019 untouched.
 - Next: check latest Actions run and investigate failures if any; request actual standalone MyCut Windows playback/export acceptance with 2-3 stills and verified MP3, then develop editable shot-thumbnail review with explicit Apply and lock preservation.
+
+## Session checkpoint — 2026-10-20 (read-only shot review foundation)
+- Started at fresh HEAD `05b5f00f3801f4f73a9083f1a6cd793b56d014f8`; its CI #2211 completed **success**.
+- Added pure `buildMyCutShotReview` in `src/shared/mycut-image-cuts.ts` to generate a non-mutating shot-by-shot image/start/end/duration review plan and validate image count/names plus continuous timing before displaying any future UI. This is **only a foundation**: no thumbnail UI, editing controls, or Apply button are connected yet.
+- Added tests in `src/shared/mycut-image-cuts.test.ts` for three-image review metadata, rejected invalid image names/counts, and invalid cut boundaries.
+- Source commits: `2b05b5ae632d4aea47bc5f8db4bde81d9842af5b`, `c3a08dbd517d0531696474c41f77f3b6b779d5fd`.
+- Changed: `src/shared/mycut-image-cuts.ts`, `src/shared/mycut-image-cuts.test.ts`, this handoff.
+- CI for the new source was NOT verified at handoff write; check latest run before claiming passing.
+- No installed Windows MyCut 1.0.1 manual GUI MP3 playback or MP4 export test; original project 1019 unchanged.
+- NEXT: review latest CI; perform manual .mycut acceptance with 2–3 user-selected image files and verified MP3; then connect shot review preview UI with thumbnails, editable shot positions, locking constraints and explicit user approval before Apply.
