@@ -1,4 +1,4 @@
-import { computeMyCutImageCuts, parseMyCutStoryboardLineCue } from "../shared/mycut-image-cuts";
+import { assertMyCutContinuousVisualCuts, computeMyCutImageCuts, parseMyCutStoryboardLineCue } from "../shared/mycut-image-cuts";
 import { app } from "electron";
 import { mkdir, readFile, writeFile, rename, readdir, access, unlink } from "node:fs/promises";
 import { readProjectFile, writeProject } from "./project-json";
@@ -684,6 +684,7 @@ export async function exportStudioEpisodeToMyCut(
       }
     }
     const cuts = computeMyCutImageCuts(lineStarts, cursor, imageCount, cues);
+    assertMyCutContinuousVisualCuts(cuts, cursor);
     imagePaths.forEach((file, index) => {
       const start = cuts[index];
       const end = cuts[index + 1];
