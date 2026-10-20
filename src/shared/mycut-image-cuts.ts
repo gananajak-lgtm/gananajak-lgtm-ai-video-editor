@@ -110,3 +110,27 @@ export function buildMyCutShotReview(
     duration: cuts[index + 1] - cuts[index]
   }));
 }
+
+/** Reorder a proposed shot list without modifying the source array or any project. */
+export function moveMyCutReviewShot(
+  images: string[], fromIndex: number, toIndex: number, lockedIndices: number[] = []
+): string[] {
+  if (!Array.isArray(images) || images.length < 1 || images.length > 500 ||
+      images.some(image => typeof image !== "string" || !image.trim()) ||
+      !Number.isInteger(fromIndex) || !Number.isInteger(toIndex) ||
+      fromIndex < 0 || toIndex < 0 || fromIndex >= images.length || toIndex >= images.length ||
+      !Array.isArray(lockedIndices) ||
+      lockedIndices.some(index => !Number.isInteger(index) || index < 0 || index >= images.length)) {
+    throw new Error("Invalid MyCut shot move");
+  }
+  const locks = new Set(lockedIndices);
+  if (fromIndex === toIndex) return [...images];
+  if (locks.has(fromIndex) || locks.has(toIndex) ||
+      [...locks].some(index => index >= Math.min(fromIndex,toIndex) && index <= Math.max(fromIndex,toIndex))) {
+    throw new Error("Cannot move a locked MyCut shot");
+  }
+  const result = [...images];
+  const [moved] = result.splice(fromIndex, 1);
+  result.splice(toIndex, 0, moved);
+  return result;
+}
