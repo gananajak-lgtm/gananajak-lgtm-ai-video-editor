@@ -1,0 +1,24 @@
+name: AutoSeller standalone tests
+on:
+  push:
+    branches:
+      - feature/affiliate-autoseller-standalone
+    paths:
+      - 'apps/affiliate-autoseller/**'
+      - '.github/workflows/affiliate-autoseller.yml'
+  pull_request:
+    paths:
+      - 'apps/affiliate-autoseller/**'
+      - '.github/workflows/affiliate-autoseller.yml'
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/affiliate-autoseller
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm test
