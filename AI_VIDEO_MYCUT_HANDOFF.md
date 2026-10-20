@@ -129,3 +129,14 @@ Do not request users to repeat all project history. Read this document, inspect 
 - CI for new code: pending at handoff write; inspect workflow run and jobs before marking verified.
 - Still no hands-on validation of standalone MyCut 1.0.1 MP3 playback or MP4 export. User's project 1019 was not modified.
 - NEXT: check current HEAD CI; validate in installed Windows MyCut with verified voice and 2-3 images; then develop thumbnail-based editable shot review with explicit Apply and locked media preservation.
+
+## Session checkpoint — 2026-10-20 (V1 continuity preflight)
+- Refreshed GitHub HEAD: `126a9ad3bdd33043ff341c951eff7d202af85063`, and verified its CI #2203 **success**.
+- Added pure `assertMyCutContinuousVisualCuts` preflight to require a finite, strictly increasing cut plan starting at t=0 and ending at narration's precise total duration. This prevents serializing zero/negative-length, out-of-order, incomplete, or NaN/Infinity V1 layouts.
+- Wired the preflight into `exportStudioEpisodeToMyCut` before any `.mycut` file write.
+- Added regression tests for normal gapless visual coverage (including voice pauses), duplicate boundaries, reversed boundaries, incorrect endpoints and non-finite values.
+- Source commits: `9478d6373167106dc6abb025613b869669e3dfad`, `69f49477d79bd13df81cbe54804395f0dce3f3a3`, `ce3d167a37b53060bae21c72504128ddc713364e`.
+- Changed files: `src/shared/mycut-image-cuts.ts`, `src/main/studio-projects.ts`, `src/shared/mycut-image-cuts.test.ts`, this document.
+- CI on new code pending as of this handoff entry; check newest workflow and test step before claiming pass.
+- No user Windows MyCut 1.0.1 manual GUI playback or export validation performed. Original project 1019 was not modified.
+- Next: verify CI, then manual acceptance of exported .mycut with verified MP3 and 2–3 user images; subsequently implement thumbnail-based editable shot review with explicit Apply, preserving locked clips.
