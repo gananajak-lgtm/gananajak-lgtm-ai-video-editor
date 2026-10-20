@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { assertMyCutContinuousVisualCuts, computeMyCutImageCuts, parseMyCutStoryboardLineCue } from "./mycut-image-cuts";
+import { assertMyCutContinuousVisualCuts, assertMyCutVoiceTimeline, computeMyCutImageCuts, parseMyCutStoryboardLineCue } from "./mycut-image-cuts";
 
 test("V1 covers the 0.3-second voice pause with no gaps", () => {
   const cuts=computeMyCutImageCuts([0,4.3,7.3],11,3,[null,null,null]);
@@ -67,5 +67,19 @@ test("V1 continuity validator accepts computed cuts covering narration pauses",(
 test("V1 continuity validator rejects zero-length, missing boundaries and bad times",()=>{
   for (const cuts of [[0,0,11],[0,4,4,11],[0,8,7,11],[1,5,11],[0,5,10],[0,NaN,11],[0,Infinity,11]]) {
     assert.throws(()=>assertMyCutContinuousVisualCuts(cuts,11),/V1 continuity/);
+  }
+});
+
+test("A1 keeps 0.3 seconds between voice lines, without trailing silence",()=>{
+  assert.doesNotThrow(()=>assertMyCutVoiceTimeline([0,4.3,7.3],[4,2.7,3.7],11));
+  assert.doesNotThrow(()=>assertMyCutVoiceTimeline([0],[4],4));
+});
+test("A1 rejects overlapping, missing gap, invalid or trailing audio timing",()=>{
+  for(const [starts,durations,end] of [
+    [[0,3.9],[4,2],5.9], [[0,4.5],[4,2],6.5],
+    [[0,4.3],[4,2],6.4], [[0,4.3],[4,0],4.3],
+    [[0,4.3],[4,2],NaN], [[0,4.3],[4,2],6.5]
+  ] as Array<[number[],number[],number]>) {
+    assert.throws(()=>assertMyCutVoiceTimeline(starts,durations,end),/MyCut A1/);
   }
 });
