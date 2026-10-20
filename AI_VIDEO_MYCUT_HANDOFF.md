@@ -189,3 +189,12 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Code commits: `e8e2baea73cae0d7a5d832802bb72ef85d829b7b`, `29fdb33251cc737d2a64493c1b3dabd42a275b7a`.
 - New CI must be checked before claiming successful build/tests. No manual Windows MyCut 1.0.1 playback or MP4 export verified. No source project 1019 changed.
 - Next priority: verify CI, run actual installed MyCut acceptance with verified MP3+2-3 images, then wire V1 thumbnail selection/order and explicit Apply instead of claiming the A1 preview is a finished storyboard UI.
+
+## Session checkpoint — 2026-10-20 (MyCut voice export queue guards)
+- Starting HEAD `a892e79801fa58f629baefaa6db2201f085593ec` with CI #2221 **success**.
+- Hardened Voice Studio `exportMyCutProject`: reject duplicate line IDs in the selected production queue before initiating the MyCut export IPC, consistent with the backend uniqueness requirement. Previously the UI relied on the backend to reject this case.
+- Failed A1 preview reads/validation now clear the old review rows and hide the stale preview so a previous episode/timing result cannot remain displayed as if current.
+- Source commit: `e9423c3283e0f3d261aa61daa657be03e1e36a5f`.
+- Changed files: `src/renderer/VoiceStudioPanel.tsx` and this handoff.
+- Latest changed-code CI not verified at time of handoff. Check Actions of the new source commit. No Windows MyCut manual acceptance performed, no paid AI calls, and project 1019 remains untouched.
+- Next: verify CI; implement V1 thumbnail shot selection/reordering preview with explicit confirmation; separately run manual Windows MyCut 1.0.1 playback + MP4 export validation using real MP3 and 2–3 user images.
