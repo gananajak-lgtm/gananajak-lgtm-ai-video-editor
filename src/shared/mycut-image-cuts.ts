@@ -94,3 +94,19 @@ export function assertMyCutVoiceTimeline(
     throw new Error("Invalid MyCut A1 end time");
   }
 }
+
+/** Build an explicit, read-only shot review plan; it does not modify MyCut projects. */
+export function buildMyCutShotReview(
+  imageNames: string[], cuts: number[], totalDuration: number
+): Array<{ image: string; position: number; start: number; end: number; duration: number }> {
+  if (!Array.isArray(imageNames) || !imageNames.length ||
+      imageNames.length > 500 || cuts.length !== imageNames.length + 1 ||
+      imageNames.some(name => typeof name !== "string" || !name.trim())) {
+    throw new Error("Invalid MyCut shot review input");
+  }
+  assertMyCutContinuousVisualCuts(cuts, totalDuration);
+  return imageNames.map((image, index) => ({
+    image, position: index + 1, start: cuts[index], end: cuts[index + 1],
+    duration: cuts[index + 1] - cuts[index]
+  }));
+}
