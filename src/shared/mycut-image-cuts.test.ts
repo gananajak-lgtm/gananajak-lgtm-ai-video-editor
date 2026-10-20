@@ -113,3 +113,14 @@ test("shot reorder rejects invalid indices and returns copy for no-op",()=>{
   const original=["a"];
   assert.notStrictEqual(moveMyCutReviewShot(original,0,0),original);
 });
+
+test("Voice Studio A1 review accepts fractional MP3 durations within floating point precision",()=>{
+  const durations=[1.13,2.07,3.19];
+  const starts=[0,1.43,3.8];
+  const total=6.99;
+  assert.doesNotThrow(()=>assertMyCutVoiceTimeline(starts,durations,total,0.3));
+});
+test("Voice Studio A1 review rejects duplicate or reordered line positions",()=>{
+  assert.throws(()=>assertMyCutVoiceTimeline([0,0],[2,2],4.3),/MyCut A1 voice gap/);
+  assert.throws(()=>assertMyCutVoiceTimeline([0,4.3,2.3],[4,2,1],7.6),/MyCut A1 voice gap/);
+});
