@@ -198,3 +198,12 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Changed files: `src/renderer/VoiceStudioPanel.tsx` and this handoff.
 - Latest changed-code CI not verified at time of handoff. Check Actions of the new source commit. No Windows MyCut manual acceptance performed, no paid AI calls, and project 1019 remains untouched.
 - Next: verify CI; implement V1 thumbnail shot selection/reordering preview with explicit confirmation; separately run manual Windows MyCut 1.0.1 playback + MP4 export validation using real MP3 and 2–3 user images.
+
+## Session checkpoint — 2026-10-21 (final V1 order approval)
+- Fresh starting HEAD `2617470e391dab3b57c2a1e5133e9a3f39d60d4c`. CI #2223 **success**.
+- Found consent-sequencing bug in `src/main/index.ts`: image order could be changed via optional filename/sidecar matching AFTER the user had approved a previous order.
+- Moved the final export approval prompt to AFTER the optional ordering choice and BEFORE Save As. The final confirmation now lists the actual image order that would be serialized in the new `.mycut`. "Cancel export" and "Cancel" still abort without file writes. No automatic AI Vision or billable API.
+- Source commit: `978fbb973c19866594be6b32a1cb11b7c7b97da9`.
+- Changed files: `src/main/index.ts` and this handoff. CI for changed source pending at checkpoint; inspect latest Actions run. No local TypeScript/build result claimed.
+- Manual standalone MyCut 1.0.1 playback and MP4 export still not verified. Original project 1019 untouched.
+- NEXT: check CI, perform Windows acceptance with 2–3 actual stills and verified MP3; then implement full V1 thumbnail and reorder review UI with explicit approval. Current workflow still uses native file picker/message dialogs, NOT editable thumbnail UI.
