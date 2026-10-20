@@ -160,3 +160,14 @@ Do not request users to repeat all project history. Read this document, inspect 
 - CI for the new source was NOT verified at handoff write; check latest run before claiming passing.
 - No installed Windows MyCut 1.0.1 manual GUI MP3 playback or MP4 export test; original project 1019 unchanged.
 - NEXT: review latest CI; perform manual .mycut acceptance with 2–3 user-selected image files and verified MP3; then connect shot review preview UI with thumbnails, editable shot positions, locking constraints and explicit user approval before Apply.
+
+## Session checkpoint — 2026-10-20 (immutable shot reordering and locks)
+- Fresh starting HEAD `936a9761a0116babbdc9872d2d7eb17819e1b2e9`; CI #2213 **success**.
+- Added pure `moveMyCutReviewShot` to reorder a COPY of proposed image paths, without mutating the original list or any MyCut project.
+- The helper validates indices and protects locked positions, including preventing moves that would shift a locked shot across the move interval. This is a foundation for an editable review UI; **no drag-and-drop UI or Apply operation is connected yet**.
+- Added regression tests for immutable reordering, blocked moves across locks, legal moves outside locked slots, and malformed indices.
+- Code commits: `ee0072ecbae4831289de140bb47813b0e4ebd0e8`, `c96281e0e6afff02956e2ab38dca7ac6af49ae1f`.
+- Changed files: `src/shared/mycut-image-cuts.ts`, `src/shared/mycut-image-cuts.test.ts`, this handoff.
+- New code CI status not yet verified when handoff written. Review latest run before claiming success.
+- No manual Windows MyCut 1.0.1 acceptance test; existing project 1019 untouched.
+- Next: check CI, obtain GUI acceptance of MP3+image .mycut output and MP4 export, then wire thumbnail shot-review UI with user-controlled ordering and explicit confirmation.
