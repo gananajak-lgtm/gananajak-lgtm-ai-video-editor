@@ -181,3 +181,11 @@ Do not request users to repeat all project history. Read this document, inspect 
 - CI for changed UI was not yet verified at handoff write; check latest HEAD Actions validate/build and Windows jobs. No claim of Windows manual GUI acceptance.
 - NEXT: confirm CI and acceptance with real MyCut 1.0.1, and wire actual image thumbnail review + editable shot positions with explicit Apply; do not treat A1-only preview as full image review.
 - Original MyCut project 1019 untouched; no paid API request.
+
+## Session checkpoint — 2026-10-20 (Voice Studio A1 preview preflight hardening)
+- Session starting HEAD: `852864b1da71980e21679447c9bffa34388fc5c2`. Its CI #2218 completed **success**.
+- Hardened `src/renderer/VoiceStudioPanel.tsx` A1 read-only preview: reject duplicate queue line IDs and incomplete MP3 mapping, clear rejected preview, and call existing shared `assertMyCutVoiceTimeline` before showing timings. This keeps review validation consistent with .mycut export. No billable calls.
+- Added regression tests for fractional MP3 durations / floating-point timing tolerance and bad duplicate/reordered timing positions in `src/shared/mycut-image-cuts.test.ts`.
+- Code commits: `e8e2baea73cae0d7a5d832802bb72ef85d829b7b`, `29fdb33251cc737d2a64493c1b3dabd42a275b7a`.
+- New CI must be checked before claiming successful build/tests. No manual Windows MyCut 1.0.1 playback or MP4 export verified. No source project 1019 changed.
+- Next priority: verify CI, run actual installed MyCut acceptance with verified MP3+2-3 images, then wire V1 thumbnail selection/order and explicit Apply instead of claiming the A1 preview is a finished storyboard UI.
