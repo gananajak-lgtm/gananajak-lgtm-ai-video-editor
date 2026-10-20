@@ -171,3 +171,13 @@ Do not request users to repeat all project history. Read this document, inspect 
 - New code CI status not yet verified when handoff written. Review latest run before claiming success.
 - No manual Windows MyCut 1.0.1 acceptance test; existing project 1019 untouched.
 - Next: check CI, obtain GUI acceptance of MP3+image .mycut output and MP4 export, then wire thumbnail shot-review UI with user-controlled ordering and explicit confirmation.
+
+## Session checkpoint — 2026-10-20 (Voice Studio A1 timing preview UI)
+- Fresh starting HEAD `b6df42610a1a9796a91392a9685920935e689f4c`, CI #2216 **success**.
+- Added a **read-only A1 timing review panel** to `src/renderer/VoiceStudioPanel.tsx`. New button "ตรวจสอบลำดับและเวลาเสียง MyCut (ไม่สร้างไฟล์)" reads existing verified MP3 manifest, orders by production queue and displays speaker/text/start/end with 0.3-second gaps.
+- This action does not call ElevenLabs or create a .mycut; preview is reset when changing episode/project. Existing separate export actions and save-as confirmations remain.
+- Code commit: `1a4e8c233ce2b30bfd18a6559380f9202f5f1804`.
+- Files: `src/renderer/VoiceStudioPanel.tsx`, this handoff.
+- CI for changed UI was not yet verified at handoff write; check latest HEAD Actions validate/build and Windows jobs. No claim of Windows manual GUI acceptance.
+- NEXT: confirm CI and acceptance with real MyCut 1.0.1, and wire actual image thumbnail review + editable shot positions with explicit Apply; do not treat A1-only preview as full image review.
+- Original MyCut project 1019 untouched; no paid API request.
