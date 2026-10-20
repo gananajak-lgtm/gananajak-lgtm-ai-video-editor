@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { parseNovelScript } from "./novel-voice-parser";
+import { assertMyCutVoiceTimeline } from "../shared/mycut-image-cuts";
 import { readCharacterVoiceLibrary } from "./CharacterVoiceLibrary";
 import type { VoiceLine } from "./novel-voice-parser";
 import { buildVoiceProductionPlan, prepareVoiceGeneration, reusableVoiceCache, authorizeVoiceGeneration, voiceApprovalFingerprint, validateVoiceProductionPlan, voiceBatchProgress, voicePlanSummary } from "./voice-production-plan";
@@ -398,8 +399,10 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
       const ordered = productionPlan.jobs.map(job => available.get(job.lineId)).filter(
         (line): line is typeof manifest.lines[number] => !!line
       );
-      if (!ordered.length || ordered.length !== manifest.lines.length) {
-        setPlanMessage("รายการ MP3 ไม่ตรงกับคิวเสียงปัจจุบัน ไม่สามารถแสดงตัวอย่างเวลาได้");
+      if (!ordered.length || ordered.length !== manifest.lines.length ||
+          new Set(productionPlan.jobs.filter(job => available.has(job.lineId)).map(job => job.lineId)).size !== ordered.length) {
+        setPlanMessage("รายการ MP3 ไม่ตรงกับคิวเสียงปัจจุบัน หรือมีบรรทัดซ้ำ ไม่สามารถแสดงตัวอย่างเวลาได้");
+        setMyCutTimingPreview([]);
         setMyCutTimingPreviewOpen(false);
         return;
       }
@@ -410,6 +413,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
         position = end + (index === ordered.length - 1 ? 0 : 0.3);
         return { speaker: line.speaker, text: line.text, start, end };
       });
+      assertMyCutVoiceTimeline(rows.map(row => row.start), ordered.map(line => line.duration), position, 0.3);
       setMyCutTimingPreview(rows);
       setMyCutTimingPreviewOpen(true);
       setPlanMessage("แสดงตัวอย่างเวลา A1 จาก MP3 ที่ตรวจสอบแล้ว ไม่มีการสร้างไฟล์หรือใช้เครดิต");
