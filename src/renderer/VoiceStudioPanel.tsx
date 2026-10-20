@@ -418,6 +418,8 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
       setMyCutTimingPreviewOpen(true);
       setPlanMessage("แสดงตัวอย่างเวลา A1 จาก MP3 ที่ตรวจสอบแล้ว ไม่มีการสร้างไฟล์หรือใช้เครดิต");
     } catch (error) {
+      setMyCutTimingPreview([]);
+      setMyCutTimingPreviewOpen(false);
       setPlanMessage(`ดูตัวอย่างเวลา MyCut ไม่สำเร็จ: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
@@ -433,8 +435,8 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
         setPlanMessage("ยังไม่มี MP3 ที่พร้อมส่งออก MyCut สำหรับคิวเสียงปัจจุบัน");
         return;
       }
-      if (ordered.length !== manifest.lines.length) {
-        setPlanMessage("รายการ MP3 ไม่ตรงกับคิวเสียงปัจจุบัน กรุณาตรวจสอบก่อนส่งออกเพื่อป้องกันเรียงผิด");
+      if (ordered.length !== manifest.lines.length || new Set(ordered).size !== ordered.length) {
+        setPlanMessage("รายการ MP3 ไม่ตรงกับคิวเสียงปัจจุบัน หรือมีบรรทัดซ้ำ กรุณาตรวจสอบก่อนส่งออกเพื่อป้องกันเรียงผิด");
         return;
       }
       const result = await window.videoEditor.exportStudioEpisodeToMyCut(activeProjectId, activeEpisodeId, ordered, withImages);
