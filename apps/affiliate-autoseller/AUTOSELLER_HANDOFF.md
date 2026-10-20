@@ -7,3 +7,10 @@
 - CI: new standalone app is not yet added to main workflow; test locally with `cd apps/affiliate-autoseller && npm test && npm start`. Confirm CI and functional browser check separately; not yet verified.
 - Next: add local MP4 import handshake with explicit consent and filename/path validation; integrate non-destructively with MyCut export; implement clip previews, availability checks, scheduled editorial calendar, product relevance and performance metrics; add CI test job; verify actual creator permissions for TikTok.
 - Always fresh-fetch HEAD and both handoffs before edits; commit changes and update this handoff every session. Document actual commit SHA and CI status after verification, never invent status.
+
+## Checkpoint — standalone MVP + CI workflow
+- Standalone app files committed through `76311bec`; local data ignore commit `e89bad4`; standalone GitHub Actions workflow commit `e1961fc`.
+- Node built-in HTTP service, no third-party runtime dependencies. App is a separate process/package within the existing GitHub repository, **not yet a dedicated GitHub repo or deployed public service**.
+- Added `.github/workflows/affiliate-autoseller.yml` to run `npm test` on branch push and PR changes.
+- Verification: GitHub create-file writes confirmed. Manual `git clone` / `npm test` in assistant environment could **not** run because that environment had no GitHub DNS/network access. CI results are not yet observed; do not claim tests passed.
+- Next developer: check fresh HEAD + Actions run and inspect failures; test `npm test`, `npm start` + browser. Add integration tests for persistence and POST API. Expand bridge only after reviewing current MyCut export API and explicit user consent.
