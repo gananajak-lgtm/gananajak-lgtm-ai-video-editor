@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { assertMyCutContinuousVisualCuts, assertMyCutVoiceTimeline, computeMyCutImageCuts, parseMyCutStoryboardLineCue } from "./mycut-image-cuts";
+import { assertMyCutContinuousVisualCuts, assertMyCutVoiceTimeline, buildMyCutShotReview, computeMyCutImageCuts, parseMyCutStoryboardLineCue } from "./mycut-image-cuts";
 
 test("V1 covers the 0.3-second voice pause with no gaps", () => {
   const cuts=computeMyCutImageCuts([0,4.3,7.3],11,3,[null,null,null]);
@@ -82,4 +82,17 @@ test("A1 rejects overlapping, missing gap, invalid or trailing audio timing",()=
   ] as Array<[number[],number[],number]>) {
     assert.throws(()=>assertMyCutVoiceTimeline(starts,durations,end),/MyCut A1/);
   }
+});
+
+test("read-only shot review shows consecutive image positions and precise durations",()=>{
+  assert.deepEqual(buildMyCutShotReview(["a.png","b.png","c.png"],[0,4.3,7.3,11],11),[
+    {image:"a.png",position:1,start:0,end:4.3,duration:4.3},
+    {image:"b.png",position:2,start:4.3,end:7.3,duration:3},
+    {image:"c.png",position:3,start:7.3,end:11,duration:3.7}
+  ]);
+});
+test("shot review rejects mismatched image counts, empty names and invalid cuts",()=>{
+  assert.throws(()=>buildMyCutShotReview(["a.png"],[0,5,11],11),/shot review/);
+  assert.throws(()=>buildMyCutShotReview([""],[0,11],11),/shot review/);
+  assert.throws(()=>buildMyCutShotReview(["a.png","b.png"],[0,6,6],11),/shot review|continuity/);
 });
