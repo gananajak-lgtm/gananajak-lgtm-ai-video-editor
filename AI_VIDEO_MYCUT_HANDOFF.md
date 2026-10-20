@@ -140,3 +140,13 @@ Do not request users to repeat all project history. Read this document, inspect 
 - CI on new code pending as of this handoff entry; check newest workflow and test step before claiming pass.
 - No user Windows MyCut 1.0.1 manual GUI playback or export validation performed. Original project 1019 was not modified.
 - Next: verify CI, then manual acceptance of exported .mycut with verified MP3 and 2–3 user images; subsequently implement thumbnail-based editable shot review with explicit Apply, preserving locked clips.
+
+## Session checkpoint — 2026-10-20 (A1 gap preflight)
+- Fresh starting HEAD `0dccc6f1cb53aeb831b7524684e34735870d9eb2`. Its CI #2207 was observed with `validate=success` and `windows-package=in_progress`; do not claim final success without a new check.
+- Added pure `assertMyCutVoiceTimeline` enforcing finite positive voice durations, t=0 start, exact 0.3-second gap between A1 voice clips (within floating-point tolerance), and no unplanned trailing silence.
+- Called preflight in `exportStudioEpisodeToMyCut` before generating the new .mycut file. V1 still covers silence continuously and is independently preflighted.
+- Added regression tests for multiple clips, single clip, overlapping voice, too-long gap, invalid zero duration and wrong project end time.
+- Code commits: `b94a7a9629bc86b8b53c92e1104b9415a45738ae`, `53dd05aac6d4823b49fc815d8f08861784342f59`, `fe1123e1fe5879f552eb9b26fb0b829eb59e5633`.
+- Files: `src/shared/mycut-image-cuts.ts`, `src/main/studio-projects.ts`, `src/shared/mycut-image-cuts.test.ts`, this handoff.
+- CI for new changes must be checked; no local test claim. No Windows user-GUI .mycut playback or MP4 manual validation done. Existing MyCut project 1019 untouched.
+- Next: check latest Actions run and investigate failures if any; request actual standalone MyCut Windows playback/export acceptance with 2-3 stills and verified MP3, then develop editable shot-thumbnail review with explicit Apply and lock preservation.
