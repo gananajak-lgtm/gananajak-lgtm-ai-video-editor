@@ -247,3 +247,11 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Source commit `0d203078b56a446a6ebdd0fd045b0f78bcf6abc2`. Changed files: `src/main/index.ts`, this handoff.
 - New source CI requires verification. No MyCut Windows 1.0.1 manual playback/MP4 test or paid API use. Original project 1019 untouched.
 - NEXT: check CI; implement thumbnail V1 selection/order UI with explicit Apply and locked-shot preservation; run installed Windows MyCut acceptance test with real images and MP3.
+
+## Session checkpoint — 2026-10-21 (first interactive V1 thumbnail review)
+- Fresh starting HEAD `d864e842bb73e36c3e84f098d856da7543ec6455`; its CI #2238 **success**.
+- Added a new V1 thumbnail Shot Review experience in `src/renderer/VoiceStudioPanel.tsx`: users select images, see local Electron thumbnail previews, move shots with up/down buttons, lock positions against shifts, cancel review, or explicitly click "Apply และส่งออก .mycut ใหม่". This operates on a local preview proposal; no existing MyCut project changes.
+- Extended `studio:export-mycut` IPC, typed DesktopApi and preload bridge to optionally accept user-reviewed image paths instead of reopening the file picker. The existing final timeline timing review and native export approval, Save As and exclusive-create behavior remain.
+- Commits: `ff13c5aab88cdcc50d2daf646431c9398cd3a8af` (main IPC), `a920e609d7f3874e66b2c90e83518da00c7a0eaa` (types), `d73de22d80e7d5c4ffdfd2602920a4dba6c0ab5e` (preload), `e4f6db0047db8016922f4ea1a204960bfccb18bb` (UI).
+- Pending: confirm latest CI including TS build; do NOT claim runtime GUI verified. No manual installed Windows MyCut 1.0.1 MP3 playback or MP4 export acceptance. Original project 1019 untouched; no paid AI.
+- Next: inspect CI failure if any, improve review UX (timings in gallery, undo, focus, sidecar pinned locks), then actual Windows acceptance with existing verified MP3 + 2-3 selected images and MP4 export.
