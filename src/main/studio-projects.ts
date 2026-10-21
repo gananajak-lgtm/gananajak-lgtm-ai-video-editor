@@ -1,4 +1,4 @@
-import { assertMyCutContinuousVisualCuts, assertMyCutVoiceTimeline, computeMyCutImageCuts, parseMyCutStoryboardLineCue } from "../shared/mycut-image-cuts";
+import { assertMyCutContinuousVisualCuts, assertMyCutVoiceTimeline, assertMyCutUniqueSelectedImages, computeMyCutImageCuts, parseMyCutStoryboardLineCue } from "../shared/mycut-image-cuts";
 import { app } from "electron";
 import { mkdir, readFile, writeFile, rename, readdir, access, unlink } from "node:fs/promises";
 import { readProjectFile, writeProject } from "./project-json";
@@ -658,6 +658,7 @@ export async function exportStudioEpisodeToMyCut(
         ![".png", ".jpg", ".jpeg", ".webp", ".bmp"].includes(path.extname(file).toLowerCase()))) {
     throw new Error("Invalid image selection");
   }
+  assertMyCutUniqueSelectedImages(imagePaths);
   const { stat } = await import("node:fs/promises");
   for (const file of imagePaths) {
     if (!(await stat(file)).isFile()) throw new Error("Image not found: " + path.basename(file));
