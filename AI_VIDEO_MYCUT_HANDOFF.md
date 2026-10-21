@@ -255,3 +255,11 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Commits: `ff13c5aab88cdcc50d2daf646431c9398cd3a8af` (main IPC), `a920e609d7f3874e66b2c90e83518da00c7a0eaa` (types), `d73de22d80e7d5c4ffdfd2602920a4dba6c0ab5e` (preload), `e4f6db0047db8016922f4ea1a204960bfccb18bb` (UI).
 - Pending: confirm latest CI including TS build; do NOT claim runtime GUI verified. No manual installed Windows MyCut 1.0.1 MP3 playback or MP4 export acceptance. Original project 1019 untouched; no paid AI.
 - Next: inspect CI failure if any, improve review UX (timings in gallery, undo, focus, sidecar pinned locks), then actual Windows acceptance with existing verified MP3 + 2-3 selected images and MP4 export.
+
+## Session checkpoint — 2026-10-21 (preserve explicitly applied thumbnail order)
+- Fresh start HEAD `c846287a9e53c4a941750f56d94fe49c3df664e1`; CI #2242 completed **success**.
+- Identified a review-consent bug: the `studio:export-mycut` handler still offered an optional filename/caption-based image reorder even when the user had selected and explicitly applied a custom order in the thumbnail Shot Review UI.
+- Fixed `src/main/index.ts` so optional reorder suggestion runs only for the legacy native-picker flow (`selectedImages === undefined`). For the new thumbnail flow, preserve user-applied image ordering verbatim, while still enforcing image integrity, sidecar timing validation, final timeline approval, Save As and exclusive new-file write.
+- Source commit: `99302553816c3fc78a9370aff9433789097e4b12`.
+- No installed Windows MyCut manual GUI playback/MP4 validation performed; original MyCut project 1019 untouched; no paid provider calls.
+- New CI still requires verification. NEXT: verify CI, add explicit thumbnail timing display and edit/lock regression tests, then perform actual Windows MP3 + 2–3 images acceptance.
