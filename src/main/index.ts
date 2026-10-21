@@ -1,6 +1,6 @@
 import { generateStudioVoiceLine } from "./providers/elevenlabs-voice-provider";
 import { listStudioProjects, createStudioProject, createStudioEpisode, deleteStudioProject, deleteStudioEpisode, listStudioTrash, restoreStudioTrash, loadStudioEpisodeEditor, saveStudioEpisodeEditor, loadStudioEpisodeScript, saveStudioEpisodeScript, loadStudioCharacterVoices, saveStudioCharacterVoices, patchStudioCharacterVoice, loadStudioEpisodeVoiceAudio, removeStudioEpisodeVoiceAudio, getStudioVoiceAudioDuration, findReusableStudioEpisodeAudio, prepareStudioEpisodeMyCutVoiceManifest, exportStudioEpisodeToMyCut, suggestMyCutImageOrder } from "./studio-projects";
-import { computeMyCutImageCuts, parseMyCutStoryboardLineCue, buildMyCutShotReview } from "../shared/mycut-image-cuts";
+import { computeMyCutImageCuts, parseMyCutStoryboardLineCue, buildMyCutShotReview, assertMyCutUniqueSelectedImages } from "../shared/mycut-image-cuts";
 import { checkProviderConnection } from "./provider-connection";
 import { createMetaBrokerSession, exchangeMetaBrokerSession, validateMetaBrokerConfig } from "./meta-auth-broker";
 import { explainAffiliateProduct } from "./affiliate-product-search";
@@ -336,6 +336,7 @@ ipcMain.handle("studio:export-mycut", async (_event, projectId: string, episodeI
       if (choice.response === 1) imagePaths = matches.map(item => item.image);
     }
   }
+  assertMyCutUniqueSelectedImages(imagePaths);
   // Preflight the FINAL order before asking for approval or a Save As destination.
   // This uses the same sidecar line cues as the MyCut serializer.
   let shotTimingSummary = "";
