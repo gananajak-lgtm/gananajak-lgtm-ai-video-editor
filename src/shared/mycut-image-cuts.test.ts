@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { assertMyCutContinuousVisualCuts, assertMyCutVoiceTimeline, buildMyCutShotReview, moveMyCutReviewShot, computeMyCutImageCuts, parseMyCutStoryboardLineCue } from "./mycut-image-cuts";
+import { assertMyCutContinuousVisualCuts, assertMyCutVoiceTimeline, buildMyCutShotReview, assertMyCutUniqueSelectedImages, moveMyCutReviewShot, computeMyCutImageCuts, parseMyCutStoryboardLineCue } from "./mycut-image-cuts";
 
 test("V1 covers the 0.3-second voice pause with no gaps", () => {
   const cuts=computeMyCutImageCuts([0,4.3,7.3],11,3,[null,null,null]);
@@ -123,4 +123,13 @@ test("Voice Studio A1 review accepts fractional MP3 durations within floating po
 test("Voice Studio A1 review rejects duplicate or reordered line positions",()=>{
   assert.throws(()=>assertMyCutVoiceTimeline([0,0],[2,2],4.3),/MyCut A1 voice gap/);
   assert.throws(()=>assertMyCutVoiceTimeline([0,4.3,2.3],[4,2,1],7.6),/MyCut A1 voice gap/);
+});
+
+test("V1 image review rejects duplicate selected filenames across Windows slash variants",()=>{
+  assert.throws(()=>assertMyCutUniqueSelectedImages(["C:\\shots\\a.png","c:/shots/A.png"]),/Duplicate MyCut image/);
+  assert.doesNotThrow(()=>assertMyCutUniqueSelectedImages(["C:/shots/a.png","C:/shots/b.png"]));
+  assert.doesNotThrow(()=>assertMyCutUniqueSelectedImages([]));
+});
+test("V1 image selection rejects empty filenames and invalid input",()=>{
+  assert.throws(()=>assertMyCutUniqueSelectedImages(["one.png","  "]),/Invalid MyCut image/);
 });
