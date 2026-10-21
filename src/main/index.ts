@@ -310,7 +310,9 @@ ipcMain.handle("studio:export-mycut", async (_event, projectId: string, episodeI
     : suggestion.lines.map(line => line.duration);
   const total = selectedDurations.reduce((sum, duration) => sum + duration, 0) +
     Math.max(0, selectedDurations.length - 1) * 0.3;
-  if (imagePaths.length > 1) {
+  // A thumbnail-review Apply is the authoritative user-selected order.
+  // Never propose another automatic reorder after that explicit decision.
+  if (imagePaths.length > 1 && selectedImages === undefined) {
     const lineLookup = new Map(suggestion.lines.map(line => [line.lineId, line]));
     const narration = orderedLineIds.length
       ? orderedLineIds.map(id => lineLookup.get(id)).filter((line): line is NonNullable<typeof line> => !!line)
