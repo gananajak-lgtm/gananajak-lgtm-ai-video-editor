@@ -365,8 +365,8 @@ ipcMain.handle("studio:export-mycut", async (_event, projectId: string, episodeI
     );
     shotTimingSummary = shots.slice(0, 12).map(shot =>
       `${shot.position}. ${path.basename(shot.image)}  ${shot.start.toFixed(2)}–${shot.end.toFixed(2)}s`
-    ).join("\\n");
-    if (shots.length > 12) shotTimingSummary += `\\n... and ${shots.length - 12} more images`;
+    ).join("\n");
+    if (shots.length > 12) shotTimingSummary += `\n... and ${shots.length - 12} more images`;
   }
   // Confirm the FINAL image order after any accepted suggestion, not the stale initial order.
   const imageSummary = imagePaths.length
