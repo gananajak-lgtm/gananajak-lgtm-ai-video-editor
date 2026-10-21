@@ -344,6 +344,17 @@ ipcMain.handle("studio:export-mycut", async (_event, projectId: string, episodeI
     }
   }
   assertMyCutUniqueSelectedImages(imagePaths);
+  // Verify the actual files in the approved V1 order before asking for consent.
+  // File-picker filters alone do not guarantee usable, still-existing files.
+  for (const image of imagePaths) {
+    if (![".png", ".jpg", ".jpeg", ".webp", ".bmp"].includes(path.extname(image).toLowerCase())) {
+      throw new Error("Unsupported V1 image: " + path.basename(image));
+    }
+    const info = await (await import("node:fs/promises")).stat(image);
+    if (!info.isFile() || info.size <= 0) {
+      throw new Error("V1 image is not a nonempty file: " + path.basename(image));
+    }
+  }
   // Preflight the FINAL order before asking for approval or a Save As destination.
   // This uses the same sidecar line cues as the MyCut serializer.
   let shotTimingSummary = "";
