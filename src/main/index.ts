@@ -275,18 +275,19 @@ ipcMain.handle("studio:generate-voice-line", async (_event, request: {
 ipcMain.handle("studio:remove-voice-audio", (_event, projectId: string, episodeId: string, lineId: string) => removeStudioEpisodeVoiceAudio(projectId, episodeId, lineId));
 ipcMain.handle("studio:load-voice-audio", (_event, projectId: string, episodeId: string) => loadStudioEpisodeVoiceAudio(projectId, episodeId));
 ipcMain.handle("studio:prepare-mycut-voice-manifest", (_event, projectId: string, episodeId: string) => prepareStudioEpisodeMyCutVoiceManifest(projectId, episodeId));
-ipcMain.handle("studio:export-mycut", async (_event, projectId: string, episodeId: string, orderedLineIds: string[], withImages = false) => {
+ipcMain.handle("studio:export-mycut", async (_event, projectId: string, episodeId: string, orderedLineIds: string[], withImages = false, selectedImages?: string[]) => {
   // Validate untrusted IPC input before opening any native selection or approval dialog.
   if (!Array.isArray(orderedLineIds) || orderedLineIds.length > 10000 ||
       orderedLineIds.some(id => typeof id !== "string" || !id || id.length > 250) ||
       new Set(orderedLineIds).size !== orderedLineIds.length ||
-      typeof withImages !== "boolean") {
+      typeof withImages !== "boolean" ||
+      (selectedImages !== undefined && (!withImages || !Array.isArray(selectedImages) || selectedImages.length < 1 || selectedImages.length > 500 || selectedImages.some(image => typeof image !== "string")))) {
     throw new Error("Invalid MyCut export request");
   }
   const suggestion = await prepareStudioEpisodeMyCutVoiceManifest(projectId, episodeId);
   if (!suggestion.lines.length) throw new Error("No completed MP3 files to export");
   let imagePaths: string[] = [];
-  if (withImages) {
+  if (withImages && selectedImages === undefined) {
     const selection = await dialog.showOpenDialog({
       title: "Select images in Timeline order (V1)",
       properties: ["openFile", "multiSelections"],
@@ -294,6 +295,8 @@ ipcMain.handle("studio:export-mycut", async (_event, projectId: string, episodeI
     });
     if (selection.canceled || !selection.filePaths.length) return null;
     imagePaths = selection.filePaths;
+  } else if (withImages && selectedImages) {
+    imagePaths = [...selectedImages];
   }
   // Preview and require explicit approval before creating any MyCut file.
   // Filename/order matching is not AI visual analysis; selected images remain in their given order.
