@@ -134,3 +134,17 @@ export function moveMyCutReviewShot(
   result.splice(toIndex, 0, moved);
   return result;
 }
+
+/** Reject duplicate selections that obscure which shot the user approved. */
+export function assertMyCutUniqueSelectedImages(images: string[]): void {
+  if (!Array.isArray(images) || images.length > 500 ||
+      images.some(image => typeof image !== "string" || !image.trim())) {
+    throw new Error("Invalid MyCut image selection");
+  }
+  const seen = new Set<string>();
+  for (const image of images) {
+    const normalized = image.replace(/\\/g, "/").toLowerCase();
+    if (seen.has(normalized)) throw new Error("Duplicate MyCut image selection: " + image);
+    seen.add(normalized);
+  }
+}
