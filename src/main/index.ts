@@ -276,6 +276,13 @@ ipcMain.handle("studio:remove-voice-audio", (_event, projectId: string, episodeI
 ipcMain.handle("studio:load-voice-audio", (_event, projectId: string, episodeId: string) => loadStudioEpisodeVoiceAudio(projectId, episodeId));
 ipcMain.handle("studio:prepare-mycut-voice-manifest", (_event, projectId: string, episodeId: string) => prepareStudioEpisodeMyCutVoiceManifest(projectId, episodeId));
 ipcMain.handle("studio:export-mycut", async (_event, projectId: string, episodeId: string, orderedLineIds: string[], withImages = false) => {
+  // Validate untrusted IPC input before opening any native selection or approval dialog.
+  if (!Array.isArray(orderedLineIds) || orderedLineIds.length > 10000 ||
+      orderedLineIds.some(id => typeof id !== "string" || !id || id.length > 250) ||
+      new Set(orderedLineIds).size !== orderedLineIds.length ||
+      typeof withImages !== "boolean") {
+    throw new Error("Invalid MyCut export request");
+  }
   const suggestion = await prepareStudioEpisodeMyCutVoiceManifest(projectId, episodeId);
   if (!suggestion.lines.length) throw new Error("No completed MP3 files to export");
   let imagePaths: string[] = [];
