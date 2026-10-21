@@ -233,3 +233,10 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Source commit `c9710f79b68534d7c3469a95357b5500db2affda`. Files: `src/renderer/VoiceStudioPanel.tsx`, handoff.
 - CI for this change must be checked; no local build or GUI verification claimed.
 - Outstanding: actual V1 thumbnail ordering UI, preview/apply and locked shots; Windows MyCut 1.0.1 manual MP3 playback and MP4 export acceptance. User MyCut project 1019 untouched; no paid AI calls.
+
+## Session checkpoint — 2026-10-21 (IPC export request preflight)
+- Started with fresh HEAD `77ea9348fe0f21f4b0174ae8d589b83894c007c1`. Its CI #2234 was **in_progress** when checked; do not claim success before a follow-up check.
+- Added request preflight directly at `studio:export-mycut` IPC entry, before launching any native picker/approval dialog. Reject malformed line-order arrays, duplicates, oversized/empty IDs and non-boolean image-enabled flags. This supplements existing renderer checks and the file serializer's validation.
+- Source commit: `d0c382eb6bc30214b1a2f7e4b355318125246acc`, file `src/main/index.ts`.
+- No paid calls, no original MyCut project 1019 mutation. This does **not** provide thumbnail UI or Windows playback/MP4 acceptance.
+- Verify new CI before claiming pass. Next: actual editable V1 shot-thumbnail review with explicit Apply and lock preservation; manual standalone MyCut Windows validation remains open.
