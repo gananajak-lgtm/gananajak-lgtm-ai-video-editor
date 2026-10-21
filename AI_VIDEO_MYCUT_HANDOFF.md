@@ -207,3 +207,12 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Changed files: `src/main/index.ts` and this handoff. CI for changed source pending at checkpoint; inspect latest Actions run. No local TypeScript/build result claimed.
 - Manual standalone MyCut 1.0.1 playback and MP4 export still not verified. Original project 1019 untouched.
 - NEXT: check CI, perform Windows acceptance with 2–3 actual stills and verified MP3; then implement full V1 thumbnail and reorder review UI with explicit approval. Current workflow still uses native file picker/message dialogs, NOT editable thumbnail UI.
+
+## Session checkpoint — 2026-10-21 (V1 timing preflight before consent)
+- Fresh starting HEAD: `eb51639475a2629966fb0d60f29a52aa5f531a39`; its CI #2225 completed **success**.
+- In `src/main/index.ts`, after selecting/optionally reordering images and BEFORE final export approval, compute the A1-derived image cut plan using selected durations and local `.txt` sidecar cues. Reuse shared `parseMyCutStoryboardLineCue`, `computeMyCutImageCuts` and `buildMyCutShotReview`.
+- Approval dialog now previews final V1 shot start/end times (up to first 12 shots, remainder counted), instead of just filenames. Invalid/conflicting cue plans abort BEFORE Save As and before any .mycut file write. User still must explicitly confirm; no paid provider invoked and no existing MyCut file modified.
+- Source commits: `34bd9a68f0c54c57f1ffe5f5b4b817e6c1b0f9e6`, `19cf54a406032db471ce9d7fc50dffba3e9938a6`.
+- Changed: `src/main/index.ts`, this handoff. CI for changed code not yet verified at checkpoint; inspect run jobs/test/build first.
+- This is an improved native dialog, **not** the complete editable V1 thumbnail gallery. Manual MyCut 1.0.1 Windows MP3 playback/MP4 export not yet tested; user's project 1019 untouched.
+- NEXT: verify new CI. Then Windows acceptance with real MP3 and 2–3 images; full V1 editable thumbnail preview remains priority.
