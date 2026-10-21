@@ -226,3 +226,10 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Changed files: `src/shared/mycut-image-cuts.ts`, `src/shared/mycut-image-cuts.test.ts`, `src/main/index.ts`, `src/main/studio-projects.ts`, this handoff.
 - New CI awaiting verification at this checkpoint; don't claim green before checking. No manual installed Windows MyCut playback/export has been performed. Original project 1019 remains untouched.
 - NEXT: check Actions and resolve any failures; implement true thumbnail-driven editable V1 review, user Apply, and image locks. Manual MP3 + 2–3 still acceptance in MyCut 1.0.1 remains required.
+
+## Session checkpoint — 2026-10-21 (export reentrancy guard)
+- Fresh starting HEAD `7f760872ffe964f57da4f73a059cc08169e90c7e`, CI #2232 completed **success**.
+- In `src/renderer/VoiceStudioPanel.tsx`, protected `exportMyCutProject` with synchronous ref lock + pending UI state. Repeated fast clicks on either audio-only or image-enabled .mycut export cannot launch competing open/confirmation/Save As dialogs. Both export buttons stay disabled during an active export; finally releases lock even for cancellation or errors.
+- Source commit `c9710f79b68534d7c3469a95357b5500db2affda`. Files: `src/renderer/VoiceStudioPanel.tsx`, handoff.
+- CI for this change must be checked; no local build or GUI verification claimed.
+- Outstanding: actual V1 thumbnail ordering UI, preview/apply and locked shots; Windows MyCut 1.0.1 manual MP3 playback and MP4 export acceptance. User MyCut project 1019 untouched; no paid AI calls.
