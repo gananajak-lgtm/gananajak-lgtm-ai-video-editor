@@ -240,3 +240,10 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Source commit: `d0c382eb6bc30214b1a2f7e4b355318125246acc`, file `src/main/index.ts`.
 - No paid calls, no original MyCut project 1019 mutation. This does **not** provide thumbnail UI or Windows playback/MP4 acceptance.
 - Verify new CI before claiming pass. Next: actual editable V1 shot-thumbnail review with explicit Apply and lock preservation; manual standalone MyCut Windows validation remains open.
+
+## Session checkpoint — 2026-10-21 (V1 asset pre-consent validation)
+- Fresh starting branch HEAD `134dbe0c9ff7f894336dc263c8e553f0629cb6b0`; CI #2236 completed **success**.
+- Improved `src/main/index.ts` pre-consent V1 review: after final image ordering, verify every selected file has an accepted still-image extension and exists as a non-empty regular file BEFORE the review/approval and Save As dialogs. Avoids asking the user to approve a shot list that cannot be exported due to missing/empty/unsupported media. Existing serializer still performs its checks.
+- Source commit `0d203078b56a446a6ebdd0fd045b0f78bcf6abc2`. Changed files: `src/main/index.ts`, this handoff.
+- New source CI requires verification. No MyCut Windows 1.0.1 manual playback/MP4 test or paid API use. Original project 1019 untouched.
+- NEXT: check CI; implement thumbnail V1 selection/order UI with explicit Apply and locked-shot preservation; run installed Windows MyCut acceptance test with real images and MP3.
