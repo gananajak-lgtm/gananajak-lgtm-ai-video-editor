@@ -1,5 +1,6 @@
 import { generateStudioVoiceLine } from "./providers/elevenlabs-voice-provider";
 import { listStudioProjects, createStudioProject, createStudioEpisode, deleteStudioProject, deleteStudioEpisode, listStudioTrash, restoreStudioTrash, loadStudioEpisodeEditor, saveStudioEpisodeEditor, loadStudioEpisodeScript, saveStudioEpisodeScript, loadStudioCharacterVoices, saveStudioCharacterVoices, patchStudioCharacterVoice, loadStudioEpisodeVoiceAudio, removeStudioEpisodeVoiceAudio, getStudioVoiceAudioDuration, findReusableStudioEpisodeAudio, prepareStudioEpisodeMyCutVoiceManifest, exportStudioEpisodeToMyCut, suggestMyCutImageOrder } from "./studio-projects";
+import { computeMyCutImageCuts, parseMyCutStoryboardLineCue, buildMyCutShotReview } from "../shared/mycut-image-cuts";
 import { checkProviderConnection } from "./provider-connection";
 import { createMetaBrokerSession, exchangeMetaBrokerSession, validateMetaBrokerConfig } from "./meta-auth-broker";
 import { explainAffiliateProduct } from "./affiliate-product-search";
@@ -335,10 +336,41 @@ ipcMain.handle("studio:export-mycut", async (_event, projectId: string, episodeI
       if (choice.response === 1) imagePaths = matches.map(item => item.image);
     }
   }
+  // Preflight the FINAL order before asking for approval or a Save As destination.
+  // This uses the same sidecar line cues as the MyCut serializer.
+  let shotTimingSummary = "";
+  if (imagePaths.length) {
+    const { stat, readFile } = await import("node:fs/promises");
+    const lineStarts: number[] = [];
+    let cursor = 0;
+    selectedDurations.forEach((duration, index) => {
+      lineStarts.push(cursor);
+      cursor += duration + (index === selectedDurations.length - 1 ? 0 : 0.3);
+    });
+    const cues: Array<number | null> = [];
+    for (const image of imagePaths) {
+      let cue: number | null = null;
+      try {
+        const sidecar = image + ".txt";
+        if ((await stat(sidecar)).size <= 8192) {
+          cue = parseMyCutStoryboardLineCue(await readFile(sidecar, "utf8"), lineStarts.length);
+        }
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      }
+      cues.push(cue);
+    }
+    const shots = buildMyCutShotReview(
+      imagePaths, computeMyCutImageCuts(lineStarts, total, imagePaths.length, cues), total
+    );
+    shotTimingSummary = shots.slice(0, 12).map(shot =>
+      `${shot.position}. ${path.basename(shot.image)}  ${shot.start.toFixed(2)}–${shot.end.toFixed(2)}s`
+    ).join("\\n");
+    if (shots.length > 12) shotTimingSummary += `\\n... and ${shots.length - 12} more images`;
+  }
   // Confirm the FINAL image order after any accepted suggestion, not the stale initial order.
   const imageSummary = imagePaths.length
-    ? imagePaths.slice(0, 12).map((file, index) => `${index + 1}. ${path.basename(file)}`).join("\n") +
-      (imagePaths.length > 12 ? `\n... and ${imagePaths.length - 12} more images` : "")
+    ? shotTimingSummary
     : "No images selected; V1 will be empty.";
   const approval = await dialog.showMessageBox({
     type: "question",
