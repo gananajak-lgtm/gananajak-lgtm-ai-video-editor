@@ -263,3 +263,11 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Source commit: `99302553816c3fc78a9370aff9433789097e4b12`.
 - No installed Windows MyCut manual GUI playback/MP4 validation performed; original MyCut project 1019 untouched; no paid provider calls.
 - New CI still requires verification. NEXT: verify CI, add explicit thumbnail timing display and edit/lock regression tests, then perform actual Windows MP3 + 2–3 images acceptance.
+
+## Session checkpoint — 2026-10-22 (V1 thumbnail approximate timings)
+- Starting fresh HEAD `1d81dffa72e28f2a5c0af95b5853b17ecebbd380` and CI #2244 **success**.
+- `src/renderer/VoiceStudioPanel.tsx` Shot Review now loads the verified existing MP3 manifest, checks that the voice production queue maps exactly once to all cached lines, and computes a proposed V1 time plan using shared `computeMyCutImageCuts` / `buildMyCutShotReview`. Thumbnail cards show approximate start/end seconds; times recompute after up/down reordering.
+- The review clearly labels these times as approximate because local `.txt` storyboard cues are not loaded by the renderer. The main-process final review continues reading these cues, verifying final exact cuts, and requesting approval before Save As.
+- Code commit: `749568820566a7dbfff613694bf25f39372eae2b`. Changed files: `src/renderer/VoiceStudioPanel.tsx`, this handoff. New CI must be checked before claiming success.
+- No paid AI providers invoked and user's MyCut project 1019 untouched. No installed Windows MyCut 1.0.1 manual MP3 playback or MP4 export acceptance performed.
+- Next: verify CI, handle any TypeScript/build failures, then improve thumbnail timing precision by surfacing sidecar cues safely and test GUI flows on Windows, followed by manual MyCut acceptance.
