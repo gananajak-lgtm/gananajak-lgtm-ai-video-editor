@@ -216,3 +216,13 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Changed: `src/main/index.ts`, this handoff. CI for changed code not yet verified at checkpoint; inspect run jobs/test/build first.
 - This is an improved native dialog, **not** the complete editable V1 thumbnail gallery. Manual MyCut 1.0.1 Windows MP3 playback/MP4 export not yet tested; user's project 1019 untouched.
 - NEXT: verify new CI. Then Windows acceptance with real MP3 and 2–3 images; full V1 editable thumbnail preview remains priority.
+
+## Session checkpoint — 2026-10-21 (duplicate V1 selection guard)
+- Fresh HEAD at start: `c438d034aa87f1a5e9bcb36e948042d6fbbb7f5b`; CI #2228 **success** on Validate and Windows Package.
+- Introduced shared `assertMyCutUniqueSelectedImages` for chosen V1 media paths, rejecting exact or Windows case/slash variant repeats. This protects the current native review dialog against accidentally approving the same selected image twice; users may still reuse an image intentionally in future via an explicit duplicate-shot UI.
+- Called this guard in `src/main/index.ts` before timing review/approval and in `src/main/studio-projects.ts` before .mycut serialization. No changes to paid APIs or existing MyCut projects.
+- Regression tests added in `src/shared/mycut-image-cuts.test.ts` for duplicate normalized paths and valid/invalid lists.
+- Code commits: `e943bda69e4e113620d39553d7db0462197858fa`, `53511752baf94d9f65eec5d43d898080985d979e`, `a6de2e542074b42d2103ed1a5c3c6a8c0a1e1ec2`, `3de6fbf832344baa3c10c2c3d685c8c924dd1b55`.
+- Changed files: `src/shared/mycut-image-cuts.ts`, `src/shared/mycut-image-cuts.test.ts`, `src/main/index.ts`, `src/main/studio-projects.ts`, this handoff.
+- New CI awaiting verification at this checkpoint; don't claim green before checking. No manual installed Windows MyCut playback/export has been performed. Original project 1019 remains untouched.
+- NEXT: check Actions and resolve any failures; implement true thumbnail-driven editable V1 review, user Apply, and image locks. Manual MP3 + 2–3 still acceptance in MyCut 1.0.1 remains required.
