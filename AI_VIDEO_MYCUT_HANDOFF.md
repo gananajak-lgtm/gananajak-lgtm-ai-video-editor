@@ -288,3 +288,10 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Changed: `src/main/index.ts`, `src/shared/types.ts`, `src/preload/index.ts`, `src/renderer/VoiceStudioPanel.tsx`, this handoff.
 - Check newest CI on this code before claiming pass; no installed Windows MyCut 1.0.1 manual playback or MP4 export verified. Original project 1019 untouched.
 - NEXT: verify CI, investigate errors, review thumbnail lock/Apply workflow in actual GUI, then Windows acceptance with verified MP3 and 2-3 stills.
+
+## Session checkpoint — 2026-10-22 (reject conflicting thumbnail moves)
+- Fresh starting HEAD `e26f08b8452d65952f4a1f032c15f38108ae97ec`; CI #2254 **success**.
+- Thumbnail V1 reorder now validates each proposed move against the *actual sidecar cue-aware cut plan* BEFORE mutating React shot order. If a move would yield impossible/non-monotonic cue placements, the current order remains unchanged and the existing UI error message explains the failure. Locked-slot guards remain.
+- Code commit `eadf0d6ee25cd1eaf036e7e9bc311b37b6e19e97`; changed `src/renderer/VoiceStudioPanel.tsx` plus this handoff. No paid API calls or updates to MyCut project 1019.
+- Verify CI for this change; installed Windows MyCut 1.0.1 MP3 playback/MP4 export still untested.
+- NEXT: ensure new CI passes, assess further thumbnail GUI UX and acceptance test with MP3+2–3 images in actual Windows MyCut.
