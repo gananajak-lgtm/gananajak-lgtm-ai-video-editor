@@ -427,6 +427,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
   const [myCutReviewVoiceDurations, setMyCutReviewVoiceDurations] = useState<number[]>([]);
   const [myCutReviewLineIds, setMyCutReviewLineIds] = useState<string[]>([]);
   const [myCutReviewAudioPaths, setMyCutReviewAudioPaths] = useState<string[]>([]);
+  const [myCutReviewAudioHashes, setMyCutReviewAudioHashes] = useState<string[]>([]);
   const myCutReviewTimings = useMemo(() => {
     if (!myCutReviewImages.length || !myCutReviewVoiceDurations.length) return [];
     const starts: number[] = [];
@@ -452,6 +453,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
     setMyCutReviewVoiceDurations([]);
     setMyCutReviewLineIds([]);
     setMyCutReviewAudioPaths([]);
+    setMyCutReviewAudioHashes([]);
     setMyCutReviewLocks([]);
     setMyCutReviewOpen(false);
   }, [activeProjectId, activeEpisodeId]);
@@ -480,7 +482,11 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
       setMyCutReviewVoiceDurations(durations);
       setMyCutReviewLineIds(productionPlan.jobs.map(job => job.lineId));
       const audioById = new Map(manifest.lines.map(line => [line.lineId, line.audio]));
-      setMyCutReviewAudioPaths(productionPlan.jobs.map(job => audioById.get(job.lineId) ?? ""));
+      const reviewedAudioPaths = productionPlan.jobs.map(job => audioById.get(job.lineId) ?? "");
+      const reviewedAudioHashes = await window.videoEditor.readMyCutAudioFingerprints(reviewedAudioPaths);
+      if (requestEpisodeKey !== myCutReviewEpisodeKey.current) return;
+      setMyCutReviewAudioPaths(reviewedAudioPaths);
+      setMyCutReviewAudioHashes(reviewedAudioHashes);
       if (reviewed.some(item => !item.preview)) throw new Error("มีภาพที่ไม่สามารถอ่านได้ กรุณาเลือกไฟล์ใหม่");
       setMyCutReviewImages(reviewed);
       setMyCutReviewLocks([]);
@@ -547,6 +553,12 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
         if (freshAudioPaths.length !== myCutReviewAudioPaths.length ||
             freshAudioPaths.some((audio, index) => !audio || audio !== myCutReviewAudioPaths[index])) {
           setPlanMessage("ไฟล์เสียง MP3 ที่ใช้เปลี่ยนหลังรีวิวภาพ กรุณาตรวจภาพ V1 ใหม่ก่อนส่งออก");
+          return;
+        }
+        const freshHashes = await window.videoEditor.readMyCutAudioFingerprints(freshAudioPaths as string[]);
+        if (freshHashes.length !== myCutReviewAudioHashes.length ||
+            freshHashes.some((hash, index) => hash !== myCutReviewAudioHashes[index])) {
+          setPlanMessage("ข้อมูล MP3 ถูกเปลี่ยนหลังรีวิวภาพ กรุณาตรวจเวลา V1 ใหม่ก่อนส่งออก");
           return;
         }
         if (freshDurations.length !== myCutReviewVoiceDurations.length ||
