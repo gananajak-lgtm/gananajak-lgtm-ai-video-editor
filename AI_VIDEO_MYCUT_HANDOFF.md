@@ -379,3 +379,10 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Test commit `adb070db94e25af4720f08a1557b81ef1666373d`. Existing `test:mycut` command already includes this test file.
 - Check new CI before claiming test pass. No GUI Windows MyCut 1.0.1 or MP4 export acceptance completed; no paid API use or changes to project 1019.
 - NEXT: confirm CI, then focus on integration acceptance and atomic audio snapshot limitations.
+
+## Session checkpoint — 2026-10-23 (missing later MP3 regression)
+- Fresh starting HEAD `6cac45a08d7a8cfeee96b435ccf12aa40f182941`; CI #2287 completed **success**.
+- Extended `src/main/mycut-approved-audio.test.ts` with a multi-clip regression that deletes the second of two reviewed MP3s after collecting approval hashes. The serializer-level integrity function must reject the missing second file with ENOENT, even when the first MP3 still matches. Existing `npm run test:mycut` includes the test.
+- Test commit `ed31b9147b65e8e16b7a71e9e66cbb4d89f66451`. Confirm new CI before claiming this new regression passed.
+- No installed Windows MyCut 1.0.1 GUI playback/MP4 export yet, no paid APIs, no changes to existing project 1019. Atomic audio snapshots remain future work.
+- NEXT: verify CI; prioritize end-to-end acceptance and avoid further tiny guards unless an actual failed test reveals a bug.
