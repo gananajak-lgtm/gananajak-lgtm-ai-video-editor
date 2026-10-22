@@ -7,6 +7,7 @@ import { resolveBundledFfmpegPath } from "./studio-mp3-decode";
 import type { ProjectDocument } from "../shared/types";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
+import { assertApprovedMyCutMp3Hashes } from "./mycut-approved-audio";
 import { hasPlausibleMp3Header } from "./studio-mp3-header";
 import { isDecodableMp3 } from "./studio-mp3-decode";
 
@@ -710,21 +711,8 @@ export async function exportStudioEpisodeToMyCut(
     ]
   };
   // Exclusive creation: never overwrite an existing user's MyCut edit.
-  // Verify approved MP3 bytes at the serializer boundary, after timeline construction.
   if (expectedAudioHashes !== undefined) {
-    if (!Array.isArray(expectedAudioHashes) || expectedAudioHashes.length !== selected.length ||
-        expectedAudioHashes.some(hash => typeof hash !== "string" || !/^[a-f0-9]{64}$/.test(hash))) {
-      throw new Error("Invalid MyCut approved MP3 fingerprints");
-    }
-    const { createHash } = await import("node:crypto");
-    const { createReadStream } = await import("node:fs");
-    for (let index = 0; index < selected.length; index++) {
-      const digest = createHash("sha256");
-      for await (const chunk of createReadStream(selected[index].audio)) digest.update(chunk);
-      if (digest.digest("hex") !== expectedAudioHashes[index]) {
-        throw new Error("MyCut MP3 changed before project serialization; review again");
-      }
-    }
+    await assertApprovedMyCutMp3Hashes(selected.map(line => line.audio), expectedAudioHashes);
   }
   await writeFile(destination, JSON.stringify(project, null, 2), { flag: "wx" });
   return { path: destination, audioClips: selected.length, duration: cursor };
