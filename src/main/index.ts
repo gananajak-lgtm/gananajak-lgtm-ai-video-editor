@@ -205,6 +205,25 @@ ipcMain.handle("media:image-preview", async (_event, filePath: string) => {
   return image.resize({ width }).toDataURL();
 });
 
+ipcMain.handle("studio:mycut-image-cues", async (_event, images: string[], lineCount: number) => {
+  if (!Array.isArray(images) || images.length > 500 || !Number.isInteger(lineCount) || lineCount < 1 ||
+      images.some(image => typeof image !== "string" || !image ||
+        ![".png", ".jpg", ".jpeg", ".webp", ".bmp"].includes(path.extname(image).toLowerCase()))) {
+    throw new Error("Invalid MyCut shot cue request");
+  }
+  const { stat, readFile } = await import("node:fs/promises");
+  return Promise.all(images.map(async image => {
+    try {
+      const sidecar = image + ".txt";
+      if ((await stat(sidecar)).size > 8192) return null;
+      return parseMyCutStoryboardLineCue(await readFile(sidecar, "utf8"), lineCount);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+      throw error;
+    }
+  }));
+});
+
 ipcMain.handle("media:select-narration", async () => {
   const result = await dialog.showOpenDialog({
     title: "Select narration audio",
