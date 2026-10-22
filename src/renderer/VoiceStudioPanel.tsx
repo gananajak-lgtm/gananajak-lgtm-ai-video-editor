@@ -476,7 +476,18 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
     try {
       const order = moveMyCutReviewShot(myCutReviewImages.map(item => item.path), from, to, myCutReviewLocks);
       const byPath = new Map(myCutReviewImages.map(item => [item.path, item]));
-      setMyCutReviewImages(order.map(path => byPath.get(path)!));
+      const proposed = order.map(path => byPath.get(path)!);
+      // Never strand the user in a cue-conflicting shot order: validate before applying.
+      if (myCutReviewVoiceDurations.length) {
+        const starts: number[] = [];
+        let total = 0;
+        myCutReviewVoiceDurations.forEach((duration, index) => {
+          starts.push(total);
+          total += duration + (index === myCutReviewVoiceDurations.length - 1 ? 0 : 0.3);
+        });
+        computeMyCutImageCuts(starts, total, proposed.length, proposed.map(image => image.cue));
+      }
+      setMyCutReviewImages(proposed);
     } catch (error) {
       setPlanMessage(error instanceof Error ? error.message : String(error));
     }
