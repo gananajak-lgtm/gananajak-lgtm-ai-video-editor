@@ -306,6 +306,7 @@ export type DesktopApi = {
   selectImages: () => Promise<string[]>;
   selectNarration: () => Promise<string | null>;
   readImagePreview: (filePath: string) => Promise<string | null>;
+  readMyCutImageCues: (images: string[], lineCount: number) => Promise<Array<number | null>>;
   selectAudioLayers: () => Promise<AudioAsset[]>;
   openProject: () => Promise<ProjectLoadResult | null>;
   listStudioProjects: () => Promise<StudioProject[]>;
