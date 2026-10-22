@@ -426,6 +426,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
   const [myCutReviewImages, setMyCutReviewImages] = useState<Array<{ path: string; preview: string | null; cue: number | null }>>([]);
   const [myCutReviewVoiceDurations, setMyCutReviewVoiceDurations] = useState<number[]>([]);
   const [myCutReviewLineIds, setMyCutReviewLineIds] = useState<string[]>([]);
+  const [myCutReviewAudioPaths, setMyCutReviewAudioPaths] = useState<string[]>([]);
   const myCutReviewTimings = useMemo(() => {
     if (!myCutReviewImages.length || !myCutReviewVoiceDurations.length) return [];
     const starts: number[] = [];
@@ -450,6 +451,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
     setMyCutReviewImages([]);
     setMyCutReviewVoiceDurations([]);
     setMyCutReviewLineIds([]);
+    setMyCutReviewAudioPaths([]);
     setMyCutReviewLocks([]);
     setMyCutReviewOpen(false);
   }, [activeProjectId, activeEpisodeId]);
@@ -477,6 +479,8 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
       if (requestEpisodeKey !== myCutReviewEpisodeKey.current) return;
       setMyCutReviewVoiceDurations(durations);
       setMyCutReviewLineIds(productionPlan.jobs.map(job => job.lineId));
+      const audioById = new Map(manifest.lines.map(line => [line.lineId, line.audio]));
+      setMyCutReviewAudioPaths(productionPlan.jobs.map(job => audioById.get(job.lineId) ?? ""));
       if (reviewed.some(item => !item.preview)) throw new Error("มีภาพที่ไม่สามารถอ่านได้ กรุณาเลือกไฟล์ใหม่");
       setMyCutReviewImages(reviewed);
       setMyCutReviewLocks([]);
@@ -538,6 +542,13 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
         // Re-read verified MP3 metadata: an identical line order can still have replacement audio.
         const durationsById = new Map(manifest.lines.map(line => [line.lineId, line.duration]));
         const freshDurations = ordered.map(id => durationsById.get(id));
+        const audioById = new Map(manifest.lines.map(line => [line.lineId, line.audio]));
+        const freshAudioPaths = ordered.map(id => audioById.get(id));
+        if (freshAudioPaths.length !== myCutReviewAudioPaths.length ||
+            freshAudioPaths.some((audio, index) => !audio || audio !== myCutReviewAudioPaths[index])) {
+          setPlanMessage("ไฟล์เสียง MP3 ที่ใช้เปลี่ยนหลังรีวิวภาพ กรุณาตรวจภาพ V1 ใหม่ก่อนส่งออก");
+          return;
+        }
         if (freshDurations.length !== myCutReviewVoiceDurations.length ||
             freshDurations.some((duration, index) =>
               duration === undefined || !Number.isFinite(duration) ||
