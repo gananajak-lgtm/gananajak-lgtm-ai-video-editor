@@ -14,6 +14,7 @@ const api: DesktopApi = {
   readImagePreview: (filePath) =>
     ipcRenderer.invoke("media:image-preview", filePath),
   readMyCutImageCues: (images, lineCount) => ipcRenderer.invoke("studio:mycut-image-cues", images, lineCount),
+  readMyCutAudioFingerprints: (files) => ipcRenderer.invoke("studio:mycut-audio-fingerprints", files),
   selectAudioLayers: () => ipcRenderer.invoke("media:select-audio-layers"),
   listStudioProjects: () => ipcRenderer.invoke("studio:list-projects"),
   createStudioProject: (title) => ipcRenderer.invoke("studio:create-project", title),
