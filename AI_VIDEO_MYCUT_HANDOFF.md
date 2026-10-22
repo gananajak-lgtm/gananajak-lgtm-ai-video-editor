@@ -357,3 +357,11 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Source commits `dda6f8cc13f1421fb134076d393298d89514f519` (`src/main/studio-projects.ts`), `cc459bb987a6a28d4c913ea25df3406b488e7381` (`src/main/index.ts`).
 - New source CI awaits verification. Audio files still referenced by path in MyCut; fully atomic snapshots aren't implemented. MyCut 1.0.1 Windows GUI/MP4 acceptance has not been run; original MyCut project 1019 untouched. No paid AI calls.
 - NEXT: check CI and fix any failures, add file-mutation regression testing; then manually validate generated project in Windows MyCut with MP3 and stills.
+
+## Session checkpoint — 2026-10-22 (real MP3 mutation regression)
+- Started from HEAD `20aaa4eff3cf023239b4d09b546d15c3450f607c`; CI #2278 remained queued on initial check. DO NOT claim prior CI passed.
+- Extracted the existing pre-write approved SHA-256 verification into `src/main/mycut-approved-audio.ts`, called from the `exportStudioEpisodeToMyCut` serializer immediately before its exclusive `.mycut` write. The optional approved-hash workflow stays unchanged.
+- Added `src/main/mycut-approved-audio.test.ts` node:test coverage: approved bytes accepted, same-size/same-path MP3 replacement rejected, malformed digests and absent MP3 rejected. Added test to `npm run test:mycut` so CI executes it when standard MyCut tests run.
+- Commits: `9c6a157aa3cafe61e53fa6d301b9162c9a121ee5`, `89001c24eaadc62a99134c29711a0ba653685495`, `04eeef487243246043fc0312e4262e53210b3e03`, `3c4a2b660e55bc9ade286740685099e5c663bf95`.
+- Check new CI for TS/tests; no live Windows MyCut 1.0.1 GUI playback or MP4 rendering tested, no paid API usage, original project 1019 not touched. As before, external mutation after digest verification is not atomically prevented.
+- NEXT: diagnose CI if red, otherwise plan snapshot/reference integrity; Windows end-to-end manual acceptance with real MP3 and stills remains essential.
