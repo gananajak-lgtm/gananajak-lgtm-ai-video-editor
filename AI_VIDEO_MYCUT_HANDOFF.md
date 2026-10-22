@@ -271,3 +271,11 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Code commit: `749568820566a7dbfff613694bf25f39372eae2b`. Changed files: `src/renderer/VoiceStudioPanel.tsx`, this handoff. New CI must be checked before claiming success.
 - No paid AI providers invoked and user's MyCut project 1019 untouched. No installed Windows MyCut 1.0.1 manual MP3 playback or MP4 export acceptance performed.
 - Next: verify CI, handle any TypeScript/build failures, then improve thumbnail timing precision by surfacing sidecar cues safely and test GUI flows on Windows, followed by manual MyCut acceptance.
+
+## Session checkpoint — 2026-10-22 (repair CI #2246 TypeScript failure)
+- Fresh starting HEAD `a71a32e80e82f61c9fe79677d10c59e503a79470`. CI #2246 **failed** on both validate and windows-package at `npm run typecheck`.
+- Inspected validate job log 119397537141: `src/renderer/VoiceStudioPanel.tsx(441,7) TS2448/TS2454`: `myCutReviewImages` used before declaration/assignment by the new timing `useMemo`.
+- Fixed ordering of React state declaration so `myCutReviewImages` is defined BEFORE the thumbnail timing memo. No change to V1 timing logic, sidecar cue behavior, export approval or paid services.
+- Source commit: `07cee60027184373dbab23404caf206a6ee7c0d3` (`src/renderer/VoiceStudioPanel.tsx`).
+- This fix requires new CI verification before claiming build pass. Previous #2246 is confirmed RED.
+- Next: check CI for this commit, then improve exact storyboard cue timing previews in the UI safely; manually verify installed Windows MyCut 1.0.1 playback and MP4 export. Project 1019 untouched.
