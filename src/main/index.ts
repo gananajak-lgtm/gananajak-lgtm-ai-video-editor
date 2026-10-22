@@ -470,7 +470,7 @@ ipcMain.handle("studio:export-mycut", async (_event, projectId: string, episodeI
       }
     }
   }
-  return exportStudioEpisodeToMyCut(projectId, episodeId, orderedLineIds, result.filePath, imagePaths);
+  return exportStudioEpisodeToMyCut(projectId, episodeId, orderedLineIds, result.filePath, imagePaths, expectedAudioHashes);
 });
   ipcMain.handle("studio:voice-audio-duration", (_event, projectId: string, episodeId: string, relativePath: string) => getStudioVoiceAudioDuration(projectId, episodeId, relativePath));
   ipcMain.handle("studio:resolve-voice-audio", async (_event, projectId: string, episodeId: string, relativePath: string) => {
