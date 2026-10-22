@@ -316,3 +316,11 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Source commit `59748b55bcd861215bb786ef43c8f1bce264e16f` (VoiceStudioPanel). Project/episode switching already clears the review. No paid APIs, no changes to original MyCut project 1019.
 - Latest CI on this new code still needs verification. Manual Windows MyCut 1.0.1 GUI playback/MP4 export not tested.
 - NEXT: check CI; test review -> narration reorder -> Apply abort; end-to-end Windows MyCut acceptance with real existing MP3 and 2–3 still images remains required.
+
+## Session checkpoint — 2026-10-22 (invalidate V1 preview after MP3 duration changes)
+- Fresh starting HEAD `fb0c0c784375fcdcac35f90d812187171d6a04d7`; CI #2262 completed **success**.
+- In `src/renderer/VoiceStudioPanel.tsx`, thumbnail Apply/export now compares the *fresh verified MP3 manifest durations* against those used when calculating the user's reviewed V1 shot timings. An unchanged line ID order is no longer considered enough: if voice was regenerated with a different duration, export stops before any Save As/native approval and tells the user to redo the V1 review.
+- Duration comparison uses a 1e-6-second numerical tolerance; uses only existing local MP3 metadata and invokes no billable provider.
+- Source commit: `dd62fe677f041c6822ba63c85d7c66571cdfc278` (VoiceStudioPanel).
+- Verify CI for this change before claiming pass. Manual installed Windows MyCut 1.0.1 MP3 playback and MP4 export acceptance still not verified; user's original project 1019 untouched.
+- NEXT: check CI; consider review fingerprinting verified MP3 file identity (same-duration replacements remain possible), add targeted regressions, then test full Windows user flow.
