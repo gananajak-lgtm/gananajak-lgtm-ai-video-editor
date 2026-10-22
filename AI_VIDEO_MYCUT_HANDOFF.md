@@ -341,3 +341,12 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Changed files: `src/main/index.ts`, `src/shared/types.ts`, `src/preload/index.ts`, `src/renderer/VoiceStudioPanel.tsx`, this handoff.
 - Check new CI before claiming pass. Fingerprints are compared before opening native Export dialogs, not an atomic lock through serialization; files could still change afterward. Windows MyCut 1.0.1 GUI MP3 playback / MP4 export remains untested. Original project 1019 untouched.
 - NEXT: inspect CI failures if any; targeted regression tests for hashing and stale review; Windows end-to-end acceptance.
+
+## Session checkpoint — 2026-10-22 (final MP3 hash recheck after Save As)
+- Started at HEAD `99019c9bac2f61ba7a59faee7c548fbc1a4e98cc`; CI status for that HEAD could not be confirmed from its exact commit lookup during this run.
+- Extended typed `exportStudioEpisodeToMyCut` preload/renderer IPC call to carry the approved SHA-256 hashes from the thumbnail review, and validate hashes' shape/count on the main side.
+- After native final approval AND after Save As, before calling `exportStudioEpisodeToMyCut`, the Electron main handler re-prepares the verified MP3 manifest and streams audio bytes for fresh SHA-256 comparisons. A changed/missing MP3 causes an error before writing the new .mycut. Normal native-picker export remains compatible without approved hash array.
+- Code commits `bfa4c1828ada85713d19616fd5a71b495141e395`, `335f749d129045392a794849591742687fd89039`, `465a3df0cbfa5c1de101a0c37a8fd7ce8eed7bdb`, `610c298c8b7ee8a5f9e6c7782483f00546adb85c`.
+- Files: `src/main/index.ts`, `src/shared/types.ts`, `src/preload/index.ts`, `src/renderer/VoiceStudioPanel.tsx`, this handoff.
+- Remaining race: an external writer could still change MP3 after the final hash check and before MyCut reads it; fully atomic snapshot/staging is future work. Source CI needs verification; Windows MyCut 1.0.1 GUI playback and MP4 export not manually verified. No paid AI calls; original project 1019 untouched.
+- NEXT: check new CI; add targeted regressions and consider audio snapshot stage; run actual Windows acceptance.
