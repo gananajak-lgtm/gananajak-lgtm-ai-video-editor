@@ -302,3 +302,10 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Code commit `3412fdf9d41045a4cf460df86b1f90e8276a0534`. No paid AI calls; original project 1019 untouched.
 - New CI must be checked. Manual actual MyCut 1.0.1 Windows GUI playback/MP4 export remains unverified.
 - NEXT: verify CI; then address async episode switch guard and run end-to-end Windows acceptance with verified MP3 + 2–3 images.
+
+## Session checkpoint — 2026-10-22 (discard stale Shot Review loads on episode switches)
+- Started at HEAD `8272d8215278efa9d8ad2b7b9dbf83e14563e64e`; CI #2258 completed **success**.
+- In `src/renderer/VoiceStudioPanel.tsx` the async V1 thumbnail selection pipeline now captures the project/episode key on start and checks it after the native file picker, cue retrieval, and thumbnail previews. If a project/episode switch occurred while an operation awaited, stale results and stale errors are ignored; the old episode's images cannot repopulate the new episode review. `finally` still releases picker lock.
+- Source commit: `a1e7e5fbe85e3a3008dc699ad30ddbe70f0f092e`. Changed file `src/renderer/VoiceStudioPanel.tsx`, this handoff.
+- CI on the new code remains to be checked before claiming pass. No paid APIs or modifications to MyCut project 1019; manual standalone Windows MyCut 1.0.1 playback/MP4 export not verified.
+- NEXT: confirm new CI and investigate failures; test thumbnail behavior and installed Windows end-to-end flow with actual MP3 and 2–3 stills.
