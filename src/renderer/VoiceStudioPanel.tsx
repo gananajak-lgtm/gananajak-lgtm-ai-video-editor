@@ -423,6 +423,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
       setPlanMessage(`ดูตัวอย่างเวลา MyCut ไม่สำเร็จ: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
+  const [myCutReviewImages, setMyCutReviewImages] = useState<Array<{ path: string; preview: string | null }>>([]);
   const [myCutReviewVoiceDurations, setMyCutReviewVoiceDurations] = useState<number[]>([]);
   const myCutReviewTimings = useMemo(() => {
     if (!myCutReviewImages.length || !myCutReviewVoiceDurations.length) return [];
@@ -439,7 +440,6 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
       return [];
     }
   }, [myCutReviewImages, myCutReviewVoiceDurations]);
-  const [myCutReviewImages, setMyCutReviewImages] = useState<Array<{ path: string; preview: string | null }>>([]);
   const [myCutReviewLocks, setMyCutReviewLocks] = useState<number[]>([]);
   const [myCutReviewOpen, setMyCutReviewOpen] = useState(false);
   useEffect(() => {
