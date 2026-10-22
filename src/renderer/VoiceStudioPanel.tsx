@@ -425,6 +425,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
   };
   const [myCutReviewImages, setMyCutReviewImages] = useState<Array<{ path: string; preview: string | null; cue: number | null }>>([]);
   const [myCutReviewVoiceDurations, setMyCutReviewVoiceDurations] = useState<number[]>([]);
+  const [myCutReviewLineIds, setMyCutReviewLineIds] = useState<string[]>([]);
   const myCutReviewTimings = useMemo(() => {
     if (!myCutReviewImages.length || !myCutReviewVoiceDurations.length) return [];
     const starts: number[] = [];
@@ -448,6 +449,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
   useEffect(() => {
     setMyCutReviewImages([]);
     setMyCutReviewVoiceDurations([]);
+    setMyCutReviewLineIds([]);
     setMyCutReviewLocks([]);
     setMyCutReviewOpen(false);
   }, [activeProjectId, activeEpisodeId]);
@@ -474,6 +476,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
       const reviewed = await Promise.all(picked.map(async (path, index) => ({ path, preview: await window.videoEditor.readImagePreview(path), cue: cues[index] })));
       if (requestEpisodeKey !== myCutReviewEpisodeKey.current) return;
       setMyCutReviewVoiceDurations(durations);
+      setMyCutReviewLineIds(productionPlan.jobs.map(job => job.lineId));
       if (reviewed.some(item => !item.preview)) throw new Error("มีภาพที่ไม่สามารถอ่านได้ กรุณาเลือกไฟล์ใหม่");
       setMyCutReviewImages(reviewed);
       setMyCutReviewLocks([]);
@@ -525,6 +528,10 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
       }
       if (ordered.length !== manifest.lines.length || new Set(ordered).size !== ordered.length) {
         setPlanMessage("รายการ MP3 ไม่ตรงกับคิวเสียงปัจจุบัน หรือมีบรรทัดซ้ำ กรุณาตรวจสอบก่อนส่งออกเพื่อป้องกันเรียงผิด");
+        return;
+      }
+      if (reviewedImages && (ordered.length !== myCutReviewLineIds.length || ordered.some((id, index) => id !== myCutReviewLineIds[index]))) {
+        setPlanMessage("คิวเสียงเปลี่ยนหลังรีวิวภาพ กรุณาเลือกภาพและตรวจเวลา V1 ใหม่ก่อนส่งออก");
         return;
       }
       const result = await window.videoEditor.exportStudioEpisodeToMyCut(activeProjectId, activeEpisodeId, ordered, withImages, reviewedImages);
