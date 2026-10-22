@@ -534,6 +534,18 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
         setPlanMessage("คิวเสียงเปลี่ยนหลังรีวิวภาพ กรุณาเลือกภาพและตรวจเวลา V1 ใหม่ก่อนส่งออก");
         return;
       }
+      if (reviewedImages) {
+        // Re-read verified MP3 metadata: an identical line order can still have replacement audio.
+        const durationsById = new Map(manifest.lines.map(line => [line.lineId, line.duration]));
+        const freshDurations = ordered.map(id => durationsById.get(id));
+        if (freshDurations.length !== myCutReviewVoiceDurations.length ||
+            freshDurations.some((duration, index) =>
+              duration === undefined || !Number.isFinite(duration) ||
+              Math.abs(duration - myCutReviewVoiceDurations[index]) > 1e-6)) {
+          setPlanMessage("ไฟล์ MP3 หรือความยาวเสียงเปลี่ยนหลังรีวิวภาพ กรุณาเลือกภาพและตรวจเวลา V1 ใหม่ก่อนส่งออก");
+          return;
+        }
+      }
       const result = await window.videoEditor.exportStudioEpisodeToMyCut(activeProjectId, activeEpisodeId, ordered, withImages, reviewedImages);
       setPlanMessage(result
         ? `สร้างโปรเจกต์ MyCut ใหม่แล้ว: ${result.audioClips} คลิปเสียง · ${result.duration.toFixed(2)} วินาที · ${result.path}${withImages ? " (เพิ่มภาพบน V1 แล้ว)" : " (ยังไม่มีภาพบน V1)"}`
