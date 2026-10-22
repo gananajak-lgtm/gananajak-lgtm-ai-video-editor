@@ -332,3 +332,12 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Limitation: an MP3 rewritten **at the same file path and with the same duration** is not detected by this path/duration comparison. Content hash or asset fingerprint would be needed for full verification.
 - New CI for changed source needs verification. Installed Windows MyCut 1.0.1 playback and MP4 export still not manually validated.
 - NEXT: verify CI; consider audio fingerprint hashing and targeted tests; perform real Windows MyCut end-to-end acceptance.
+
+## Session checkpoint — 2026-10-22 (SHA-256 MP3 review identity)
+- Started at HEAD `d344b8b275260195b7fd15cce26dfc8afd3e9e15`; CI #2266 completed **success**.
+- Added local `studio:mycut-audio-fingerprints` IPC that streams each selected verified MP3 into a SHA-256 digest, plus typed DesktopApi and preload method `readMyCutAudioFingerprints`.
+- In `src/renderer/VoiceStudioPanel.tsx`, V1 Thumbnail Shot Review stores MP3 content digests at review time and rehashes current MP3s before Apply/export. This detects edits at the same file path and with identical audio duration, alongside existing voice IDs, paths, and duration validation. Errors prevent export, with no paid API calls or existing project writes.
+- Source commits: `7fcc6d83b7608bf22c6daef10aa5471a10aafe6c`, `2b85142e86f3ed06433de46a5510fb0a876aebcf`, `375c347f284d1edad93116cd286f8d7bbd5fe8f2`, `573ed83d1084d6ea6f9f33fa7b69f226859fecad`.
+- Changed files: `src/main/index.ts`, `src/shared/types.ts`, `src/preload/index.ts`, `src/renderer/VoiceStudioPanel.tsx`, this handoff.
+- Check new CI before claiming pass. Fingerprints are compared before opening native Export dialogs, not an atomic lock through serialization; files could still change afterward. Windows MyCut 1.0.1 GUI MP3 playback / MP4 export remains untested. Original project 1019 untouched.
+- NEXT: inspect CI failures if any; targeted regression tests for hashing and stale review; Windows end-to-end acceptance.
