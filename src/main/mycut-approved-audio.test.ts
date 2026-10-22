@@ -38,3 +38,19 @@ test("approved MP3 hash order is binding", async t => {
  await assertApprovedMyCutMp3Hashes([one,two],hashes);
  await assert.rejects(assertApprovedMyCutMp3Hashes([two,one],hashes),/changed/);
 });
+
+test("second approved clip changing is rejected even if the first is unchanged", async t => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "mycut-second-clip-"));
+  t.after(async () => { await rm(dir, { recursive: true, force: true }); });
+  const first = path.join(dir, "first.mp3");
+  const second = path.join(dir, "second.mp3");
+  await writeFile(first, "ID3clip01");
+  await writeFile(second, "ID3clip02");
+  const hashes = await Promise.all([first, second].map(async file =>
+    createHash("sha256").update(await readFile(file)).digest("hex")
+  ));
+  await assertApprovedMyCutMp3Hashes([first, second], hashes);
+  await writeFile(second, "ID3clip03");
+  await assert.rejects(assertApprovedMyCutMp3Hashes([first, second], hashes), /changed/);
+  await assert.rejects(assertApprovedMyCutMp3Hashes([first, second], [hashes[0]]), /Invalid MyCut/);
+});
