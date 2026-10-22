@@ -28,3 +28,13 @@ test("approved MP3 verification rejects malformed hashes and missing media", asy
   await assert.rejects(assertApprovedMyCutMp3Hashes([file], ["0".repeat(64)]), /ENOENT/);
   await assert.rejects(assertApprovedMyCutMp3Hashes([], []), /Invalid MyCut/);
 });
+
+test("approved MP3 hash order is binding", async t => {
+ const dir=await mkdtemp(path.join(os.tmpdir(),"mycut-order-"));
+ t.after(()=>rm(dir,{recursive:true,force:true}));
+ const one=path.join(dir,"one.mp3"), two=path.join(dir,"two.mp3");
+ await writeFile(one,"ID3first"); await writeFile(two,"ID3other");
+ const hashes=await Promise.all([one,two].map(async file=>createHash("sha256").update(await readFile(file)).digest("hex")));
+ await assertApprovedMyCutMp3Hashes([one,two],hashes);
+ await assert.rejects(assertApprovedMyCutMp3Hashes([two,one],hashes),/changed/);
+});
