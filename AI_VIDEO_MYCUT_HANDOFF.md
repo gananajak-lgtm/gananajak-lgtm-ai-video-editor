@@ -309,3 +309,10 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Source commit: `a1e7e5fbe85e3a3008dc699ad30ddbe70f0f092e`. Changed file `src/renderer/VoiceStudioPanel.tsx`, this handoff.
 - CI on the new code remains to be checked before claiming pass. No paid APIs or modifications to MyCut project 1019; manual standalone Windows MyCut 1.0.1 playback/MP4 export not verified.
 - NEXT: confirm new CI and investigate failures; test thumbnail behavior and installed Windows end-to-end flow with actual MP3 and 2–3 stills.
+
+## Session checkpoint — 2026-10-22 (reject stale V1 review after voice queue edits)
+- Started from fresh HEAD `5da7bebfe8bda37172a1119e29e2bd579bc7319c`; CI #2260 completed **success**.
+- In `src/renderer/VoiceStudioPanel.tsx` Shot Review now captures the voice production job line IDs when thumbnails/cue timings are loaded. At final Apply/export it compares the current verified MP3 export order to that original review queue; if a line was added, removed or reordered after review, export is aborted with a Thai explanation to repeat review. This avoids exporting a shot timing plan approved for a different narration order within the *same* episode.
+- Source commit `59748b55bcd861215bb786ef43c8f1bce264e16f` (VoiceStudioPanel). Project/episode switching already clears the review. No paid APIs, no changes to original MyCut project 1019.
+- Latest CI on this new code still needs verification. Manual Windows MyCut 1.0.1 GUI playback/MP4 export not tested.
+- NEXT: check CI; test review -> narration reorder -> Apply abort; end-to-end Windows MyCut acceptance with real existing MP3 and 2–3 still images remains required.
