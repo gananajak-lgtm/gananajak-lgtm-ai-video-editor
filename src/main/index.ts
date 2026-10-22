@@ -205,6 +205,25 @@ ipcMain.handle("media:image-preview", async (_event, filePath: string) => {
   return image.resize({ width }).toDataURL();
 });
 
+ipcMain.handle("studio:mycut-audio-fingerprints", async (_event, files: string[]) => {
+  if (!Array.isArray(files) || !files.length || files.length > 10000 ||
+      files.some(file => typeof file !== "string" || !file || path.extname(file).toLowerCase() !== ".mp3")) {
+    throw new Error("Invalid MyCut MP3 fingerprint request");
+  }
+  const { createHash } = await import("node:crypto");
+  const { createReadStream } = await import("node:fs");
+  const { stat } = await import("node:fs/promises");
+  const digests: string[] = [];
+  for (const file of files) {
+    const info = await stat(file);
+    if (!info.isFile() || info.size <= 0) throw new Error("Invalid MyCut MP3 file");
+    const hash = createHash("sha256");
+    for await (const chunk of createReadStream(file)) hash.update(chunk);
+    digests.push(hash.digest("hex"));
+  }
+  return digests;
+});
+
 ipcMain.handle("studio:mycut-image-cues", async (_event, images: string[], lineCount: number) => {
   if (!Array.isArray(images) || images.length > 500 || !Number.isInteger(lineCount) || lineCount < 1 ||
       images.some(image => typeof image !== "string" || !image ||
