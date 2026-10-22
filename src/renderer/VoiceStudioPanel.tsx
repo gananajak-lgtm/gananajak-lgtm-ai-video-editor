@@ -423,7 +423,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
       setPlanMessage(`ดูตัวอย่างเวลา MyCut ไม่สำเร็จ: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
-  const [myCutReviewImages, setMyCutReviewImages] = useState<Array<{ path: string; preview: string | null }>>([]);
+  const [myCutReviewImages, setMyCutReviewImages] = useState<Array<{ path: string; preview: string | null; cue: number | null }>>([]);
   const [myCutReviewVoiceDurations, setMyCutReviewVoiceDurations] = useState<number[]>([]);
   const myCutReviewTimings = useMemo(() => {
     if (!myCutReviewImages.length || !myCutReviewVoiceDurations.length) return [];
@@ -434,7 +434,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
       end += duration + (index === myCutReviewVoiceDurations.length - 1 ? 0 : 0.3);
     });
     try {
-      const cuts = computeMyCutImageCuts(starts, end, myCutReviewImages.length, myCutReviewImages.map(() => null));
+      const cuts = computeMyCutImageCuts(starts, end, myCutReviewImages.length, myCutReviewImages.map(image => image.cue));
       return buildMyCutShotReview(myCutReviewImages.map(image => image.path), cuts, end);
     } catch {
       return [];
@@ -460,8 +460,9 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
           new Set(productionPlan.jobs.filter(job => lookup.has(job.lineId)).map(job => job.lineId)).size !== durations.length) {
         throw new Error("คิว MP3 ไม่ตรงกับรายการปัจจุบัน กรุณาตรวจสอบเสียงก่อนรีวิวภาพ");
       }
+      const cues = await window.videoEditor.readMyCutImageCues(picked, durations.length);
+      const reviewed = await Promise.all(picked.map(async (path, index) => ({ path, preview: await window.videoEditor.readImagePreview(path), cue: cues[index] })));
       setMyCutReviewVoiceDurations(durations);
-      const reviewed = await Promise.all(picked.map(async path => ({ path, preview: await window.videoEditor.readImagePreview(path) })));
       if (reviewed.some(item => !item.preview)) throw new Error("มีภาพที่ไม่สามารถอ่านได้ กรุณาเลือกไฟล์ใหม่");
       setMyCutReviewImages(reviewed);
       setMyCutReviewLocks([]);
