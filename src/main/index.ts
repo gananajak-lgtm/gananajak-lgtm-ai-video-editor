@@ -313,12 +313,15 @@ ipcMain.handle("studio:generate-voice-line", async (_event, request: {
 ipcMain.handle("studio:remove-voice-audio", (_event, projectId: string, episodeId: string, lineId: string) => removeStudioEpisodeVoiceAudio(projectId, episodeId, lineId));
 ipcMain.handle("studio:load-voice-audio", (_event, projectId: string, episodeId: string) => loadStudioEpisodeVoiceAudio(projectId, episodeId));
 ipcMain.handle("studio:prepare-mycut-voice-manifest", (_event, projectId: string, episodeId: string) => prepareStudioEpisodeMyCutVoiceManifest(projectId, episodeId));
-ipcMain.handle("studio:export-mycut", async (_event, projectId: string, episodeId: string, orderedLineIds: string[], withImages = false, selectedImages?: string[]) => {
+ipcMain.handle("studio:export-mycut", async (_event, projectId: string, episodeId: string, orderedLineIds: string[], withImages = false, selectedImages?: string[], expectedAudioHashes?: string[]) => {
   // Validate untrusted IPC input before opening any native selection or approval dialog.
   if (!Array.isArray(orderedLineIds) || orderedLineIds.length > 10000 ||
       orderedLineIds.some(id => typeof id !== "string" || !id || id.length > 250) ||
       new Set(orderedLineIds).size !== orderedLineIds.length ||
       typeof withImages !== "boolean" ||
+      (expectedAudioHashes !== undefined && (!selectedImages || !Array.isArray(expectedAudioHashes) ||
+        expectedAudioHashes.length !== orderedLineIds.length ||
+        expectedAudioHashes.some(hash => typeof hash !== "string" || !/^[a-f0-9]{64}$/.test(hash)))) ||
       (selectedImages !== undefined && (!withImages || !Array.isArray(selectedImages) || selectedImages.length < 1 || selectedImages.length > 500 || selectedImages.some(image => typeof image !== "string")))) {
     throw new Error("Invalid MyCut export request");
   }
@@ -451,6 +454,22 @@ ipcMain.handle("studio:export-mycut", async (_event, projectId: string, episodeI
     filters: [{ name: "MyCut project", extensions: ["mycut"] }]
   });
   if (result.canceled || !result.filePath) return null;
+  // Recheck the approved MP3 bytes after the native dialogs, immediately before serialization.
+  if (expectedAudioHashes) {
+    const latest = await prepareStudioEpisodeMyCutVoiceManifest(projectId, episodeId);
+    const latestById = new Map(latest.lines.map(line => [line.lineId, line.audio]));
+    const { createHash } = await import("node:crypto");
+    const { createReadStream } = await import("node:fs");
+    for (let index = 0; index < orderedLineIds.length; index++) {
+      const audio = latestById.get(orderedLineIds[index]);
+      if (!audio) throw new Error("MyCut MP3 missing after approval; review again");
+      const hash = createHash("sha256");
+      for await (const chunk of createReadStream(audio)) hash.update(chunk);
+      if (hash.digest("hex") !== expectedAudioHashes[index]) {
+        throw new Error("MyCut MP3 changed after review; reselect images and approve again");
+      }
+    }
+  }
   return exportStudioEpisodeToMyCut(projectId, episodeId, orderedLineIds, result.filePath, imagePaths);
 });
   ipcMain.handle("studio:voice-audio-duration", (_event, projectId: string, episodeId: string, relativePath: string) => getStudioVoiceAudioDuration(projectId, episodeId, relativePath));
