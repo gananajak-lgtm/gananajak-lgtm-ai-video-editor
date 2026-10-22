@@ -350,3 +350,10 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Files: `src/main/index.ts`, `src/shared/types.ts`, `src/preload/index.ts`, `src/renderer/VoiceStudioPanel.tsx`, this handoff.
 - Remaining race: an external writer could still change MP3 after the final hash check and before MyCut reads it; fully atomic snapshot/staging is future work. Source CI needs verification; Windows MyCut 1.0.1 GUI playback and MP4 export not manually verified. No paid AI calls; original project 1019 untouched.
 - NEXT: check new CI; add targeted regressions and consider audio snapshot stage; run actual Windows acceptance.
+
+## Session checkpoint — 2026-10-22 (serializer-boundary MP3 hash check)
+- Started at HEAD `a6d1be71ee8a43e594e750d2949939df046968b2`; its CI #2275 was in_progress during initial check.
+- Extended `exportStudioEpisodeToMyCut` to optionally accept approved MP3 SHA-256 digests, reject malformed counts/hash strings, and stream/re-hash the actual selected MP3 assets *after constructing the V1/A1 timeline and immediately before the exclusive .mycut write*. Main IPC passes existing review hashes into serializer. This supplements the post-Save-As check and narrows (does not eliminate) TOCTOU exposure.
+- Source commits `dda6f8cc13f1421fb134076d393298d89514f519` (`src/main/studio-projects.ts`), `cc459bb987a6a28d4c913ea25df3406b488e7381` (`src/main/index.ts`).
+- New source CI awaits verification. Audio files still referenced by path in MyCut; fully atomic snapshots aren't implemented. MyCut 1.0.1 Windows GUI/MP4 acceptance has not been run; original MyCut project 1019 untouched. No paid AI calls.
+- NEXT: check CI and fix any failures, add file-mutation regression testing; then manually validate generated project in Windows MyCut with MP3 and stills.
