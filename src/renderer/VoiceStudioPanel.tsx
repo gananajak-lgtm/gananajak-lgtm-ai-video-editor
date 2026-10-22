@@ -442,6 +442,9 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
   }, [myCutReviewImages, myCutReviewVoiceDurations]);
   const [myCutReviewLocks, setMyCutReviewLocks] = useState<number[]>([]);
   const [myCutReviewOpen, setMyCutReviewOpen] = useState(false);
+  const myCutReviewEpisodeKey = useRef(`${activeProjectId ?? ""}:${activeEpisodeId ?? ""}`);
+  // Keep the current episode identity visible to pending async picker callbacks.
+  myCutReviewEpisodeKey.current = `${activeProjectId ?? ""}:${activeEpisodeId ?? ""}`;
   useEffect(() => {
     setMyCutReviewImages([]);
     setMyCutReviewVoiceDurations([]);
@@ -452,11 +455,12 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
   const [myCutReviewSelecting, setMyCutReviewSelecting] = useState(false);
   const selectMyCutReviewImages = async () => {
     if (myCutReviewSelectionLock.current || myCutExportLock.current || !activeProjectId || !activeEpisodeId) return;
+    const requestEpisodeKey = myCutReviewEpisodeKey.current;
     myCutReviewSelectionLock.current = true;
     setMyCutReviewSelecting(true);
     try {
       const picked = await window.videoEditor.selectImages();
-      if (!picked.length) return;
+      if (requestEpisodeKey !== myCutReviewEpisodeKey.current || !picked.length) return;
       assertMyCutUniqueSelectedImages(picked);
       const manifest = await window.videoEditor.prepareStudioEpisodeMyCutVoiceManifest(activeProjectId!, activeEpisodeId!);
       const lookup = new Map(manifest.lines.map(line => [line.lineId, line.duration]));
@@ -466,7 +470,9 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
         throw new Error("คิว MP3 ไม่ตรงกับรายการปัจจุบัน กรุณาตรวจสอบเสียงก่อนรีวิวภาพ");
       }
       const cues = await window.videoEditor.readMyCutImageCues(picked, durations.length);
+      if (requestEpisodeKey !== myCutReviewEpisodeKey.current) return;
       const reviewed = await Promise.all(picked.map(async (path, index) => ({ path, preview: await window.videoEditor.readImagePreview(path), cue: cues[index] })));
+      if (requestEpisodeKey !== myCutReviewEpisodeKey.current) return;
       setMyCutReviewVoiceDurations(durations);
       if (reviewed.some(item => !item.preview)) throw new Error("มีภาพที่ไม่สามารถอ่านได้ กรุณาเลือกไฟล์ใหม่");
       setMyCutReviewImages(reviewed);
@@ -474,6 +480,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
       setMyCutReviewOpen(true);
       setPlanMessage("เลือกภาพแล้ว ตรวจลำดับและล็อกช็อตก่อนกด Apply และ Export");
     } catch (error) {
+      if (requestEpisodeKey !== myCutReviewEpisodeKey.current) return;
       setPlanMessage(`เลือกภาพสำหรับรีวิวไม่สำเร็จ: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       myCutReviewSelectionLock.current = false;
