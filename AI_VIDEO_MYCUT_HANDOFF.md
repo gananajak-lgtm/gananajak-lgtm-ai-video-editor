@@ -365,3 +365,10 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Commits: `9c6a157aa3cafe61e53fa6d301b9162c9a121ee5`, `89001c24eaadc62a99134c29711a0ba653685495`, `04eeef487243246043fc0312e4262e53210b3e03`, `3c4a2b660e55bc9ade286740685099e5c663bf95`.
 - Check new CI for TS/tests; no live Windows MyCut 1.0.1 GUI playback or MP4 rendering tested, no paid API usage, original project 1019 not touched. As before, external mutation after digest verification is not atomically prevented.
 - NEXT: diagnose CI if red, otherwise plan snapshot/reference integrity; Windows end-to-end manual acceptance with real MP3 and stills remains essential.
+
+## Session checkpoint — 2026-10-23 (ordered MP3 verification regression)
+- Fresh starting HEAD `fd64edfb1fd21c7a5c50c69d350fdc95939b3cc8`, CI #2283 completed success.
+- Added a `node:test` regression to `src/main/mycut-approved-audio.test.ts`: two approved MP3 files are accepted in their reviewed order, and reversing the file order with unchanged hashes must be rejected. This checks A1 line-to-fingerprint positional binding, not only existence or byte integrity.
+- Test commit `fe80e8d848ea9083e88efdb95e5a5062cbccef98`.
+- Recheck Actions for this test commit; do not claim new CI green until observed. No Windows MyCut 1.0.1 GUI or actual MP4 export validation yet; no paid API calls; original project 1019 untouched.
+- NEXT: verify new CI; add deeper second-line mutation regression when possible, then Windows acceptance with verified MP3 and 2–3 stills. Fully atomic audio staging not implemented.
