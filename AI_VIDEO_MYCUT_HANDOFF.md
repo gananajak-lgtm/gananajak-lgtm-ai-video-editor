@@ -295,3 +295,10 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Code commit `eadf0d6ee25cd1eaf036e7e9bc311b37b6e19e97`; changed `src/renderer/VoiceStudioPanel.tsx` plus this handoff. No paid API calls or updates to MyCut project 1019.
 - Verify CI for this change; installed Windows MyCut 1.0.1 MP3 playback/MP4 export still untested.
 - NEXT: ensure new CI passes, assess further thumbnail GUI UX and acceptance test with MP3+2–3 images in actual Windows MyCut.
+
+## Session checkpoint — 2026-10-22 (thumbnail selection reentrancy guard)
+- Started at HEAD `e904ccd24a76e1174b551b5e4e78d6aca5a74009`; CI #2256 completed **success**.
+- In `src/renderer/VoiceStudioPanel.tsx`, added synchronous ref lock and pending state to the V1 thumbnail picker/preview-loading flow. Repeated clicks cannot open overlapping local image pickers or issue overlapping thumbnail/cue/MP3 reads. Thumbnail selection button is disabled while loading; lock is always cleared in `finally` including cancel and errors, and picker is guarded during MyCut export.
+- Code commit `3412fdf9d41045a4cf460df86b1f90e8276a0534`. No paid AI calls; original project 1019 untouched.
+- New CI must be checked. Manual actual MyCut 1.0.1 Windows GUI playback/MP4 export remains unverified.
+- NEXT: verify CI; then address async episode switch guard and run end-to-end Windows acceptance with verified MP3 + 2–3 images.
