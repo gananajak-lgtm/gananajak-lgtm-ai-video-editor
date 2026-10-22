@@ -372,3 +372,10 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Test commit `fe80e8d848ea9083e88efdb95e5a5062cbccef98`.
 - Recheck Actions for this test commit; do not claim new CI green until observed. No Windows MyCut 1.0.1 GUI or actual MP4 export validation yet; no paid API calls; original project 1019 untouched.
 - NEXT: verify new CI; add deeper second-line mutation regression when possible, then Windows acceptance with verified MP3 and 2–3 stills. Fully atomic audio staging not implemented.
+
+## Session checkpoint — 2026-10-23 (second-clip MP3 mutation regression)
+- Started at HEAD `8f1a80d75026b74b1fca1385db6b8cd7f262062d`; CI #2285 completed **success**.
+- Extended `src/main/mycut-approved-audio.test.ts` with multi-clip regression: approve two SHA-256 MP3 fingerprints; mutate the second clip at the same path and size while leaving the first untouched; assert the final approved-audio verification rejects it. A missing hash for the second clip also rejects.
+- Test commit `adb070db94e25af4720f08a1557b81ef1666373d`. Existing `test:mycut` command already includes this test file.
+- Check new CI before claiming test pass. No GUI Windows MyCut 1.0.1 or MP4 export acceptance completed; no paid API use or changes to project 1019.
+- NEXT: confirm CI, then focus on integration acceptance and atomic audio snapshot limitations.
