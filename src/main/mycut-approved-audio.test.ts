@@ -54,3 +54,17 @@ test("second approved clip changing is rejected even if the first is unchanged",
   await assert.rejects(assertApprovedMyCutMp3Hashes([first, second], hashes), /changed/);
   await assert.rejects(assertApprovedMyCutMp3Hashes([first, second], [hashes[0]]), /Invalid MyCut/);
 });
+
+test("missing second approved MP3 aborts verification even if first is valid", async t => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "mycut-missing-second-"));
+  t.after(async () => { await rm(dir, { recursive: true, force: true }); });
+  const first = path.join(dir, "first.mp3");
+  const second = path.join(dir, "second.mp3");
+  await writeFile(first, "ID3voice1");
+  await writeFile(second, "ID3voice2");
+  const hashes = await Promise.all([first, second].map(async file =>
+    createHash("sha256").update(await readFile(file)).digest("hex")
+  ));
+  await rm(second);
+  await assert.rejects(assertApprovedMyCutMp3Hashes([first, second], hashes), /ENOENT/);
+});
