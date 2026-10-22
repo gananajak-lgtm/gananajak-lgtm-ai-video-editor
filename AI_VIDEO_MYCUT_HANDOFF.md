@@ -279,3 +279,12 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Source commit: `07cee60027184373dbab23404caf206a6ee7c0d3` (`src/renderer/VoiceStudioPanel.tsx`).
 - This fix requires new CI verification before claiming build pass. Previous #2246 is confirmed RED.
 - Next: check CI for this commit, then improve exact storyboard cue timing previews in the UI safely; manually verify installed Windows MyCut 1.0.1 playback and MP4 export. Project 1019 untouched.
+
+## Session checkpoint — 2026-10-22 (cue-accurate thumbnail V1 review)
+- Fresh starting HEAD `e3e2f3bf85ddfc72d535aaca3ced04762e9f1374`; GitHub Actions CI #2248 **success** (after typecheck repair).
+- Added `studio:mycut-image-cues` in `src/main/index.ts` to read local, bounded UTF-8 `.txt` sidecar line cues using the existing strict `parseMyCutStoryboardLineCue`; exposed method through typed `DesktopApi` and `src/preload/index.ts`. No Vision API call or paid usage.
+- Updated `src/renderer/VoiceStudioPanel.tsx` thumbnail preview to store each image's parsed cue, run the shared cut computation with these cues, and update cut timings when users reorder. Apply is disabled if the cut plan is invalid or conflicting, rather than silently sending a knowingly invalid V1 plan to Save As. Final export still re-reads local cues and requires final approval.
+- Source commits: `69de7cd7c170dec8ce3ec9e14f26a06db733f832`, `c796fbc1cb41bc86c01f4f2e87bfe8c62e4ee778`, `a1c16526aa1ac6ffb9a7afcd81e212567ff84650`, `e090b4d34cf86978991345ccdc22f51015d31db8`, `8a30e7e4ea7328e5c4df2fb1781b4ed04801beb6`.
+- Changed: `src/main/index.ts`, `src/shared/types.ts`, `src/preload/index.ts`, `src/renderer/VoiceStudioPanel.tsx`, this handoff.
+- Check newest CI on this code before claiming pass; no installed Windows MyCut 1.0.1 manual playback or MP4 export verified. Original project 1019 untouched.
+- NEXT: verify CI, investigate errors, review thumbnail lock/Apply workflow in actual GUI, then Windows acceptance with verified MP3 and 2-3 stills.
