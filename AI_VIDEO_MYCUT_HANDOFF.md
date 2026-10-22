@@ -324,3 +324,11 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Source commit: `dd62fe677f041c6822ba63c85d7c66571cdfc278` (VoiceStudioPanel).
 - Verify CI for this change before claiming pass. Manual installed Windows MyCut 1.0.1 MP3 playback and MP4 export acceptance still not verified; user's original project 1019 untouched.
 - NEXT: check CI; consider review fingerprinting verified MP3 file identity (same-duration replacements remain possible), add targeted regressions, then test full Windows user flow.
+
+## Session checkpoint — 2026-10-22 (invalidate review when MP3 path changes)
+- Starting HEAD `832e826dabb25fa0d1ba4f27e4ac6b4218500c47`; CI #2264 was **queued** on inspection, not verified green.
+- V1 thumbnail review now saves the verified MP3 asset paths in the voice-queue order at review time, and checks them against a fresh voice manifest when Apply/export is pressed. A replaced or remapped MP3 **path** with identical duration no longer slips through the line-ID/duration checks. The review is reset on episode switch as before.
+- Source commit `1fa6e52a516cba339ec720ae25957e444f966754` in `src/renderer/VoiceStudioPanel.tsx`. No paid API calls, and original MyCut project 1019 untouched.
+- Limitation: an MP3 rewritten **at the same file path and with the same duration** is not detected by this path/duration comparison. Content hash or asset fingerprint would be needed for full verification.
+- New CI for changed source needs verification. Installed Windows MyCut 1.0.1 playback and MP4 export still not manually validated.
+- NEXT: verify CI; consider audio fingerprint hashing and targeted tests; perform real Windows MyCut end-to-end acceptance.
