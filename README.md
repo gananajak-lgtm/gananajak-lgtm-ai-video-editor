@@ -1,5 +1,7 @@
 # AI Video Editor 🎬
 
+> 📱💻 **Continuing this project between ChatGPT chats on mobile and desktop?** Read [AI_VIDEO_MYCUT_HANDOFF.md](./AI_VIDEO_MYCUT_HANDOFF.md) first. It records project rules, verified state, CI, unfinished work, and the mandatory end-of-session GitHub handoff procedure. Always fresh-fetch branch HEAD.
+
 AI-assisted automatic video editor focused on story-driven videos made from still images, long narration, music, ambience, sound effects, and subtitles.
 
 ## MVP

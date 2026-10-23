@@ -1,3 +1,6 @@
+import { generateStudioVoiceLine } from "./providers/elevenlabs-voice-provider";
+import { listStudioProjects, createStudioProject, createStudioEpisode, deleteStudioProject, deleteStudioEpisode, listStudioTrash, restoreStudioTrash, loadStudioEpisodeEditor, saveStudioEpisodeEditor, loadStudioEpisodeScript, saveStudioEpisodeScript, loadStudioCharacterVoices, saveStudioCharacterVoices, patchStudioCharacterVoice, loadStudioEpisodeVoiceAudio, removeStudioEpisodeVoiceAudio, getStudioVoiceAudioDuration, findReusableStudioEpisodeAudio, prepareStudioEpisodeMyCutVoiceManifest, exportStudioEpisodeToMyCut, suggestMyCutImageOrder } from "./studio-projects";
+import { computeMyCutImageCuts, parseMyCutStoryboardLineCue, buildMyCutShotReview, assertMyCutUniqueSelectedImages } from "../shared/mycut-image-cuts";
 import { checkProviderConnection } from "./provider-connection";
 import { createMetaBrokerSession, exchangeMetaBrokerSession, validateMetaBrokerConfig } from "./meta-auth-broker";
 import { explainAffiliateProduct } from "./affiliate-product-search";
@@ -5,6 +8,7 @@ import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell } from "electro
 import path from "node:path";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import ffmpegPath from "ffmpeg-static";
+import { resolveBundledFfmpegPath } from "./studio-mp3-decode";
 import { spawn } from "node:child_process";
 import type { ContentBrief } from "../shared/content-factory";
 import type { AudioAsset, ProjectDocument, SceneBlock, TimelinePlan, TranscriptResult, VisualBrainPlan } from "../shared/types";
@@ -31,7 +35,7 @@ import {
   createPlaybackUrl,
   installMediaProtocol
 } from "./mediaProtocol";
-import { getAiSettingsStatus, saveOpenAiApiKey, getReplicateApiToken, saveReplicateApiToken, getElevenLabsApiKey, saveElevenLabsApiKey, getReplicateVideoModel, saveReplicateVideoModel } from "./settings";
+import { getAiSettingsStatus, saveOpenAiApiKey, getReplicateApiToken, saveReplicateApiToken, getElevenLabsApiKey, saveElevenLabsApiKey, listElevenLabsWorkspaces, saveElevenLabsWorkspace, selectElevenLabsWorkspace, getReplicateVideoModel, saveReplicateVideoModel } from "./settings";
 import {
   autosaveProject,
   findMissingMedia,
@@ -201,6 +205,44 @@ ipcMain.handle("media:image-preview", async (_event, filePath: string) => {
   return image.resize({ width }).toDataURL();
 });
 
+ipcMain.handle("studio:mycut-audio-fingerprints", async (_event, files: string[]) => {
+  if (!Array.isArray(files) || !files.length || files.length > 10000 ||
+      files.some(file => typeof file !== "string" || !file || path.extname(file).toLowerCase() !== ".mp3")) {
+    throw new Error("Invalid MyCut MP3 fingerprint request");
+  }
+  const { createHash } = await import("node:crypto");
+  const { createReadStream } = await import("node:fs");
+  const { stat } = await import("node:fs/promises");
+  const digests: string[] = [];
+  for (const file of files) {
+    const info = await stat(file);
+    if (!info.isFile() || info.size <= 0) throw new Error("Invalid MyCut MP3 file");
+    const hash = createHash("sha256");
+    for await (const chunk of createReadStream(file)) hash.update(chunk);
+    digests.push(hash.digest("hex"));
+  }
+  return digests;
+});
+
+ipcMain.handle("studio:mycut-image-cues", async (_event, images: string[], lineCount: number) => {
+  if (!Array.isArray(images) || images.length > 500 || !Number.isInteger(lineCount) || lineCount < 1 ||
+      images.some(image => typeof image !== "string" || !image ||
+        ![".png", ".jpg", ".jpeg", ".webp", ".bmp"].includes(path.extname(image).toLowerCase()))) {
+    throw new Error("Invalid MyCut shot cue request");
+  }
+  const { stat, readFile } = await import("node:fs/promises");
+  return Promise.all(images.map(async image => {
+    try {
+      const sidecar = image + ".txt";
+      if ((await stat(sidecar)).size > 8192) return null;
+      return parseMyCutStoryboardLineCue(await readFile(sidecar, "utf8"), lineCount);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+      throw error;
+    }
+  }));
+});
+
 ipcMain.handle("media:select-narration", async () => {
   const result = await dialog.showOpenDialog({
     title: "Select narration audio",
@@ -242,6 +284,208 @@ ipcMain.handle("media:select-audio-layers", async () => {
 
   return assets;
 });
+
+ipcMain.handle("studio:list-projects", () => listStudioProjects());
+ipcMain.handle("studio:create-project", (_event, title: string) => createStudioProject(title));
+ipcMain.handle("studio:create-episode", (_event, projectId: string, title: string) => createStudioEpisode(projectId, title));
+ipcMain.handle("studio:delete-project", (_event, projectId: string) => deleteStudioProject(projectId));
+ipcMain.handle("studio:delete-episode", (_event, projectId: string, episodeId: string) => deleteStudioEpisode(projectId, episodeId));
+ipcMain.handle("studio:list-trash", () => listStudioTrash());
+ipcMain.handle("studio:restore-trash", (_event, kind: "project" | "episode", archiveId: string) => restoreStudioTrash(kind, archiveId));
+ipcMain.handle("studio:load-episode-editor", (_event, projectId: string, episodeId: string) => loadStudioEpisodeEditor(projectId, episodeId));
+ipcMain.handle("studio:save-episode-editor", (_event, projectId: string, episodeId: string, document: ProjectDocument) => saveStudioEpisodeEditor(projectId, episodeId, document));
+ipcMain.handle("studio:load-episode-script", (_event, projectId: string, episodeId: string) => loadStudioEpisodeScript(projectId, episodeId));
+ipcMain.handle("studio:save-episode-script", (_event, projectId: string, episodeId: string, script: string) => saveStudioEpisodeScript(projectId, episodeId, script));
+ipcMain.handle("studio:generate-voice-line", async (_event, request: {
+  projectId: string; episodeId: string; lineId: string; fingerprint: string;
+  text: string; voiceId: string; modelId: string; approved: boolean;
+  jobId?: string; speaker?: string; emotion?: string;
+}) => {
+  if (!request || request.approved !== true) throw new Error("Explicit paid generation approval required");
+  if (typeof request.projectId !== "string" || typeof request.episodeId !== "string" ||
+      typeof request.lineId !== "string" || typeof request.fingerprint !== "string" ||
+      typeof request.text !== "string" || typeof request.voiceId !== "string" ||
+      typeof request.modelId !== "string") throw new Error("Invalid voice request");
+  return generateStudioVoiceLine(request.projectId, request.episodeId, request.lineId,
+    request.fingerprint, request.text, request.voiceId, request.modelId,
+    { jobId: request.jobId, speaker: request.speaker, emotion: request.emotion });
+});
+ipcMain.handle("studio:remove-voice-audio", (_event, projectId: string, episodeId: string, lineId: string) => removeStudioEpisodeVoiceAudio(projectId, episodeId, lineId));
+ipcMain.handle("studio:load-voice-audio", (_event, projectId: string, episodeId: string) => loadStudioEpisodeVoiceAudio(projectId, episodeId));
+ipcMain.handle("studio:prepare-mycut-voice-manifest", (_event, projectId: string, episodeId: string) => prepareStudioEpisodeMyCutVoiceManifest(projectId, episodeId));
+ipcMain.handle("studio:export-mycut", async (_event, projectId: string, episodeId: string, orderedLineIds: string[], withImages = false, selectedImages?: string[], expectedAudioHashes?: string[]) => {
+  // Validate untrusted IPC input before opening any native selection or approval dialog.
+  if (!Array.isArray(orderedLineIds) || orderedLineIds.length > 10000 ||
+      orderedLineIds.some(id => typeof id !== "string" || !id || id.length > 250) ||
+      new Set(orderedLineIds).size !== orderedLineIds.length ||
+      typeof withImages !== "boolean" ||
+      (expectedAudioHashes !== undefined && (!selectedImages || !Array.isArray(expectedAudioHashes) ||
+        expectedAudioHashes.length !== orderedLineIds.length ||
+        expectedAudioHashes.some(hash => typeof hash !== "string" || !/^[a-f0-9]{64}$/.test(hash)))) ||
+      (selectedImages !== undefined && (!withImages || !Array.isArray(selectedImages) || selectedImages.length < 1 || selectedImages.length > 500 || selectedImages.some(image => typeof image !== "string")))) {
+    throw new Error("Invalid MyCut export request");
+  }
+  const suggestion = await prepareStudioEpisodeMyCutVoiceManifest(projectId, episodeId);
+  if (!suggestion.lines.length) throw new Error("No completed MP3 files to export");
+  let imagePaths: string[] = [];
+  if (withImages && selectedImages === undefined) {
+    const selection = await dialog.showOpenDialog({
+      title: "Select images in Timeline order (V1)",
+      properties: ["openFile", "multiSelections"],
+      filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "webp", "bmp"] }]
+    });
+    if (selection.canceled || !selection.filePaths.length) return null;
+    imagePaths = selection.filePaths;
+  } else if (withImages && selectedImages) {
+    imagePaths = [...selectedImages];
+  }
+  // Preview and require explicit approval before creating any MyCut file.
+  // Filename/order matching is not AI visual analysis; selected images remain in their given order.
+  const durations = new Map(suggestion.lines.map(line => [line.lineId, line.duration]));
+  const selectedDurations = orderedLineIds.length
+    ? orderedLineIds.map(id => {
+        const duration = durations.get(id);
+        if (duration === undefined) throw new Error("Voice line missing: " + id);
+        return duration;
+      })
+    : suggestion.lines.map(line => line.duration);
+  const total = selectedDurations.reduce((sum, duration) => sum + duration, 0) +
+    Math.max(0, selectedDurations.length - 1) * 0.3;
+  // A thumbnail-review Apply is the authoritative user-selected order.
+  // Never propose another automatic reorder after that explicit decision.
+  if (imagePaths.length > 1 && selectedImages === undefined) {
+    const lineLookup = new Map(suggestion.lines.map(line => [line.lineId, line]));
+    const narration = orderedLineIds.length
+      ? orderedLineIds.map(id => lineLookup.get(id)).filter((line): line is NonNullable<typeof line> => !!line)
+      : suggestion.lines;
+    // Optional local sidecar caption: shot-001.png.txt (UTF-8).
+    // The image itself is not uploaded and no paid vision API is invoked.
+    const { readFile } = await import("node:fs/promises");
+    const descriptions: Record<string, string> = {};
+    for (const file of imagePaths) {
+      try {
+        const sidecar = file + ".txt";
+        const { stat } = await import("node:fs/promises");
+        if ((await stat(sidecar)).size > 8192) continue;
+        descriptions[file] = (await readFile(sidecar, "utf8")).slice(0, 8192);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      }
+    }
+    const matches = suggestMyCutImageOrder(imagePaths, narration, descriptions);
+    const hitCount = matches.filter(item => item.matched).length;
+    if (hitCount > 0) {
+      const choice = await dialog.showMessageBox({
+        type: "question",
+        title: "Optional image ordering suggestion",
+        message: "Use suggested order based on filenames and narration?",
+        detail: `Optional image-name.txt captions support line: 3 or บรรทัด: 3 for exact placement. Otherwise require 2 matching words. Uncertain images retain their positions. This is NOT visual AI.\nMatched: ${hitCount}/${imagePaths.length}\n\nSuggested order:\n${matches.slice(0, 15).map((m, i) => `${i + 1}. ${path.basename(m.image)} ${m.matched ? "(text match)" : "(no match)"}`).join("\n")}`,
+        buttons: ["Keep selected order", "Use suggested order", "Cancel export"],
+        defaultId: 0,
+        cancelId: 2,
+        noLink: true
+      });
+      if (choice.response === 2) return null;
+      if (choice.response === 1) imagePaths = matches.map(item => item.image);
+    }
+  }
+  assertMyCutUniqueSelectedImages(imagePaths);
+  // Verify the actual files in the approved V1 order before asking for consent.
+  // File-picker filters alone do not guarantee usable, still-existing files.
+  for (const image of imagePaths) {
+    if (![".png", ".jpg", ".jpeg", ".webp", ".bmp"].includes(path.extname(image).toLowerCase())) {
+      throw new Error("Unsupported V1 image: " + path.basename(image));
+    }
+    const info = await (await import("node:fs/promises")).stat(image);
+    if (!info.isFile() || info.size <= 0) {
+      throw new Error("V1 image is not a nonempty file: " + path.basename(image));
+    }
+  }
+  // Preflight the FINAL order before asking for approval or a Save As destination.
+  // This uses the same sidecar line cues as the MyCut serializer.
+  let shotTimingSummary = "";
+  if (imagePaths.length) {
+    const { stat, readFile } = await import("node:fs/promises");
+    const lineStarts: number[] = [];
+    let cursor = 0;
+    selectedDurations.forEach((duration, index) => {
+      lineStarts.push(cursor);
+      cursor += duration + (index === selectedDurations.length - 1 ? 0 : 0.3);
+    });
+    const cues: Array<number | null> = [];
+    for (const image of imagePaths) {
+      let cue: number | null = null;
+      try {
+        const sidecar = image + ".txt";
+        if ((await stat(sidecar)).size <= 8192) {
+          cue = parseMyCutStoryboardLineCue(await readFile(sidecar, "utf8"), lineStarts.length);
+        }
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      }
+      cues.push(cue);
+    }
+    const shots = buildMyCutShotReview(
+      imagePaths, computeMyCutImageCuts(lineStarts, total, imagePaths.length, cues), total
+    );
+    shotTimingSummary = shots.slice(0, 12).map(shot =>
+      `${shot.position}. ${path.basename(shot.image)}  ${shot.start.toFixed(2)}–${shot.end.toFixed(2)}s`
+    ).join("\n");
+    if (shots.length > 12) shotTimingSummary += `\n... and ${shots.length - 12} more images`;
+  }
+  // Confirm the FINAL image order after any accepted suggestion, not the stale initial order.
+  const imageSummary = imagePaths.length
+    ? shotTimingSummary
+    : "No images selected; V1 will be empty.";
+  const approval = await dialog.showMessageBox({
+    type: "question",
+    title: "Review MyCut timeline before export",
+    message: "Confirm new MyCut project?",
+    detail: `${selectedDurations.length} voice lines on A1 (0.3s pauses)\n${imagePaths.length} images on continuous V1\nDuration: ${total.toFixed(2)} seconds\n\nImage order:\n${imageSummary}\n\nNo TTS credits. Existing projects will not be overwritten.`,
+    buttons: ["Cancel", "Confirm export"],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true
+  });
+  if (approval.response !== 1) return null;
+  const result = await dialog.showSaveDialog({
+    title: "Export voice clips to a new MyCut project",
+    defaultPath: "AI-Video-Voice.mycut",
+    filters: [{ name: "MyCut project", extensions: ["mycut"] }]
+  });
+  if (result.canceled || !result.filePath) return null;
+  // Recheck the approved MP3 bytes after the native dialogs, immediately before serialization.
+  if (expectedAudioHashes) {
+    const latest = await prepareStudioEpisodeMyCutVoiceManifest(projectId, episodeId);
+    const latestById = new Map(latest.lines.map(line => [line.lineId, line.audio]));
+    const { createHash } = await import("node:crypto");
+    const { createReadStream } = await import("node:fs");
+    for (let index = 0; index < orderedLineIds.length; index++) {
+      const audio = latestById.get(orderedLineIds[index]);
+      if (!audio) throw new Error("MyCut MP3 missing after approval; review again");
+      const hash = createHash("sha256");
+      for await (const chunk of createReadStream(audio)) hash.update(chunk);
+      if (hash.digest("hex") !== expectedAudioHashes[index]) {
+        throw new Error("MyCut MP3 changed after review; reselect images and approve again");
+      }
+    }
+  }
+  return exportStudioEpisodeToMyCut(projectId, episodeId, orderedLineIds, result.filePath, imagePaths, expectedAudioHashes);
+});
+  ipcMain.handle("studio:voice-audio-duration", (_event, projectId: string, episodeId: string, relativePath: string) => getStudioVoiceAudioDuration(projectId, episodeId, relativePath));
+  ipcMain.handle("studio:resolve-voice-audio", async (_event, projectId: string, episodeId: string, relativePath: string) => {
+    const verified = await findReusableStudioEpisodeAudio(projectId, episodeId, relativePath);
+    if (!verified) throw new Error("Dialogue MP3 is missing or invalid");
+    return verified;
+  });
+ipcMain.handle("studio:preview-voice-audio", async (_event, projectId: string, episodeId: string, relativePath: string) => {
+  const verified = await findReusableStudioEpisodeAudio(projectId, episodeId, relativePath);
+  if (!verified) throw new Error("Dialogue MP3 is missing or invalid");
+  return createPlaybackUrl(verified);
+});
+ipcMain.handle("studio:load-character-voices", (_event, projectId: string) => loadStudioCharacterVoices(projectId));
+ipcMain.handle("studio:save-character-voices", (_event, projectId: string, voices: Record<string, string>) => saveStudioCharacterVoices(projectId, voices));
+ipcMain.handle("studio:patch-character-voice", (_event, projectId: string, character: string, voiceId: string | null) => patchStudioCharacterVoice(projectId, character, voiceId));
 
 ipcMain.handle("project:open", async () => {
   return openProject();
@@ -322,6 +566,35 @@ async function contentProviderStatus() {
 }
 
 ipcMain.handle("content:provider-status", contentProviderStatus);
+ipcMain.handle("voice:workspaces", () => listElevenLabsWorkspaces());
+ipcMain.handle("voice:add-workspace", (_event, name: string, key: string) => saveElevenLabsWorkspace(name, key));
+ipcMain.handle("voice:select-workspace", (_event, id: string) => selectElevenLabsWorkspace(id));
+ipcMain.handle("voice:subscription", async () => {
+  const key = await getElevenLabsApiKey();
+  if (!key) throw new Error("ยังไม่ได้ตั้งค่า API Key");
+  const response = await fetch("https://api.elevenlabs.io/v1/user/subscription", { headers: { "xi-api-key": key, Accept: "application/json" }, signal: AbortSignal.timeout(15000) });
+  if (!response.ok) throw new Error(response.status === 403 ? "API Key ไม่มีสิทธิ์อ่านข้อมูล Subscription" : response.status === 401 ? "API Key ไม่ถูกต้อง" : `อ่านเครดิตไม่สำเร็จ (HTTP ${response.status})`);
+  const data: unknown = await response.json();
+  if (!data || typeof data !== "object") throw new Error("ข้อมูลเครดิตไม่ถูกต้อง");
+  const record = data as Record<string, unknown>;
+  const used = typeof record.character_count === "number" ? record.character_count : null;
+  const limit = typeof record.character_limit === "number" ? record.character_limit : null;
+  return { used, limit, remaining: used !== null && limit !== null ? Math.max(0, limit - used) : null, resetAt: typeof record.next_character_count_reset_unix === "number" ? record.next_character_count_reset_unix : null };
+});
+ipcMain.handle("voice:list-elevenlabs-voices", async () => {
+  const key = await getElevenLabsApiKey();
+  if (!key) throw new Error("ยังไม่ได้ตั้งค่า ElevenLabs API Key");
+  const response = await fetch("https://api.elevenlabs.io/v1/voices", {
+    headers: { "xi-api-key": key, Accept: "application/json" },
+    signal: AbortSignal.timeout(15000)
+  });
+  if (!response.ok) throw new Error(response.status === 401 ? "API Key ไม่ถูกต้อง" : response.status === 403 ? "API Key ไม่มีสิทธิ์อ่านรายชื่อเสียง" : `โหลดรายชื่อเสียงไม่สำเร็จ (HTTP ${response.status})`);
+  const payload: unknown = await response.json();
+  if (!payload || typeof payload !== "object" || !("voices" in payload) || !Array.isArray(payload.voices)) throw new Error("ข้อมูลเสียงไม่ถูกต้อง");
+  return payload.voices.flatMap((item: unknown) => item && typeof item === "object" && "voice_id" in item && "name" in item && typeof item.voice_id === "string" && typeof item.name === "string" ? [{ id: item.voice_id, name: item.name, previewUrl: "preview_url" in item && typeof item.preview_url === "string" && /^https:\/\//.test(item.preview_url) ? item.preview_url : null }] : []);
+});
+
+
 ipcMain.handle("content:save-replicate-token", async (_event, token: string) => {
   await saveReplicateApiToken(token);
   return contentProviderStatus();
@@ -945,7 +1218,7 @@ app.whenReady().then(async () => {
     await mkdir(smokeRoot, { recursive: true });
     const imagePath = path.join(smokeRoot, "frame.png");
     await new Promise<void>((resolve, reject) => {
-      const proc = spawn(ffmpegPath || "ffmpeg", ["-y", "-f", "lavfi", "-i", "color=c=0x182033:s=320x568:r=30", "-frames:v", "1", imagePath]);
+      const proc = spawn(ffmpegPath ? resolveBundledFfmpegPath(ffmpegPath) : "ffmpeg", ["-y", "-f", "lavfi", "-i", "color=c=0x182033:s=320x568:r=30", "-frames:v", "1", imagePath]);
       proc.once("error", reject);
       proc.once("exit", (code) => code === 0 ? resolve() : reject(new Error(`Packaged FFmpeg smoke test failed (${code})`)));
     });

@@ -3,16 +3,16 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const ffmpegPath = require("ffmpeg-static");
-const { renderTimeline } = require("../dist-electron/main/video/render.js");
+const { renderTimeline } = require("../dist-electron/src/main/video/render.js");
 const {
   createPreviewTimeline
-} = require("../dist-electron/main/video/previewPlan.js");
+} = require("../dist-electron/src/main/video/previewPlan.js");
 const {
   buildQcSampleSpecs
-} = require("../dist-electron/main/video/qcPack.js");
+} = require("../dist-electron/src/main/video/qcPack.js");
 const {
   verifyRenderedOutput
-} = require("../dist-electron/main/video/renderVerification.js");
+} = require("../dist-electron/src/main/video/renderVerification.js");
 
 function run(args) {
   const result = spawnSync(ffmpegPath, args, {
@@ -29,8 +29,14 @@ async function main() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ai-video-editor-smoke-"));
   const image1 = path.join(root, "frame-1.png");
   const image2 = path.join(root, "frame-2.png");
+  const image3 = path.join(root, "frame-3.png");
   const narration = path.join(root, "narration.wav");
   const effect = path.join(root, "effect.wav");
+  const voiceA = path.join(root, "voice-a.wav");
+  const voiceB = path.join(root, "voice-b.wav");
+  const music = path.join(root, "music.wav");
+  const storyOutput = path.join(root, "story-smoke.mp4");
+  const threeSceneOutput = path.join(root, "three-scene-smoke.mp4");
   const output = path.join(root, "smoke.mp4");
 
   try {
@@ -50,6 +56,8 @@ async function main() {
       image2
     ]);
 
+    run(["-y", "-f", "lavfi", "-i", "color=c=0x206040:s=640x360:d=1", "-frames:v", "1", image3]);
+
     run([
       "-y",
       "-f", "lavfi",
@@ -65,6 +73,13 @@ async function main() {
       "-ac", "2",
       effect
     ]);
+
+    for (const [file, frequency, duration] of [
+      [voiceA, 330, 0.8], [voiceB, 550, 0.8], [music, 110, 4]
+    ]) {
+      run(["-y", "-f", "lavfi", "-i", `sine=frequency=${frequency}:duration=${duration}`,
+        "-ac", "2", file]);
+    }
 
     const fullPlan = {
       duration: 3,
@@ -193,6 +208,136 @@ async function main() {
       !fs.existsSync(report.reportPath)
     ) {
       throw new Error("Post-render verification did not validate the smoke output.");
+    }
+
+    // End-to-end novel-style export: two speakers, a deliberate pause, SFX, music and two held frames.
+    const storyPlan = {
+      duration: 4, narration, width: 360, height: 640, fps: 24,
+      clips: [
+        { id: "story-scene-1", imagePath: image1, start: 0, duration: 2, motion: "hold" },
+        { id: "story-scene-2", imagePath: image2, start: 2, duration: 2, motion: "hold" }
+      ],
+      audioLayers: [
+        { id: "speaker-a", filePath: voiceA, kind: "dialogue", start: 0.3, duration: 0.8, volume: 0.7, loop: false, fadeIn: 0, fadeOut: 0, origin: "studio-dialogue", voiceLineId: "line-1", voiceSpeaker: "พรานสิง" },
+        { id: "speaker-b", filePath: voiceB, kind: "dialogue", start: 2.2, duration: 0.8, volume: 0.7, loop: false, fadeIn: 0, fadeOut: 0, origin: "studio-dialogue", voiceLineId: "line-2", voiceSpeaker: "พรานอิน" },
+        { id: "story-effect", filePath: effect, kind: "sfx", start: 1.5, duration: 0.8, volume: 0.15, loop: false, fadeIn: 0, fadeOut: 0, origin: "manual" },
+        { id: "background-music", filePath: music, kind: "music", start: 0, duration: 4, volume: 0.08, loop: false, fadeIn: 0, fadeOut: 0.2, origin: "manual" }
+      ],
+      subtitles: [], transitionDuration: 0, quality: "draft"
+    };
+    await renderTimeline(storyPlan, storyOutput, () => {});
+    const storyReport = await verifyRenderedOutput(storyPlan, storyOutput);
+    if (!storyReport.passed || Math.abs(storyReport.actualDuration - 4) > 0.3 ||
+        storyReport.width !== 360 || storyReport.height !== 640 ||
+        fs.statSync(storyOutput).size < 1000) {
+      throw new Error("Multi-speaker story MP4 failed post-render verification.");
+    }
+
+    // Sample raw decoded pixels on either side of the 2-second scene boundary.
+    function sampleScenePixel(second) {
+      const decoded = spawnSync(ffmpegPath, [
+        "-v", "error", "-ss", String(second), "-i", storyOutput,
+        "-frames:v", "1", "-vf", "crop=1:1:180:320,format=rgb24",
+        "-f", "rawvideo", "-"
+      ], { stdio: ["ignore", "pipe", "pipe"] });
+      if (decoded.status !== 0 || decoded.stdout.length !== 3) {
+        throw new Error("Could not decode an MP4 scene-boundary sample");
+      }
+      return [...decoded.stdout];
+    }
+    const beforeCut = sampleScenePixel(1.8);
+    const afterCut = sampleScenePixel(2.2);
+    const colorDistance = beforeCut.reduce((sum, value, index) =>
+      sum + Math.abs(value - afterCut[index]), 0);
+    if (colorDistance < 80) {
+      throw new Error("Encoded MP4 did not switch master frames at the expected scene boundary.");
+    }
+    // Check visual stability within each held shot as well as the boundary:
+    // a delayed or premature cut must fail, even if the two samples differ.
+    const pixelDistance = (a, b) => a.reduce((sum, value, i) => sum + Math.abs(value - b[i]), 0);
+    const opening = sampleScenePixel(0.4);
+    const justBeforeCut = sampleScenePixel(1.92);
+    const justAfterCut = sampleScenePixel(2.08);
+    const ending = sampleScenePixel(3.6);
+    if (pixelDistance(opening, justBeforeCut) > 24 ||
+        pixelDistance(justAfterCut, ending) > 24 ||
+        pixelDistance(justBeforeCut, justAfterCut) < 80) {
+      throw new Error("MP4 held-frame timing or scene-boundary stability failed.");
+    }
+
+    // Decode both scene boundaries in a separate three-master MP4.
+    const threeScenePlan = {
+      ...storyPlan,
+      clips: [
+        { id: "master-1", imagePath: image1, start: 0, duration: 1.25, motion: "hold" },
+        { id: "master-2", imagePath: image2, start: 1.25, duration: 1.5, motion: "hold" },
+        { id: "master-3", imagePath: image3, start: 2.75, duration: 1.25, motion: "hold" }
+      ]
+    };
+    await renderTimeline(threeScenePlan, threeSceneOutput, () => {});
+    const threeSceneReport = await verifyRenderedOutput(threeScenePlan, threeSceneOutput);
+    if (!threeSceneReport.passed) throw new Error("Three-scene MP4 verification failed");
+    function threeScenePixel(second) {
+      const decoded = spawnSync(ffmpegPath, [
+        "-v", "error", "-ss", String(second), "-i", threeSceneOutput,
+        "-frames:v", "1", "-vf", "crop=1:1:180:320,format=rgb24",
+        "-f", "rawvideo", "-"
+      ], { stdio: ["ignore", "pipe", "pipe"] });
+      if (decoded.status !== 0 || decoded.stdout.length !== 3)
+        throw new Error("Could not decode three-scene MP4 frame");
+      return [...decoded.stdout];
+    }
+    const scenePixels = [0.35, 1.12, 1.38, 2.62, 2.88, 3.65].map(threeScenePixel);
+    for (const [a, b] of [[0, 1], [2, 3], [4, 5]]) {
+      if (pixelDistance(scenePixels[a], scenePixels[b]) > 24)
+        throw new Error("Three-scene MP4 changed a held master too early");
+    }
+    for (const [a, b] of [[1, 2], [3, 4]]) {
+      if (pixelDistance(scenePixels[a], scenePixels[b]) < 80)
+        throw new Error("Three-scene MP4 missed its scheduled scene cut");
+    }
+
+    // Decode the encoded AAC output and confirm that each speaker's distinct
+    // frequency is present only inside that speaker's scheduled time window.
+    const pcm = path.join(root, "story-audio.f32le");
+    run(["-y", "-i", storyOutput, "-map", "0:a:0", "-vn", "-ac", "1",
+      "-ar", "8000", "-f", "f32le", pcm]);
+    const pcmBytes = fs.readFileSync(pcm);
+    const samples = new Float32Array(pcmBytes.buffer.slice(
+      pcmBytes.byteOffset, pcmBytes.byteOffset + pcmBytes.byteLength
+    ));
+    function toneMagnitude(startSeconds, frequency) {
+      const start = Math.round(startSeconds * 8000);
+      const length = 1600;
+      let cosine = 0;
+      let sine = 0;
+      for (let n = 0; n < length; n += 1) {
+        const angle = 2 * Math.PI * frequency * n / 8000;
+        cosine += samples[start + n] * Math.cos(angle);
+        sine += samples[start + n] * Math.sin(angle);
+      }
+      return Math.hypot(cosine, sine) / length;
+    }
+    const speakerAActive = toneMagnitude(0.5, 330);
+    const speakerAQuiet = toneMagnitude(1.2, 330);
+    const speakerBActive = toneMagnitude(2.4, 550);
+    const speakerBQuiet = toneMagnitude(1.2, 550);
+    if (!(speakerAActive > 0.01 && speakerAActive > speakerAQuiet * 5 &&
+          speakerBActive > 0.01 && speakerBActive > speakerBQuiet * 5)) {
+      throw new Error("Encoded MP4 dialogue timing or speaker separation failed.");
+    }
+    // Verify the other independently scheduled tracks survived AAC encoding.
+    // Music remains throughout, SFX enters only at 1.5s, narration ends at 3s.
+    const musicEarly = toneMagnitude(0.5, 110);
+    const musicLate = toneMagnitude(3.5, 110);
+    const sfxActive = toneMagnitude(1.65, 880);
+    const sfxBefore = toneMagnitude(0.5, 880);
+    const narrationActive = toneMagnitude(0.5, 440);
+    const narrationAfter = toneMagnitude(3.5, 440);
+    if (!(musicEarly > 0.001 && musicLate > 0.001 &&
+          sfxActive > 0.001 && sfxActive > sfxBefore * 4 &&
+          narrationActive > 0.005 && narrationActive > narrationAfter * 4)) {
+      throw new Error("Encoded MP4 music, SFX or narration timing failed.");
     }
 
     console.log(
