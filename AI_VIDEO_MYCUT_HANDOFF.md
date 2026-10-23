@@ -386,3 +386,10 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Test commit `ed31b9147b65e8e16b7a71e9e66cbb4d89f66451`. Confirm new CI before claiming this new regression passed.
 - No installed Windows MyCut 1.0.1 GUI playback/MP4 export yet, no paid APIs, no changes to existing project 1019. Atomic audio snapshots remain future work.
 - NEXT: verify CI; prioritize end-to-end acceptance and avoid further tiny guards unless an actual failed test reveals a bug.
+
+## Session checkpoint — 2026-10-23 (3-voice / 3-image serialized MyCut acceptance fixture)
+- Fresh starting HEAD `271ce6e1b538a49801de1a7d9c236d81186e8179` and CI #2289 **success**.
+- Added a multi-line integration fixture to `scripts/mycut-bridge.test.cjs` executed by existing `npm run test:mycut`: three prerecorded voice assets and three images, 1080×1920/30 fps, two exact 0.3s inter-clip pauses, no pause after the third clip, continuous V1 to project end, correct referenced media IDs and paths, and byte-preserving refusal to overwrite an existing .mycut file. A separate invalid-late-image fixture verifies no partial project file is created.
+- Test commit `df198ebb02ebc0138a7e0e6f74268e27859452da`. CI result of this commit must be confirmed; this offline bridge test is NOT installed Windows MyCut GUI playback, nor the native Electron IPC serializer end-to-end.
+- No paid APIs used and user's project 1019 untouched.
+- NEXT: verify CI; work toward native Electron IPC .mycut integration acceptance and then installed Windows MyCut 1.0.1 MP3 playback/MP4 export, which remain unverified.
