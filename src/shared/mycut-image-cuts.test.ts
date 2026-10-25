@@ -133,3 +133,25 @@ test("V1 image review rejects duplicate selected filenames across Windows slash 
 test("V1 image selection rejects empty filenames and invalid input",()=>{
   assert.throws(()=>assertMyCutUniqueSelectedImages(["one.png","  "]),/Invalid MyCut image/);
 });
+
+test("native MyCut timing helpers validate 60 voice lines and 20 sidecar-anchored V1 shots",()=>{
+  const durations=Array.from({length:60},(_,i)=>1+(i%7)*0.125);
+  const starts:number[]=[];let total=0;
+  durations.forEach((duration,i)=>{
+    starts.push(total);
+    total+=duration+(i===durations.length-1?0:0.3);
+  });
+  assert.doesNotThrow(()=>assertMyCutVoiceTimeline(starts,durations,total,0.3));
+  const images=Array.from({length:20},(_,i)=>"frame-"+(i+1)+".png");
+  const cues=images.map((_,i)=>parseMyCutStoryboardLineCue("line: "+(i*3+1),durations.length));
+  const cuts=computeMyCutImageCuts(starts,total,images.length,cues);
+  assert.doesNotThrow(()=>assertMyCutContinuousVisualCuts(cuts,total));
+  const shots=buildMyCutShotReview(images,cuts,total);
+  assert.equal(shots.length,20);
+  for(let i=0;i<shots.length;i++){
+    assert.ok(Math.abs(shots[i].start-starts[i*3])<1e-7,"image aligns with its explicit narration cue");
+    assert.ok(shots[i].duration>0,"no zero-duration shot");
+    if(i>0)assert.ok(Math.abs(shots[i].start-shots[i-1].end)<1e-7,"V1 must have no gaps");
+  }
+  assert.ok(Math.abs(shots[shots.length-1].end-total)<1e-7);
+});
