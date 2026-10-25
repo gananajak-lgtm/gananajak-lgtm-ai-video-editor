@@ -72,3 +72,38 @@ test('MyCut invalid late visual fails without creating partial destination',t=>{
  assert.throws(()=>exportProject(input,output),/Missing image asset/);
  assert.equal(fs.existsSync(output),false);
 });
+
+test('long chapter export keeps 60 A1 lines and 20 continuous V1 images aligned',t=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'mycut-long-chapter-'));
+ t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
+ const lines=Array.from({length:60},(_,i)=>{
+  const audio='voice-'+String(i+1).padStart(3,'0')+'.mp3';
+  fs.writeFileSync(path.join(dir,audio),'fixture');
+  return {audio,duration:1+(i%7)*0.125,speaker:'Narrator'};
+ });
+ const visuals=Array.from({length:20},(_,i)=>{
+  const image='scene-'+String(i+1).padStart(3,'0')+'.png';
+  fs.writeFileSync(path.join(dir,image),'fixture');
+  return {image,fromLine:i*3+1};
+ });
+ const source=path.join(dir,'chapter.json'),dest=path.join(dir,'chapter.mycut');
+ fs.writeFileSync(source,JSON.stringify({title:'Long episode',lines,visuals}));
+ exportProject(source,dest);
+ const saved=JSON.parse(fs.readFileSync(dest,'utf8'));
+ const a=saved.clips.filter(c=>c.track==='A1').sort((x,y)=>x.start-y.start);
+ const v=saved.clips.filter(c=>c.track==='V1').sort((x,y)=>x.start-y.start);
+ assert.equal(a.length,60);assert.equal(v.length,20);
+ assert.equal(saved.media.length,80);
+ assert.equal(a[0].start,0);assert.equal(v[0].start,0);
+ for(let i=1;i<a.length;i++){
+  assert.ok(Math.abs(a[i].start-a[i-1].start-a[i-1].dur-0.3)<1e-7,'A1 must have exactly 0.3-second gap');
+ }
+ for(let i=1;i<v.length;i++){
+  assert.ok(Math.abs(v[i].start-v[i-1].start-v[i-1].dur)<1e-7,'V1 must remain continuous');
+ }
+ assert.ok(Math.abs(a[a.length-1].start+a[a.length-1].dur-saved.dur)<1e-7,'no trailing audio gap');
+ assert.ok(Math.abs(v[v.length-1].start+v[v.length-1].dur-saved.dur)<1e-7,'V1 extends to audio end');
+ for(let i=0;i<v.length;i++){
+  assert.ok(Math.abs(v[i].start-a[i*3].start)<1e-7,'each image begins at selected voice line');
+ }
+});
