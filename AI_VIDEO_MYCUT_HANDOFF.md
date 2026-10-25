@@ -400,3 +400,10 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Code commit `182180e03e3189cd84de791746d3fec678c2c658`. Test runs via existing `npm run test:mycut`; new CI must be verified before claiming it passed.
 - This is **offline bridge integration**, not native Electron IPC end-to-end or actual installed Windows MyCut 1.0.1 GUI playback/MP4 acceptance. No paid AI calls; original MyCut project 1019 untouched.
 - NEXT: verify latest CI and resolve any test assumptions; then native Electron export testing and Windows MyCut manual acceptance.
+
+## Session checkpoint — 2026-10-25 (native MyCut timing-helper long-chapter regression)
+- Fresh branch HEAD `42bde9c316aeb978d1e8fd4146868cbb1d824097`; CI #2293 completed **success**.
+- Added long-chapter regression to **actual shared timing functions used by the Electron MyCut serializer** in `src/shared/mycut-image-cuts.test.ts`: 60 narrated lines with variable fractional MP3 durations and exact 0.3-second inter-line gaps, 20 V1 stills anchored by `line: 1, 4, ... 58` storyboard sidecar cues, continuous nonzero-length V1, cue-aligned shot starts and final image reaching full timeline end. This complements the existing offline bridge fixture rather than substituting it for native IPC integration.
+- Code commit `eca008998ea6a7b1e19d06a6f45a86647c5420f3`; covered by `npm run test:mycut`. Await new CI result before claiming pass.
+- No paid provider calls or edits to project 1019. Native Electron IPC GUI flow and installed Windows MyCut 1.0.1 MP3 playback/MP4 export remain untested.
+- NEXT: verify CI, investigate any failure; implement native Electron serializer acceptance harness, then test with actual Windows MyCut GUI.
