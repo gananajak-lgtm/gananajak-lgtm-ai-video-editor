@@ -415,3 +415,10 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Commits `0773e78e5a46c9a6aa3b6e884e12873ff7a0cd61`, `072672ae5f8623ad083acbc5ff452f125bbe5048`, `bc3f344fecd77d316424b48ead3f532f7d0a6baa`, `f016e463ffbd2c659e335eaa5dcdc49e32d72218`, `e50107c5d6b76089ae42eaa5bc4c67be83028b6c`.
 - Verify new CI before claiming tests passed. No billable API use, no modifications to existing MyCut project 1019. Native Windows MyCut 1.0.1 GUI playback and real MP4 export remain untested.
 - NEXT: check new CI and remedy any build failures; build native Electron IPC acceptance harness; manually validate on installed MyCut.
+
+## Session checkpoint — 2026-10-26 (repair CI #2301 regression fixture)
+- Started HEAD `f255cad9a0e496dce602efde3e15df7ea62fded2`; CI #2301 **failed** in `npm run test:mycut`, both validate and Windows-package jobs. Typecheck passed. Logs proved that a test expecting `/MyCut A1/` actually triggered the earlier clip-overrun validation (`Invalid serialized MyCut media references or clip bounds`).
+- Fixed `src/main/mycut-serialized-validation.test.ts`: when moving the second audio clip to 1.4s, also extend test project and V1 end to 3.4s so clip bounds remain valid; this now isolates the actual invalid 0.4s A1 pause. No production validator weakening.
+- Fix commit `a91b6a4ecb04b6ef877a48a2c8b729e6971f4848`. Verify new CI status before claiming pass.
+- Original MyCut project 1019 untouched; no paid AI calls. Installed MyCut 1.0.1 Windows GUI playback and MP4 export still untested.
+- NEXT: verify test CI, diagnose other failures if any, then native IPC acceptance harness and Windows real GUI test.
