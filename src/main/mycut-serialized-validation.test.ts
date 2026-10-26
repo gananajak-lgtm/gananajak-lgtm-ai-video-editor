@@ -27,3 +27,26 @@ test("serialized MyCut rejects V1 gaps even if final image ends on time",()=>{
  p.clips.push({track:"V1",mediaId:"mi2",path:"second.png",start:1.4,dur:1.9});
  assert.throws(()=>assertSerializedMyCutTimeline(p),/V1 gap or overlap/);
 });
+
+test("serialized MyCut validates the actual JSON round trip",()=>{
+ const saved=JSON.stringify(fixture());
+ assert.doesNotThrow(()=>assertSerializedMyCutTimeline(JSON.parse(saved)));
+});
+test("serialized MyCut rejects duplicate media ids and overlong clips",()=>{
+ const duplicated=fixture();
+ duplicated.media[1].id=duplicated.media[0].id;
+ assert.throws(()=>assertSerializedMyCutTimeline(duplicated),/media references/);
+ const overlong=fixture();
+ overlong.clips[2].dur=3.31;
+ assert.throws(()=>assertSerializedMyCutTimeline(overlong),/clip bounds/);
+});
+test("serialized MyCut rejects overlapping V1 shots and unknown tracks",()=>{
+ const overlap=fixture();
+ overlap.clips[2].dur=2;
+ overlap.media.push({id:"mi2",path:"second.png"});
+ overlap.clips.push({track:"V1",mediaId:"mi2",path:"second.png",start:1.5,dur:1.8});
+ assert.throws(()=>assertSerializedMyCutTimeline(overlap),/V1 gap or overlap/);
+ const wrongTrack=fixture();
+ wrongTrack.clips[2].track="A2";
+ assert.throws(()=>assertSerializedMyCutTimeline(wrongTrack),/track assignment/);
+});
