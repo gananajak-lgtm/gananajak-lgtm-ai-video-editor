@@ -422,3 +422,10 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Fix commit `a91b6a4ecb04b6ef877a48a2c8b729e6971f4848`. Verify new CI status before claiming pass.
 - Original MyCut project 1019 untouched; no paid AI calls. Installed MyCut 1.0.1 Windows GUI playback and MP4 export still untested.
 - NEXT: verify test CI, diagnose other failures if any, then native IPC acceptance harness and Windows real GUI test.
+
+## Session checkpoint — 2026-10-26 (serialized JSON corruption regressions)
+- Fresh HEAD `fea2043bf9cf0b42b8120489b9c5b6b3e6a2f145`; CI #2303 **success**, confirming preceding fixture repair and Windows packaging pipeline.
+- Extended the native serialized timeline test suite `src/main/mycut-serialized-validation.test.ts` to cover JSON stringify/parse round-trip of a valid MyCut structure; duplicate media ID corruption; image exceeding project bounds; overlapping V1 images; and unsupported A2 track. Existing native pre-write validation is unchanged.
+- Test commit `26abe9bbcef2ed0330cc3bcbf66e51304e4830fe`. Tests run in `npm run test:mycut`; verify its fresh CI before marking passed.
+- No paid provider calls or existing MyCut project 1019 modifications. Native Electron IPC end-to-end and MyCut 1.0.1 Windows GUI playback/MP4 export are not verified.
+- NEXT: inspect CI, then add native IPC/serializer acceptance harness and manually test actual MyCut 1.0.1.
