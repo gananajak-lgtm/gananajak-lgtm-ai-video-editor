@@ -407,3 +407,11 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Code commit `eca008998ea6a7b1e19d06a6f45a86647c5420f3`; covered by `npm run test:mycut`. Await new CI result before claiming pass.
 - No paid provider calls or edits to project 1019. Native Electron IPC GUI flow and installed Windows MyCut 1.0.1 MP3 playback/MP4 export remain untested.
 - NEXT: verify CI, investigate any failure; implement native Electron serializer acceptance harness, then test with actual Windows MyCut GUI.
+
+## Session checkpoint — 2026-10-26 (native project pre-write structural validation)
+- Started HEAD `24ba2326e987c0b0f46fa325602d9d6ae7cbd9f0`; CI #2295 **success**.
+- Added `src/main/mycut-serialized-validation.ts`: validates media IDs and paths, finite positive clip duration/bounds, only V1/A1 assignments, 0.3-second A1 inter-clip gaps with no trailing gap, and continuous V1 including explicit adjacent-clip start/end equality. Wired to native `exportStudioEpisodeToMyCut` after composing project and before exclusive `{flag:'wx'}` write.
+- Added native helper tests in `src/main/mycut-serialized-validation.test.ts` for valid timeline, wrong referenced media, A1 timing drift, and V1 gap even where final visual still reaches project end. Added test to `npm run test:mycut`.
+- Commits `0773e78e5a46c9a6aa3b6e884e12873ff7a0cd61`, `072672ae5f8623ad083acbc5ff452f125bbe5048`, `bc3f344fecd77d316424b48ead3f532f7d0a6baa`, `f016e463ffbd2c659e335eaa5dcdc49e32d72218`, `e50107c5d6b76089ae42eaa5bc4c67be83028b6c`.
+- Verify new CI before claiming tests passed. No billable API use, no modifications to existing MyCut project 1019. Native Windows MyCut 1.0.1 GUI playback and real MP4 export remain untested.
+- NEXT: check new CI and remedy any build failures; build native Electron IPC acceptance harness; manually validate on installed MyCut.
