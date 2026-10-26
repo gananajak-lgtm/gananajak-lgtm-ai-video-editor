@@ -17,5 +17,12 @@ export function assertSerializedMyCutTimeline(project: { clips: SerializedClip[]
   const v = project.clips.filter(clip => clip.track === "V1").sort((x,y) => x.start-y.start);
   if (a.length + v.length !== project.clips.length || !a.length) throw new Error("Invalid MyCut track assignment");
   assertMyCutVoiceTimeline(a.map(c=>c.start), a.map(c=>c.dur), project.dur, 0.3);
-  if (v.length) assertMyCutContinuousVisualCuts([v[0].start, ...v.map(c => c.start + c.dur)], project.dur);
+  if (v.length) {
+    for (let i = 1; i < v.length; i++) {
+      if (Math.abs(v[i].start - (v[i-1].start + v[i-1].dur)) > 1e-7) {
+        throw new Error("Invalid serialized MyCut V1 gap or overlap");
+      }
+    }
+    assertMyCutContinuousVisualCuts([v[0].start, ...v.map(c => c.start + c.dur)], project.dur);
+  }
 }
