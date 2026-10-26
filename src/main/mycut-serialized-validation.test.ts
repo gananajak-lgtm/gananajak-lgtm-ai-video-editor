@@ -17,7 +17,7 @@ test("serialized MyCut validates contiguous stills and narration pause",()=>{
 test("serialized MyCut rejects broken media paths and audio gaps",()=>{
  const p=fixture(); p.clips[0].path="wrong.mp3";
  assert.throws(()=>assertSerializedMyCutTimeline(p),/media references/);
- const q=fixture(); q.clips[1].start=1.4;
+ const q=fixture(); q.clips[1].start=1.4; q.dur=3.4; q.clips[2].dur=3.4;
  assert.throws(()=>assertSerializedMyCutTimeline(q),/MyCut A1/);
 });
 test("serialized MyCut rejects V1 gaps even if final image ends on time",()=>{
