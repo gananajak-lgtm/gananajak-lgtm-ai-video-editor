@@ -50,3 +50,16 @@ test("serialized MyCut rejects overlapping V1 shots and unknown tracks",()=>{
  wrongTrack.clips[2].track="A2";
  assert.throws(()=>assertSerializedMyCutTimeline(wrongTrack),/track assignment/);
 });
+
+test("serialized MyCut rejects duplicate clip IDs and wrong media kinds",()=>{
+ const duplicate=fixture();
+ const clipsWithIds=duplicate.clips.map((clip,index)=>({...clip,id:index===0?"same":index===1?"same":"unique"}));
+ assert.throws(()=>assertSerializedMyCutTimeline({...duplicate,clips:clipsWithIds}),/duplicate or missing clip IDs/);
+ const wrongKind=fixture();
+ const mediaWithKinds=wrongKind.media.map((media,index)=>({...media,kind:index===2?"audio":"audio"}));
+ assert.throws(()=>assertSerializedMyCutTimeline({...wrongKind,media:mediaWithKinds}),/track\/media kind mismatch/);
+ const valid=fixture();
+ const validMedia=valid.media.map((media,index)=>({...media,kind:index===2?"image":"audio"}));
+ const validClips=valid.clips.map((clip,index)=>({...clip,id:"clip-"+index,kind:clip.track==="V1"?"image":"audio"}));
+ assert.doesNotThrow(()=>assertSerializedMyCutTimeline({...valid,media:validMedia,clips:validClips}));
+});
