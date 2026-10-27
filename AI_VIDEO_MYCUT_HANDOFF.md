@@ -429,3 +429,10 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Test commit `26abe9bbcef2ed0330cc3bcbf66e51304e4830fe`. Tests run in `npm run test:mycut`; verify its fresh CI before marking passed.
 - No paid provider calls or existing MyCut project 1019 modifications. Native Electron IPC end-to-end and MyCut 1.0.1 Windows GUI playback/MP4 export are not verified.
 - NEXT: inspect CI, then add native IPC/serializer acceptance harness and manually test actual MyCut 1.0.1.
+
+## Session checkpoint — 2026-10-27 (native MyCut clip identity / media kind integrity)
+- Starting HEAD `bc2d3fc176066bda1296a40c2b2979a238f8a194`; CI #2305 completed **success**.
+- Strengthened `src/main/mycut-serialized-validation.ts` pre-write validation: reject duplicate/missing clip IDs if IDs are present and reject any track/clip/media-kind mismatch on A1 (audio) or V1 (image). Existing checks for media paths, audio gaps, and V1 continuity remain intact. Native serializer supplies both IDs and kinds.
+- Added regression tests for duplicate clip IDs, image track pointing to audio-kind media, and a correct typed project. Source commits `2d9024aec957982a5495cfd74648666e5eb942c1` and `99452da7bf353134ebe73858c9e36ae0dc4f84e9`.
+- This is native serializer structural validation, not a full Electron IPC GUI acceptance test. Verify new CI before claiming pass; installed Windows MyCut 1.0.1 playback/MP4 export still untested. No paid AI calls and no change to existing MyCut project 1019.
+- NEXT: verify CI and resolve failures; build native Electron IPC acceptance harness and manually check playback/export on Windows.
