@@ -466,3 +466,9 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Test commit `69f032d995c85993353fdef04493d0ffc6f43b17`; `npm run test:mycut` includes the test. Verify new CI before claiming green.
 - This still does NOT execute Electron IPC/UI or installed Windows MyCut 1.0.1 playback and MP4 export. Existing project 1019 untouched.
 - NEXT: confirm CI, fix regressions if any, and prioritize native IPC/installed MyCut acceptance rather than more isolated structural guards.
+
+## Session checkpoint — 2026-10-29 (persisted long-episode asset-reference fixture)
+- Started HEAD `783598f7f67d7c35829b904782ed16200ce3d0ca`; CI #2321 and #2322 were **in_progress** when checked; do not claim green until completed.
+- Improved existing 60-A1/20-V1 production `writeVerifiedMyCutProject` regression: now materializes 80 nonempty temporary source files, serializes absolute paths into .mycut, reads resulting JSON, verifies every referenced media file exists and is nonempty on disk, and checks each saved clip path matches its media ID's path. The fixtures exercise *references*, not MP3 decoding nor Windows MyCut GUI.
+- Test commit `fefb5c030deefc8e52153b3219c8c5130498e872`; included in existing `npm run test:mycut`. CI must be verified. No paid API and no changes to original MyCut project 1019.
+- NEXT: check latest CI, then build an actual native Electron IPC acceptance test; Windows MyCut 1.0.1 GUI playback and MP4 output remain unverified.
