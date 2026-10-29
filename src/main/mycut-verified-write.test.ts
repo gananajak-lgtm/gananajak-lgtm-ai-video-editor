@@ -1,0 +1,50 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import path from "node:path";
+import os from "node:os";
+import { writeVerifiedMyCutProject } from "./mycut-verified-write";
+
+const project = () => ({
+  dur: 2.3,
+  media: [
+    { id: "m1", kind: "audio", path: "one.mp3" },
+    { id: "m2", kind: "audio", path: "two.mp3" },
+    { id: "m3", kind: "image", path: "frame.png" }
+  ],
+  clips: [
+    { id: "c1", kind: "audio", track: "A1", mediaId: "m1", path: "one.mp3", start: 0, dur: 1 },
+    { id: "c2", kind: "audio", track: "A1", mediaId: "m2", path: "two.mp3", start: 1.3, dur: 1 },
+    { id: "c3", kind: "image", track: "V1", mediaId: "m3", path: "frame.png", start: 0, dur: 2.3 }
+  ]
+});
+
+test("native MyCut saved JSON reads back with valid A1/V1 structure", async t => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "mycut-verified-write-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const destination = path.join(dir, "new.mycut");
+  await writeVerifiedMyCutProject(destination, project());
+  const saved = JSON.parse(await readFile(destination, "utf8"));
+  assert.equal(saved.clips.length, 3);
+  assert.equal(saved.dur, 2.3);
+  await assert.rejects(writeVerifiedMyCutProject(destination, project()), /EEXIST/);
+});
+
+test("native MyCut writer refuses malformed projects without creating output", async t => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "mycut-invalid-write-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const destination = path.join(dir, "invalid.mycut");
+  const invalid = project();
+  invalid.clips[2].path = "mismatched.png";
+  await assert.rejects(writeVerifiedMyCutProject(destination, invalid), /media references/);
+  await assert.rejects(readFile(destination), /ENOENT/);
+});
+
+test("native MyCut writer never overwrites existing user project bytes", async t => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "mycut-preserve-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const destination = path.join(dir, "existing.mycut");
+  await writeFile(destination, "keep existing edits exactly");
+  await assert.rejects(writeVerifiedMyCutProject(destination, project()), /EEXIST/);
+  assert.equal(await readFile(destination, "utf8"), "keep existing edits exactly");
+});
