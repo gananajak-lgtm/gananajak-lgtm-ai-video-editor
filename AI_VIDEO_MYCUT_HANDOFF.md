@@ -479,3 +479,11 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Code commit `b34e69b486356633a36bbac97742a4a9582b5541`; pending new CI verification. This is not a full Electron GUI acceptance test and does not validate image decoding. Windows MyCut 1.0.1 playback and MP4 export are still unverified.
 - No paid AI calls; did not touch user's existing MyCut project 1019.
 - NEXT: verify CI, strengthen actual media decoding/Windows GUI acceptance, and test native IPC end-to-end.
+
+## Session checkpoint — 2026-10-29 (native V1 image magic-byte preflight)
+- Fresh starting HEAD `c90205785fd7ecb88eec3fdc8e705d408aad628a`; CI #2326 **success**.
+- Added `src/main/mycut-image-header.ts` for fast header-signature checks on PNG, JPEG, WEBP, BMP. The production `exportStudioEpisodeToMyCut` now calls it on the final selected V1 assets, after checking files exist and are nonempty; wrong-extension/disguised images and truncated tiny files fail before writing a `.mycut` project. This is magic-byte validation, **not full image decode**, and cannot guarantee MyCut playback.
+- Added `src/main/mycut-image-header.test.ts` covering positive PNG/JPEG and negative fake/tiny/unsupported files, included in `npm run test:mycut`.
+- Commits `8f26930b5cce41cb325073c495e024ae6841cae5`, `b8fadb5c798c3945fbf3dbe1f307161553863d6e`, `5bbcffa03288d1eae36441c6e22d1c2e508f82d6`, `a71733014be7ce3a0bb3528fe8034df07f450975`.
+- Verify new CI before claiming pass. No paid calls or changes to original project 1019. Native Electron IPC GUI and installed MyCut 1.0.1 MP3 playback/MP4 export acceptance remain untested.
+- NEXT: verify CI; move toward Electron IPC acceptance and actual Windows MyCut GUI testing.
