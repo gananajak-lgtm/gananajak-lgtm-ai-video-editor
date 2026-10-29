@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { DragEvent } from "react";
 import type {
+  AudioLayer,
   ShotMotion,
   SubtitleCue,
   TimelineClip,
@@ -9,6 +11,9 @@ import type {
 type Props = {
   plan: TimelinePlan;
   onChange: (plan: TimelinePlan) => void;
+  seekRequest?: { id: number; seconds: number } | null;
+  audioLayers?: AudioLayer[];
+  onAudioLayersChange?: (layers: AudioLayer[]) => void;
 };
 
 const MIN_CLIP_SECONDS = 0.6;
@@ -56,12 +61,103 @@ function motionLabel(motion: ShotMotion) {
   }
 }
 
-export default function TimelineEditor({ plan, onChange }: Props) {
+export default function TimelineEditor({ plan, onChange, seekRequest, audioLayers = [], onAudioLayersChange }: Props) {
   const [selectedClipIndex, setSelectedClipIndex] = useState(0);
   const [preview, setPreview] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [timelineZoom, setTimelineZoom] = useState(1);
+  const [shotPage, setShotPage] = useState(0);
+  const trackViewportRef = useRef<HTMLDivElement | null>(null);
+  const [trackViewport, setTrackViewport] = useState({ left: 0, width: 900 });
+  const [draggedAudioId, setDraggedAudioId] = useState<string | null>(null);
+  const audioDragOffsetRef = useRef(0);
+  const draggedAudioIdRef = useRef<string | null>(null);
+  const [audioDragError, setAudioDragError] = useState<string | null>(null);
+  const [selectedAudioId, setSelectedAudioId] = useState<string | null>(null);
+  const studioAudio = useMemo(() => audioLayers.filter(layer => layer.origin === "studio-dialogue"), [audioLayers]);
+  const selectedAudio = studioAudio.find(layer => layer.id === selectedAudioId);
+  const orderedStudioAudio = useMemo(() => [...studioAudio].sort((a, b) => a.start - b.start || a.id.localeCompare(b.id)), [studioAudio]);
+  const selectedAudioIndex = orderedStudioAudio.findIndex(layer => layer.id === selectedAudioId);
+  const focusSelectedAudio = () => {
+    if (!selectedAudio) return;
+    seekTo(selectedAudio.start);
+    const viewport = trackViewportRef.current;
+    if (viewport) scrollTimelineTo(Math.max(0, selectedAudio.start * pixelsPerSecond - viewport.clientWidth / 3));
+  };
+  const selectAdjacentAudio = (offset: number) => {
+    const index = selectedAudioIndex < 0 ? 0 : selectedAudioIndex + offset;
+    const layer = orderedStudioAudio[index];
+    if (!layer) return;
+    setSelectedAudioId(layer.id);
+    seekTo(layer.start);
+  };
+  const moveSelectedAudio = (delta: number) => {
+    if (!selectedAudio || !onAudioLayersChange) return;
+    const start = Math.round(Math.max(0, Math.min(Math.max(0, plan.duration - selectedAudio.duration), selectedAudio.start + delta)) * 100) / 100;
+    if (studioAudio.some(other => other.id !== selectedAudio.id && start < other.start + other.duration - 0.001 && start + selectedAudio.duration > other.start + 0.001)) {
+      setAudioDragError("ไม่สามารถเลื่อนเสียงทับบรรทัดอื่นได้");
+      return;
+    }
+    setAudioDragError(null);
+    onAudioLayersChange(audioLayers.map(layer => layer.id === selectedAudio.id ? { ...layer, start } : layer));
+  };
+  const dropStudioAudio = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const id = draggedAudioIdRef.current;
+    draggedAudioIdRef.current = null;
+    setDraggedAudioId(null);
+    if (!id || !onAudioLayersChange) return;
+    const target = studioAudio.find(layer => layer.id === id);
+    if (!target) return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const rawStart = (event.clientX - bounds.left) / pixelsPerSecond - audioDragOffsetRef.current;
+    const start = Math.round(Math.max(0, Math.min(Math.max(0, plan.duration - target.duration), rawStart)) * 10) / 10;
+    const collision = studioAudio.some(other => other.id !== id && start < other.start + other.duration - 0.001 && start + target.duration > other.start + 0.001);
+    if (collision) {
+      setAudioDragError("ไม่สามารถวางเสียงทับบรรทัดอื่นได้ กรุณาเลือกตำแหน่งว่าง");
+      return;
+    }
+    setAudioDragError(null);
+    setSelectedAudioId(id);
+    onAudioLayersChange(audioLayers.map(layer => layer.id === id ? { ...layer, start } : layer));
+  };
+  const pixelsPerSecond = 24 * timelineZoom;
+  const trackWidth = Math.max(900, plan.duration * pixelsPerSecond);
+  const trackVisibleStart = Math.max(0, trackViewport.left / pixelsPerSecond - 6);
+  const trackVisibleEnd = (trackViewport.left + trackViewport.width) / pixelsPerSecond + 6;
+  const trackClips = useMemo(() => plan.clips.map((clip, index) => ({ clip, index })).filter(({ clip }) =>
+    clip.start + clip.duration >= trackVisibleStart && clip.start <= trackVisibleEnd
+  ), [plan.clips, trackVisibleStart, trackVisibleEnd]);
+  const visibleStudioAudio = useMemo(() => studioAudio.filter(layer =>
+    layer.start + layer.duration >= trackVisibleStart && layer.start <= trackVisibleEnd
+  ), [studioAudio, trackVisibleStart, trackVisibleEnd]);
+  const scrollTimelineTo = (left: number) => {
+    const viewport = trackViewportRef.current;
+    if (!viewport) return;
+    viewport.scrollLeft = Math.max(0, left);
+    setTrackViewport({ left: viewport.scrollLeft, width: viewport.clientWidth });
+  };
+  const goToSelectedClip = () => {
+    const clip = plan.clips[selectedClipIndex];
+    if (clip) scrollTimelineTo(clip.start * pixelsPerSecond);
+  };
+  const changeTimelineZoom = (zoom: number) => {
+    const viewport = trackViewportRef.current;
+    const centerSeconds = viewport
+      ? (viewport.scrollLeft + viewport.clientWidth / 2) / pixelsPerSecond
+      : playheadSeconds;
+    setTimelineZoom(zoom);
+    if (viewport) {
+      const left = Math.max(0, centerSeconds * 24 * zoom - viewport.clientWidth / 2);
+      viewport.scrollLeft = left;
+      setTrackViewport({ left: viewport.scrollLeft, width: viewport.clientWidth });
+    }
+  };
+  const SHOT_PAGE_SIZE = 25;
+  const shotPages = Math.max(1, Math.ceil(plan.clips.length / SHOT_PAGE_SIZE));
+  const currentShotPage = Math.min(shotPage, shotPages - 1);
   const [draggedClipIndex, setDraggedClipIndex] = useState<number | null>(null);
+  const [playheadSeconds, setPlayheadSeconds] = useState(0);
 
   const selectedClip =
     plan.clips[Math.min(selectedClipIndex, Math.max(0, plan.clips.length - 1))];
@@ -97,6 +193,29 @@ export default function TimelineEditor({ plan, onChange }: Props) {
     };
   }, [selectedClip?.imagePath]);
 
+  useEffect(() => {
+    setPlayheadSeconds((current) => Math.min(current, plan.duration));
+  }, [plan.duration]);
+
+  const seekTo = (seconds: number) => {
+    const target = Math.max(0, Math.min(plan.duration, seconds));
+    setPlayheadSeconds(target);
+    const index = plan.clips.findIndex((clip) => target >= clip.start && target < clip.start + clip.duration);
+    if (index >= 0) setSelectedClipIndex(index);
+    const viewport = trackViewportRef.current;
+    if (viewport) {
+      const targetX = target * pixelsPerSecond;
+      if (targetX < viewport.scrollLeft || targetX > viewport.scrollLeft + viewport.clientWidth) {
+        scrollTimelineTo(Math.max(0, targetX - viewport.clientWidth / 3));
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (seekRequest) seekTo(seekRequest.seconds);
+    // Each request has a unique id; ordinary timeline edits must not repeat seeks.
+  }, [seekRequest?.id]);
+
   const totalClipDuration = useMemo(
     () => plan.clips.reduce((sum, clip) => sum + clip.duration, 0),
     [plan.clips]
@@ -106,7 +225,8 @@ export default function TimelineEditor({ plan, onChange }: Props) {
     const clips = plan.clips.map((clip, clipIndex) =>
       clipIndex === index ? { ...clip, ...patch } : clip
     );
-    onChange({ ...plan, clips });
+    // Keep clip start timestamps contiguous after duration edits.
+    onChange({ ...plan, clips: rebuildStarts(clips) });
   };
 
   const shiftBoundary = (index: number, requestedDelta: number) => {
@@ -142,6 +262,45 @@ export default function TimelineEditor({ plan, onChange }: Props) {
     onChange({ ...plan, clips: rebuildStarts(clips) });
     setSelectedClipIndex(to);
   };
+
+  const removeSelectedClip = () => {
+    const clip = plan.clips[selectedClipIndex];
+    if (!clip) return;
+    if (!window.confirm(`ลบช็อต “${fileName(clip.imagePath)}” ออกจากไทม์ไลน์?\\nความยาวภาพจะสั้นลง แต่ไฟล์ต้นฉบับจะไม่ถูกลบ`)) return;
+    const clips = rebuildStarts(plan.clips.filter((_, index) => index !== selectedClipIndex));
+    onChange({ ...plan, clips });
+    setSelectedClipIndex(Math.max(0, Math.min(selectedClipIndex, clips.length - 1)));
+  };
+
+  const splitAtPlayhead = () => {
+    const index = plan.clips.findIndex((clip) =>
+      playheadSeconds > clip.start + MIN_CLIP_SECONDS &&
+      playheadSeconds < clip.start + clip.duration - MIN_CLIP_SECONDS
+    );
+    if (index < 0) return;
+    const original = plan.clips[index];
+    const leftDuration = playheadSeconds - original.start;
+    const rightDuration = original.duration - leftDuration;
+    const right: TimelineClip = {
+      ...original,
+      id: `${original.id}-split-${Date.now()}`,
+      start: playheadSeconds,
+      duration: rightDuration
+    };
+    const clips = [
+      ...plan.clips.slice(0, index),
+      { ...original, duration: leftDuration },
+      right,
+      ...plan.clips.slice(index + 1)
+    ];
+    onChange({ ...plan, clips: rebuildStarts(clips) });
+    setSelectedClipIndex(index + 1);
+  };
+
+  const canSplitAtPlayhead = plan.clips.some((clip) =>
+    playheadSeconds > clip.start + MIN_CLIP_SECONDS &&
+    playheadSeconds < clip.start + clip.duration - MIN_CLIP_SECONDS
+  );
 
   const replaceImage = async (index: number) => {
     const picked = await window.videoEditor.selectImages();
@@ -214,25 +373,48 @@ export default function TimelineEditor({ plan, onChange }: Props) {
 
       <div className="editorTrackSurface">
         <div className="editorTrackToolbar">
-          <strong>ไทม์ไลน์ภาพ</strong>
-          <label>ซูม <input type="range" min="0.5" max="3" step="0.25" value={timelineZoom} onChange={(event) => setTimelineZoom(Number(event.target.value))} /></label>
-          <span>{timelineZoom.toFixed(2)}×</span>
+          <strong>🎬 Timeline · ภาพ {plan.clips.length} · เสียง {studioAudio.length}</strong>
+          <div className="editorMediaPager" role="group" aria-label="ควบคุมการซูมไทม์ไลน์">
+            <button type="button" aria-pressed={timelineZoom === 0.5} onClick={() => changeTimelineZoom(0.5)} title="ภาพรวม 0.5 เท่า">− ภาพรวม</button>
+            <button type="button" aria-pressed={timelineZoom === 1} onClick={() => changeTimelineZoom(1)} title="ขนาดปกติ">1×</button>
+            <button type="button" aria-pressed={timelineZoom === 2} onClick={() => changeTimelineZoom(2)} title="ปรับเสียงละเอียด 2 เท่า">+ ละเอียด</button>
+            <label>ซูม <input aria-label="ระดับซูมไทม์ไลน์" type="range" min="0.5" max="3" step="0.25" value={timelineZoom} onChange={(event) => changeTimelineZoom(Number(event.target.value))} /></label>
+            <output>{timelineZoom.toFixed(2)}×</output>
+          </div>
         </div>
-        <div className="editorTrackScroller">
-          <div className="editorTrackClips" style={{ width: `${Math.max(100, timelineZoom * 100)}%` }}>
-            {plan.clips.map((clip, index) => (
+        <div className="editorPlayheadControl">
+          <label htmlFor="timeline-playhead">หัวอ่านเวลา</label>
+          <input id="timeline-playhead" type="range" min="0" max={Math.max(plan.duration, 0.01)} step="0.1" value={Math.min(playheadSeconds, plan.duration)} onChange={(event) => seekTo(Number(event.target.value))} />
+          <output htmlFor="timeline-playhead">{formatTime(playheadSeconds)} / {formatTime(plan.duration)}</output>
+          <button type="button" disabled={!canSplitAtPlayhead} onClick={splitAtPlayhead} title="แบ่งช็อตที่ตำแหน่งหัวอ่านเวลาโดยรักษาระยะเวลารวม">✂ แยกช็อต</button>
+        </div>
+        <div className="editorMediaPager" aria-label="เลื่อนไทม์ไลน์">
+          <span>🎞 ภาพ {trackClips.length}/{plan.clips.length} · 🎙 เสียง {visibleStudioAudio.length}/{studioAudio.length} · เลื่อนแนวนอนได้</span>
+          <button type="button" onClick={goToSelectedClip} title="เลื่อนแทร็กไปยังภาพที่เลือก">◎ ภาพที่เลือก</button>
+        </div>
+        <div className="editorTrackScroller" ref={trackViewportRef} onScroll={event => {
+          const { scrollLeft: left, clientWidth: width } = event.currentTarget;
+          // Viewport clips include a six-second overscan; skip tiny scroll
+          // updates without affecting what is rendered at the viewport edges.
+          setTrackViewport(previous =>
+            Math.floor(previous.left / 48) === Math.floor(left / 48) && previous.width === width
+              ? previous : { left, width }
+          );
+        }}>
+          <div className="editorTrackClips" aria-label="แทร็กภาพ" style={{ position: "relative", width: trackWidth + "px", minWidth: trackWidth + "px" }}>
+            {trackClips.map(({ clip, index }) => (
               <button
                 type="button"
                 key={clip.id}
                 draggable
-                onDragStart={(event) => { setDraggedClipIndex(index); event.dataTransfer.effectAllowed = "move"; }}
-                onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "move"; }}
-                onDrop={(event) => { event.preventDefault(); if (draggedClipIndex !== null) moveClip(draggedClipIndex, index); setDraggedClipIndex(null); }}
+                onDragStart={event => { setDraggedClipIndex(index); event.dataTransfer.effectAllowed = "move"; }}
+                onDragOver={event => { event.preventDefault(); event.dataTransfer.dropEffect = "move"; }}
+                onDrop={event => { event.preventDefault(); if (draggedClipIndex !== null) moveClip(draggedClipIndex, index); setDraggedClipIndex(null); }}
                 onDragEnd={() => setDraggedClipIndex(null)}
-                onClick={() => setSelectedClipIndex(index)}
+                onClick={() => { setSelectedClipIndex(index); setPlayheadSeconds(clip.start); }}
                 aria-pressed={selectedClipIndex === index}
                 className={selectedClipIndex === index ? "editorTrackClip editorTrackClipSelected" : "editorTrackClip"}
-                style={{ flexGrow: Math.max(0.6, clip.duration), flexBasis: 0 }}
+                style={{ position: "absolute", left: clip.start * pixelsPerSecond, width: Math.max(1, clip.duration * pixelsPerSecond - 3), height: "100%" }}
                 title={`${fileName(clip.imagePath)} · ${formatTime(clip.start)} · ${clip.duration.toFixed(1)}s`}
               >
                 <span>{String(index + 1).padStart(2, "0")}</span>
@@ -241,8 +423,23 @@ export default function TimelineEditor({ plan, onChange }: Props) {
               </button>
             ))}
           </div>
+          {studioAudio.length > 0 && <div className="editorTrackClips" aria-label="แทร็กเสียงตัวละคร · ลากคลิปเพื่อปรับเวลา" onDragOver={event => { if (draggedAudioIdRef.current) event.preventDefault(); }} onDrop={dropStudioAudio} style={{ position: "relative", width: trackWidth + "px", height: 54, borderTop: "1px solid #777" }}>
+            {visibleStudioAudio.map(layer => <button type="button" draggable key={layer.id} className={selectedAudioId === layer.id ? "editorTrackClip editorTrackClipSelected" : "editorTrackClip"} aria-pressed={selectedAudioId === layer.id} onDragStart={event => { audioDragOffsetRef.current = (event.clientX - event.currentTarget.getBoundingClientRect().left) / pixelsPerSecond; draggedAudioIdRef.current = layer.id; setDraggedAudioId(layer.id); event.dataTransfer.effectAllowed = "move"; }} onDragEnd={() => { draggedAudioIdRef.current = null; setDraggedAudioId(null); }} onClick={() => { setSelectedAudioId(layer.id); seekTo(layer.start); }} style={{ position: "absolute", left: layer.start * pixelsPerSecond, width: Math.max(12, layer.duration * pixelsPerSecond - 2), height: 48, overflow: "hidden" }} title={(layer.voiceLineId ?? layer.label ?? "เสียงตัวละคร") + " · " + formatTime(layer.start)}>
+              <span>🎙 {layer.voiceLineId ?? layer.label ?? "เสียง"}</span>
+            </button>)}
+          </div>}
         </div>
-        <p className="muted">คลิกเลือกช็อต · ลากช็อตเพื่อเปลี่ยนลำดับ · ปรับจุดตัดในแผงด้านล่าง</p>
+        {selectedAudio && <div className="editorMediaPager" aria-label="แก้เสียงตัวละครที่เลือก">
+          <button type="button" disabled={selectedAudioIndex <= 0} onClick={() => selectAdjacentAudio(-1)} title="เลือกเสียงก่อนหน้า">◀ เสียงก่อน</button>
+          <strong>🎙 {selectedAudio.voiceLineId ?? selectedAudio.label ?? "เสียงตัวละคร"}</strong>
+          <button type="button" disabled={selectedAudioIndex < 0 || selectedAudioIndex >= orderedStudioAudio.length - 1} onClick={() => selectAdjacentAudio(1)} title="เลือกเสียงถัดไป">เสียงถัดไป ▶</button>
+          <button type="button" onClick={() => moveSelectedAudio(-0.1)} disabled={!onAudioLayersChange}>◀ 0.1 วิ</button>
+          <span>บรรทัด {selectedAudioIndex + 1}/{studioAudio.length} · เริ่ม {formatTime(selectedAudio.start)} · สิ้นสุด {formatTime(selectedAudio.start + selectedAudio.duration)} · ยาว {selectedAudio.duration.toFixed(1)} วิ</span>
+          <button type="button" onClick={() => moveSelectedAudio(0.1)} disabled={!onAudioLayersChange}>0.1 วิ ▶</button>
+          <button type="button" onClick={focusSelectedAudio}>◎ แสดงคลิปในจอ</button>
+        </div>}
+        {audioDragError && <p role="alert">{audioDragError}</p>}
+        <p className="muted">แทร็กบน: ภาพ (ลากเพื่อจัดลำดับ) · แทร็กล่าง: เสียงตัวละคร (ลากเพื่อปรับเวลา) · คลิกเสียงเพื่อปรับละเอียด ±0.1 วินาที</p>
       </div>
 
       <div className="manualEditorGrid">
@@ -271,6 +468,9 @@ export default function TimelineEditor({ plan, onChange }: Props) {
             <div className="inspectorControls">
               <button onClick={() => replaceImage(selectedClipIndex)}>
                 Replace image
+              </button>
+              <button type="button" className="removeButton" onClick={removeSelectedClip}>
+                🗑️ ลบช็อตที่เลือก
               </button>
 
               <label>
@@ -317,12 +517,13 @@ export default function TimelineEditor({ plan, onChange }: Props) {
         </div>
 
         <div className="shotList">
+          <div className="editorMediaPager"><button type="button" disabled={currentShotPage === 0} onClick={() => setShotPage(currentShotPage - 1)}>ก่อนหน้า</button><span>ช็อต {currentShotPage * SHOT_PAGE_SIZE + 1}–{Math.min((currentShotPage + 1) * SHOT_PAGE_SIZE, plan.clips.length)} / {plan.clips.length}</span><button type="button" disabled={currentShotPage >= shotPages - 1} onClick={() => setShotPage(currentShotPage + 1)}>ถัดไป</button><button type="button" onClick={() => setShotPage(Math.floor(selectedClipIndex / SHOT_PAGE_SIZE))}>ไปช็อตที่เลือก</button></div>
           <div className="manualSectionTitle">
             <strong>Shots</strong>
             <small>Cut nudges preserve total runtime</small>
           </div>
 
-          {plan.clips.map((clip, index) => (
+          {plan.clips.slice(currentShotPage * SHOT_PAGE_SIZE, (currentShotPage + 1) * SHOT_PAGE_SIZE).map((clip, pageIndex) => { const index = currentShotPage * SHOT_PAGE_SIZE + pageIndex; return (
             <button
               className={
                 index === selectedClipIndex
@@ -341,7 +542,7 @@ export default function TimelineEditor({ plan, onChange }: Props) {
                 </small>
               </div>
             </button>
-          ))}
+          ); })}
         </div>
       </div>
 
