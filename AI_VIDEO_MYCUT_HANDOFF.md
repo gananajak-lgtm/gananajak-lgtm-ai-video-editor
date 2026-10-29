@@ -451,3 +451,11 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Code commits `2caf1465d59a8e8bdc613f6b0723f44826fabbb4`, `5073587391c722e5ba3a029825e103237cf1f547`, `f0a80abd88a24b7634e5929336a88b500c6e58d5`, `9e2e159a71b3e568af488b9b70bc57bf5632f2f3`.
 - Check new CI before claiming pass. This exercises native serializer output persistence but is not a full Electron IPC GUI test or actual installed Windows MyCut 1.0.1 MP3 playback/MP4 export. No paid AI calls; user's existing project 1019 untouched.
 - NEXT: verify new CI and fix any failures, then native Electron IPC acceptance plus Windows MyCut real-world playback/export.
+
+## Session checkpoint — 2026-10-29 (verify complete persisted .mycut bytes)
+- Fresh starting HEAD `2513f70c7f39e580fbbfcf19001bdfa62e9ae9c5`; CI #2317 completed **success**.
+- Improved `src/main/mycut-verified-write.ts` to serialize the approved native MyCut project exactly once, exclusively write it (`wx`) and read the entire saved UTF-8 file back. The readback is now compared byte-for-byte to the approved JSON before parsing and revalidating A1/V1 structure, rather than checking only duration and media/clip counts. On verification failure only the newly created output is cleaned up. Existing destinations still fail with EEXIST and remain untouched.
+- Updated `src/main/mycut-verified-write.test.ts` to assert persisted JSON string is identical to approved serialization.
+- Code commits `100fb17525ab284c9ad465e32cf15a6fac25190a`, `c53e8d5069f08bf1fe97e1240474753b37a98176`.
+- New CI requires verification. This covers native file output, not Electron IPC interactive acceptance nor MyCut 1.0.1 on Windows playback or MP4 export. No paid calls or changes to project 1019.
+- NEXT: inspect CI and resolve failures if any; progress to Electron IPC / GUI Windows acceptance.
