@@ -459,3 +459,10 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Code commits `100fb17525ab284c9ad465e32cf15a6fac25190a`, `c53e8d5069f08bf1fe97e1240474753b37a98176`.
 - New CI requires verification. This covers native file output, not Electron IPC interactive acceptance nor MyCut 1.0.1 on Windows playback or MP4 export. No paid calls or changes to project 1019.
 - NEXT: inspect CI and resolve failures if any; progress to Electron IPC / GUI Windows acceptance.
+
+## Session checkpoint — 2026-10-29 (native 60-line persisted MyCut regression)
+- Fresh HEAD `e53190bb538b74edf272914f638debafd71ac424`; CI #2320 completed **success**.
+- Extended `src/main/mycut-verified-write.test.ts` with a long-episode native serializer persistence fixture: 60 staggered A1 clips using variable fractional durations and 0.3-second pauses, 20 V1 still shots aligned every three voice lines with no V1 gaps, 80 media references. The test uses the production `writeVerifiedMyCutProject` function, writes an actual new `.mycut` JSON to a temporary directory, then reads it back and asserts the resulting media/clip counts and duration. No paid provider or existing source assets are used.
+- Test commit `69f032d995c85993353fdef04493d0ffc6f43b17`; `npm run test:mycut` includes the test. Verify new CI before claiming green.
+- This still does NOT execute Electron IPC/UI or installed Windows MyCut 1.0.1 playback and MP4 export. Existing project 1019 untouched.
+- NEXT: confirm CI, fix regressions if any, and prioritize native IPC/installed MyCut acceptance rather than more isolated structural guards.
