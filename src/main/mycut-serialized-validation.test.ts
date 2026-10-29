@@ -4,11 +4,11 @@ import { assertSerializedMyCutTimeline } from "./mycut-serialized-validation";
 
 const fixture=()=>({
  dur: 3.3,
- media: [{id:"ma",path:"a.mp3"},{id:"mb",path:"b.mp3"},{id:"mi",path:"still.png"}],
+ media: [{id:"ma",kind:"audio",path:"a.mp3"},{id:"mb",kind:"audio",path:"b.mp3"},{id:"mi",kind:"image",path:"still.png"}],
  clips: [
-  {track:"A1",mediaId:"ma",path:"a.mp3",start:0,dur:1},
-  {track:"A1",mediaId:"mb",path:"b.mp3",start:1.3,dur:2},
-  {track:"V1",mediaId:"mi",path:"still.png",start:0,dur:3.3}
+  {id:"ca",kind:"audio",track:"A1",mediaId:"ma",path:"a.mp3",start:0,dur:1},
+  {id:"cb",kind:"audio",track:"A1",mediaId:"mb",path:"b.mp3",start:1.3,dur:2},
+  {id:"cv",kind:"image",track:"V1",mediaId:"mi",path:"still.png",start:0,dur:3.3}
  ]
 });
 test("serialized MyCut validates contiguous stills and narration pause",()=>{
@@ -23,8 +23,8 @@ test("serialized MyCut rejects broken media paths and audio gaps",()=>{
 test("serialized MyCut rejects V1 gaps even if final image ends on time",()=>{
  const p=fixture();
  p.clips[2].dur=1;
- p.media.push({id:"mi2",path:"second.png"});
- p.clips.push({track:"V1",mediaId:"mi2",path:"second.png",start:1.4,dur:1.9});
+ p.media.push({id:"mi2",kind:"image",path:"second.png"});
+ p.clips.push({id:"cv2",kind:"image",track:"V1",mediaId:"mi2",path:"second.png",start:1.4,dur:1.9});
  assert.throws(()=>assertSerializedMyCutTimeline(p),/V1 gap or overlap/);
 });
 
@@ -43,8 +43,8 @@ test("serialized MyCut rejects duplicate media ids and overlong clips",()=>{
 test("serialized MyCut rejects overlapping V1 shots and unknown tracks",()=>{
  const overlap=fixture();
  overlap.clips[2].dur=2;
- overlap.media.push({id:"mi2",path:"second.png"});
- overlap.clips.push({track:"V1",mediaId:"mi2",path:"second.png",start:1.5,dur:1.8});
+ overlap.media.push({id:"mi2",kind:"image",path:"second.png"});
+ overlap.clips.push({id:"cv2",kind:"image",track:"V1",mediaId:"mi2",path:"second.png",start:1.5,dur:1.8});
  assert.throws(()=>assertSerializedMyCutTimeline(overlap),/V1 gap or overlap/);
  const wrongTrack=fixture();
  wrongTrack.clips[2].track="A2";
@@ -62,4 +62,11 @@ test("serialized MyCut rejects duplicate clip IDs and wrong media kinds",()=>{
  const validMedia=valid.media.map((media,index)=>({...media,kind:index===2?"image":"audio"}));
  const validClips=valid.clips.map((clip,index)=>({...clip,id:"clip-"+index,kind:clip.track==="V1"?"image":"audio"}));
  assert.doesNotThrow(()=>assertSerializedMyCutTimeline({...valid,media:validMedia,clips:validClips}));
+});
+
+test("serialized MyCut requires clip IDs and typed media",()=>{
+ const missingId=fixture(); delete (missingId.clips[0] as Partial<typeof missingId.clips[0]>).id;
+ assert.throws(()=>assertSerializedMyCutTimeline(missingId),/missing clip IDs/);
+ const missingKind=fixture(); delete (missingKind.media[2] as Partial<typeof missingKind.media[2]>).kind;
+ assert.throws(()=>assertSerializedMyCutTimeline(missingKind),/kind mismatch/);
 });
