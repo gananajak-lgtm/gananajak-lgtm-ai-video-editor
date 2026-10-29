@@ -6,9 +6,12 @@ type Project = Parameters<typeof assertSerializedMyCutTimeline>[0];
 export async function writeVerifiedMyCutProject(destination: string, project: Project): Promise<void> {
   assertSerializedMyCutTimeline(project);
   // Exclusive create, never replace an existing user's edits.
-  await writeFile(destination, JSON.stringify(project, null, 2), { flag: "wx" });
+  const expectedJson = JSON.stringify(project, null, 2);
+  await writeFile(destination, expectedJson, { flag: "wx" });
   try {
-    const saved = JSON.parse(await readFile(destination, "utf8")) as Project;
+    const actualJson = await readFile(destination, "utf8");
+    if (actualJson !== expectedJson) throw new Error("Persisted MyCut project bytes differ from approved data");
+    const saved = JSON.parse(actualJson) as Project;
     assertSerializedMyCutTimeline(saved);
     if (saved.dur !== project.dur || saved.clips.length !== project.clips.length ||
         saved.media.length !== project.media.length) {
