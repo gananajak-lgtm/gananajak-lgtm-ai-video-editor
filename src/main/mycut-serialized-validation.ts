@@ -1,7 +1,7 @@
 import { assertMyCutContinuousVisualCuts, assertMyCutVoiceTimeline } from "../shared/mycut-image-cuts";
 
-type SerializedClip = { id: string; kind: string; track: string; mediaId: string; path: string; start: number; dur: number };
-type SerializedMedia = { id: string; kind: string; path: string };
+type SerializedClip = { id?: string; kind?: string; track: string; mediaId: string; path: string; start: number; dur: number };
+type SerializedMedia = { id: string; kind?: string; path: string };
 export function assertSerializedMyCutTimeline(project: { clips: SerializedClip[]; media: SerializedMedia[]; dur: number }): void {
   if (!Number.isFinite(project.dur) || project.dur <= 0 || !Array.isArray(project.clips) || !Array.isArray(project.media)) {
     throw new Error("Invalid serialized MyCut timeline");
