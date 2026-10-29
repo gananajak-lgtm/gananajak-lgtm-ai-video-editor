@@ -436,3 +436,10 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Added regression tests for duplicate clip IDs, image track pointing to audio-kind media, and a correct typed project. Source commits `2d9024aec957982a5495cfd74648666e5eb942c1` and `99452da7bf353134ebe73858c9e36ae0dc4f84e9`.
 - This is native serializer structural validation, not a full Electron IPC GUI acceptance test. Verify new CI before claiming pass; installed Windows MyCut 1.0.1 playback/MP4 export still untested. No paid AI calls and no change to existing MyCut project 1019.
 - NEXT: verify CI and resolve failures; build native Electron IPC acceptance harness and manually check playback/export on Windows.
+
+## Session checkpoint — 2026-10-29 (enforce complete native clip/media identity)
+- Fresh HEAD `7287ad269551c93e823d9ceaac1821bc2f3330b3`; CI #2308 completed **success**.
+- Tightened pre-write `assertSerializedMyCutTimeline` to reject *all* missing/empty clip IDs rather than only duplicates when at least one was present; reject missing/empty media IDs/paths and missing/incorrect clip and media `kind` for A1/V1. The actual native MyCut serializer creates IDs and kinds for every entry; this closes gaps where malformed JSON could pass validation.
+- Updated native serialized validation fixtures to carry real clip IDs and kinds; added regression for absent clip ID and missing image media kind. Commits `d3e87c600125cc226be7db0c87715e095bfa1d41`, `fb0db6b841c90acfe558d30e4cb39883b06e768b`, `c0391005de9137754759a9ad7b3ed589f46b7f24`.
+- Type declarations remain optional to allow negative-case fixtures but runtime validation requires values. Verify new CI before claiming pass. No paid AI, no edits to project 1019. Installed Windows MyCut GUI and MP4 export remain untested.
+- NEXT: check CI and fix any test issues; then native Electron IPC acceptance, Windows GUI playback and export.
