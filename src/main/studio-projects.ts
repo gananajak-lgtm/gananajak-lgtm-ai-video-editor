@@ -9,6 +9,7 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { assertApprovedMyCutMp3Hashes } from "./mycut-approved-audio";
 import { assertSerializedMyCutTimeline } from "./mycut-serialized-validation";
+import { writeVerifiedMyCutProject } from "./mycut-verified-write";
 import { hasPlausibleMp3Header } from "./studio-mp3-header";
 import { isDecodableMp3 } from "./studio-mp3-decode";
 
@@ -716,6 +717,6 @@ export async function exportStudioEpisodeToMyCut(
     await assertApprovedMyCutMp3Hashes(selected.map(line => line.audio), expectedAudioHashes);
   }
   assertSerializedMyCutTimeline(project as unknown as Parameters<typeof assertSerializedMyCutTimeline>[0]);
-  await writeFile(destination, JSON.stringify(project, null, 2), { flag: "wx" });
+  await writeVerifiedMyCutProject(destination, project as unknown as Parameters<typeof assertSerializedMyCutTimeline>[0]);
   return { path: destination, audioClips: selected.length, duration: cursor };
 }
