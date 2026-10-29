@@ -487,3 +487,9 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Commits `8f26930b5cce41cb325073c495e024ae6841cae5`, `b8fadb5c798c3945fbf3dbe1f307161553863d6e`, `5bbcffa03288d1eae36441c6e22d1c2e508f82d6`, `a71733014be7ce3a0bb3528fe8034df07f450975`.
 - Verify new CI before claiming pass. No paid calls or changes to original project 1019. Native Electron IPC GUI and installed MyCut 1.0.1 MP3 playback/MP4 export acceptance remain untested.
 - NEXT: verify CI; move toward Electron IPC acceptance and actual Windows MyCut GUI testing.
+
+## Session checkpoint — 2026-10-30 (image signature check before approval)
+- Fresh HEAD `18fa20e8872bf9a173a146f6dc8c6200dc3da1a8`; CI #2331 **success**.
+- Native Electron IPC `studio:export-mycut` now invokes `assertMyCutImageHeader` during image preflight **before showing the final timeline approval dialog**, rather than discovering disguised/bad image headers only during final serializer execution after user consent. The final serializer still independently checks the files at export time.
+- Code commit `3612956d7d20997e206a854e9eb27ba5fc9777c3`. Await fresh CI; no paid API calls or original project 1019 modifications.
+- This improves native IPC validation but is not an Electron GUI end-to-end test or Windows MyCut 1.0.1 playback/MP4 export verification. NEXT: verify CI and prioritize full installed MyCut acceptance.
