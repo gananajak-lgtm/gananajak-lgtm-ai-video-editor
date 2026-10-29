@@ -27,6 +27,7 @@ test("native MyCut saved JSON reads back with valid A1/V1 structure", async t =>
   const saved = JSON.parse(await readFile(destination, "utf8"));
   assert.equal(saved.clips.length, 3);
   assert.equal(saved.dur, 2.3);
+  assert.equal(await readFile(destination, "utf8"), JSON.stringify(project(), null, 2));
   await assert.rejects(writeVerifiedMyCutProject(destination, project()), /EEXIST/);
 });
 
