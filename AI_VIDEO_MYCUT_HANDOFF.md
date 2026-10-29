@@ -443,3 +443,11 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Updated native serialized validation fixtures to carry real clip IDs and kinds; added regression for absent clip ID and missing image media kind. Commits `d3e87c600125cc226be7db0c87715e095bfa1d41`, `fb0db6b841c90acfe558d30e4cb39883b06e768b`, `c0391005de9137754759a9ad7b3ed589f46b7f24`.
 - Type declarations remain optional to allow negative-case fixtures but runtime validation requires values. Verify new CI before claiming pass. No paid AI, no edits to project 1019. Installed Windows MyCut GUI and MP4 export remain untested.
 - NEXT: check CI and fix any test issues; then native Electron IPC acceptance, Windows GUI playback and export.
+
+## Session checkpoint — 2026-10-29 (verified persisted native .mycut write)
+- Fresh starting HEAD `076ff4b0e7eaee3c2070df677ccc14ef0a7b5df1`; CI #2312 completed **success**.
+- Added `src/main/mycut-verified-write.ts`: assert native serialized V1/A1 structure, exclusively create new `.mycut` using `wx`, read persisted JSON back and validate again. If the newly created output cannot be read/validated, remove only that new file; never overwrite or delete a preexisting destination.
+- Wired the native `exportStudioEpisodeToMyCut` serializer to this write/readback function. Added `src/main/mycut-verified-write.test.ts` tests for valid JSON save/readback, invalid project rejected without creating output, and byte-perfect preservation on duplicate destination. Included test in `npm run test:mycut`.
+- Code commits `2caf1465d59a8e8bdc613f6b0723f44826fabbb4`, `5073587391c722e5ba3a029825e103237cf1f547`, `f0a80abd88a24b7634e5929336a88b500c6e58d5`, `9e2e159a71b3e568af488b9b70bc57bf5632f2f3`.
+- Check new CI before claiming pass. This exercises native serializer output persistence but is not a full Electron IPC GUI test or actual installed Windows MyCut 1.0.1 MP3 playback/MP4 export. No paid AI calls; user's existing project 1019 untouched.
+- NEXT: verify new CI and fix any failures, then native Electron IPC acceptance plus Windows MyCut real-world playback/export.
