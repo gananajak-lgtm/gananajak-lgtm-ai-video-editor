@@ -472,3 +472,10 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Improved existing 60-A1/20-V1 production `writeVerifiedMyCutProject` regression: now materializes 80 nonempty temporary source files, serializes absolute paths into .mycut, reads resulting JSON, verifies every referenced media file exists and is nonempty on disk, and checks each saved clip path matches its media ID's path. The fixtures exercise *references*, not MP3 decoding nor Windows MyCut GUI.
 - Test commit `fefb5c030deefc8e52153b3219c8c5130498e872`; included in existing `npm run test:mycut`. CI must be verified. No paid API and no changes to original MyCut project 1019.
 - NEXT: check latest CI, then build an actual native Electron IPC acceptance test; Windows MyCut 1.0.1 GUI playback and MP4 output remain unverified.
+
+## Session checkpoint — 2026-10-29 (V1 late-stage asset preflight)
+- Started fresh HEAD `3860af39ba6db61e124d486807761f952af93479`; CI #2324 completed **success**.
+- Native `exportStudioEpisodeToMyCut` now revalidates that each selected V1 image is a real, nonempty file when preparing the final serializer, **after** the initial Electron user approval/dialog preflight. This prevents an empty or replaced-by-empty image between approval and export from being silently serialized. Existing media ordering, A1 0.3s gap and V1 continuity rules remain unchanged.
+- Code commit `b34e69b486356633a36bbac97742a4a9582b5541`; pending new CI verification. This is not a full Electron GUI acceptance test and does not validate image decoding. Windows MyCut 1.0.1 playback and MP4 export are still unverified.
+- No paid AI calls; did not touch user's existing MyCut project 1019.
+- NEXT: verify CI, strengthen actual media decoding/Windows GUI acceptance, and test native IPC end-to-end.
