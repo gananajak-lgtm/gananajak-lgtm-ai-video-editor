@@ -62,6 +62,7 @@ test("native MyCut writer persists a 60-line A1 and 20-shot contiguous V1 chapte
     const id = "audio-" + i, file = path.join(dir, id + ".mp3");
     const duration = 1 + (i % 5) * 0.125;
     starts.push(total);
+    await writeFile(file, "ID3fixture");
     media.push({ id, kind: "audio", path: file });
     clips.push({ id: "clip-" + id, kind: "audio", track: "A1", mediaId: id, path: file, start: total, dur: duration });
     total += duration + (i === 59 ? 0 : 0.3);
@@ -69,6 +70,7 @@ test("native MyCut writer persists a 60-line A1 and 20-shot contiguous V1 chapte
   for (let i = 0; i < 20; i++) {
     const id = "image-" + i, file = path.join(dir, id + ".png");
     const start = starts[i * 3], end = i === 19 ? total : starts[(i + 1) * 3];
+    await writeFile(file, "image fixture");
     media.push({ id, kind: "image", path: file });
     clips.push({ id: "clip-" + id, kind: "image", track: "V1", mediaId: id, path: file, start, dur: end - start });
   }
@@ -76,6 +78,13 @@ test("native MyCut writer persists a 60-line A1 and 20-shot contiguous V1 chapte
   const saved = JSON.parse(await readFile(destination, "utf8"));
   assert.equal(saved.clips.length, 80);
   assert.equal(saved.media.length, 80);
+  for (const item of saved.media) {
+    assert.ok(path.isAbsolute(item.path), "serialized media uses absolute path");
+    assert.ok((await readFile(item.path)).length > 0, "serialized asset exists on disk");
+  }
+  for (const clip of saved.clips) {
+    assert.equal(saved.media.find((item: {id: string}) => item.id === clip.mediaId)?.path, clip.path);
+  }
   assert.equal(saved.clips.filter((clip: {track: string}) => clip.track === "V1").length, 20);
   assert.equal(saved.dur, total);
 });
