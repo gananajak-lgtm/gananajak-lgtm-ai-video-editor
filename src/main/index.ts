@@ -400,6 +400,9 @@ ipcMain.handle("studio:export-mycut", async (_event, projectId: string, episodeI
     if (!info.isFile() || info.size <= 0) {
       throw new Error("V1 image is not a nonempty file: " + path.basename(image));
     }
+    // Reject disguised image files before the user approves the proposed timeline.
+    const { assertMyCutImageHeader } = await import("./mycut-image-header");
+    await assertMyCutImageHeader(image);
   }
   // Preflight the FINAL order before asking for approval or a Save As destination.
   // This uses the same sidecar line cues as the MyCut serializer.
