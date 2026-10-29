@@ -664,7 +664,8 @@ export async function exportStudioEpisodeToMyCut(
   assertMyCutUniqueSelectedImages(imagePaths);
   const { stat } = await import("node:fs/promises");
   for (const file of imagePaths) {
-    if (!(await stat(file)).isFile()) throw new Error("Image not found: " + path.basename(file));
+    const imageInfo = await stat(file);
+    if (!imageInfo.isFile() || imageInfo.size <= 0) throw new Error("Image missing or empty after review: " + path.basename(file));
   }
   if (imagePaths.length > 0) {
     // Distribute images across spoken lines, and place cuts on their boundaries.
