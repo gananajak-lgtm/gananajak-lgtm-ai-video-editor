@@ -493,3 +493,9 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Native Electron IPC `studio:export-mycut` now invokes `assertMyCutImageHeader` during image preflight **before showing the final timeline approval dialog**, rather than discovering disguised/bad image headers only during final serializer execution after user consent. The final serializer still independently checks the files at export time.
 - Code commit `3612956d7d20997e206a854e9eb27ba5fc9777c3`. Await fresh CI; no paid API calls or original project 1019 modifications.
 - This improves native IPC validation but is not an Electron GUI end-to-end test or Windows MyCut 1.0.1 playback/MP4 export verification. NEXT: verify CI and prioritize full installed MyCut acceptance.
+
+## Session checkpoint — 2026-10-30 (Windows GUI release acceptance gate)
+- Started at HEAD `a114f803064460b860058a157b472190f7d7cfd3`; CI #2333 was **in_progress** at inspection, not yet declared green.
+- Added `MYCUT_WINDOWS_ACCEPTANCE.md`: executable manual Windows MyCut **1.0.1** acceptance plan for the actual Electron UI export, three real MP3 and still-image assets, A1 0.3-second pauses and gapless V1, native Save As/overwrite refusal, opening/reopening project in MyCut GUI, MP4 rendering and independent playback. Each criterion defaults **NOT RUN**; project 1019 must remain unchanged. This explicitly separates CI/static verification from actual installed-MyCut compatibility and provides a release gate.
+- Documentation commit `84ced1b63a2e7ae9a8be02e77381c3845ba6507b`. No claims that actual Windows GUI test was executed, no paid API calls, no MyCut project 1019 changes.
+- NEXT: verify latest CI; perform the real Windows acceptance checklist when installed GUI is available. Prioritize true GUI/IPC acceptance over additional small unit-only checks.
