@@ -44,6 +44,7 @@ export default function App() {
   const [myCutReady, setMyCutReady] = useState(false);
   const [myCutOpening, setMyCutOpening] = useState(false);
   const [myCutLocalMessage, setMyCutLocalMessage] = useState("");
+  const lastSentMyCutEpisodeKey = useRef<string | null>(null);
   useEffect(() => { void window.videoEditor.isLocalMyCutReady().then(setMyCutReady).catch(() => setMyCutReady(false)); }, []);
   const openEpisodeInPersonalMyCut = async () => {
     if (myCutOpening || !studioSelectedId || !studioEpisodeId || !studioVoiceSchedule.length) return;
@@ -73,8 +74,27 @@ export default function App() {
         if (!installed) { setMyCutLocalMessage("ยังไม่ได้เลือกแพ็กเกจ MyCut"); return; }
         setMyCutReady(true);
       }
-      await window.videoEditor.openLocalMyCutEditor();
-      setMyCutLocalMessage("เปิดหน้าตัดต่อ MyCut 1.0.1 แล้ว");
+      // Send the ready EP automatically on the first launch, without asking the
+      // user to open a hidden export panel. Do not create duplicate MyCut
+      // projects every time the user revisits the editor tab.
+      const canSendEpisode = !!studioSelectedId && !!studioEpisodeId &&
+        studioVoiceSchedule.length > 0 &&
+        studioVoiceSchedule.length === Object.keys(studioVoiceFiles).length;
+      const episodeKey = canSendEpisode
+        ? JSON.stringify([studioSelectedId, studioEpisodeId,
+            studioVoiceSchedule.map(item => [item.lineId, studioVoiceFiles[item.lineId]?.outputPath]),
+            images])
+        : null;
+      if (episodeKey && episodeKey !== lastSentMyCutEpisodeKey.current && studioSelectedId && studioEpisodeId) {
+        const imported = await window.videoEditor.sendEpisodeToLocalMyCut(
+          studioSelectedId, studioEpisodeId, studioVoiceSchedule.map(item => item.lineId), images
+        );
+        lastSentMyCutEpisodeKey.current = episodeKey;
+        setMyCutLocalMessage(`นำ MP3 ${imported.audioClips} บรรทัดและภาพ ${imported.images} ภาพเข้า MyCut แล้ว`);
+      } else {
+        await window.videoEditor.openLocalMyCutEditor();
+        setMyCutLocalMessage(canSendEpisode ? "เปิด MyCut พร้อมโปรเจกต์ที่ส่งไว้แล้ว" : "เปิด MyCut แล้ว · ยังไม่มี MP3 ของ EP ที่พร้อมส่ง");
+      }
     } catch (error) {
       setMyCutLocalMessage("เปิด MyCut ไม่สำเร็จ: " + String(error));
     } finally { setMyCutOpening(false); }
