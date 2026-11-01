@@ -93,7 +93,7 @@ export async function openLocalMyCutEditor(): Promise<void> {
   // Keep the MyCut's personal project files separate from AI Video Editor's.
   const userDir = path.join(app.getPath("userData"), "mycut-personal-workspace");
   source = source.replaceAll('app.getPath("userData")', JSON.stringify(userDir));
-  source += "\\nmodule.exports.__openHostedMyCutWindow = createWindow;";
+  source += "\nmodule.exports.__openHostedMyCutWindow = createWindow;";
   bootstrapped = true;
   try {
     // Evaluates only the checksum-verified, user-imported MyCut 1.0.1 main script.
