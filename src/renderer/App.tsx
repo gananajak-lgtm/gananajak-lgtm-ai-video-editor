@@ -1105,8 +1105,9 @@ export default function App() {
       setStudioSavedScript(episodeScript);
       episodeEditorRef.current = { projectId: studioSelectedId, episodeId };
       setEpisodeEditorScope({ projectId: studioSelectedId, episodeId });
-      setActiveProductionTab("editor");
-      setNotice("เปิดไทม์ไลน์เฉพาะ EP แล้ว · ใช้ปุ่มบันทึกไทม์ไลน์ EP เพื่อเก็บงานของตอนนี้");
+      setActiveProductionTab("dashboard");
+      setNotice("เปิดข้อมูล EP แล้ว · กดเมนู ตัดต่อ · ส่งออก เพื่อเข้า MyCut โดยตรง");
+      void openPersonalMyCut();
     } catch (error) { setError(String(error)); }
     finally { setStudioBusy(false); }
   };
@@ -1130,6 +1131,12 @@ export default function App() {
   const [activeProductionTab, setActiveProductionTab] = useState<"dashboard" | "settings" | "accounts" | "voices" | "script" | "editor">("dashboard");
   const navigateStudioTab = (tab: typeof activeProductionTab) => {
     if (tab !== activeProductionTab && studioScriptDirty && !window.confirm("บทที่แก้ไขยังไม่ได้บันทึก ต้องการเปลี่ยนเมนูโดยไม่บันทึกหรือไม่?")) return;
+    if (tab === "editor") {
+      // MyCut is the only visible editing interface. A normal click opens its
+      // original full editor rather than a legacy intermediate editor page.
+      void openPersonalMyCut();
+      return;
+    }
     setActiveProductionTab(tab);
   };
   const [theme, setTheme] = useState(() => localStorage.getItem("studio-theme-v1") || "indigo");
@@ -1169,7 +1176,7 @@ export default function App() {
           <button className={activeProductionTab === "dashboard" ? "selected" : ""} onClick={() => navigateStudioTab("dashboard")}>▦ โปรเจกต์ของฉัน</button>
           <button className={activeProductionTab === "accounts" ? "selected" : ""} onClick={() => navigateStudioTab("accounts")}>♫ คลังเสียงตัวละคร</button>
           <button className={activeProductionTab === "script" ? "selected" : ""} onClick={() => navigateStudioTab("script")}>♬ สร้างเสียงพากย์ · บท</button>
-          <button className={activeProductionTab === "editor" ? "selected" : ""} onClick={() => navigateStudioTab("editor")}>▣ ตัดต่อ · ส่งออก</button>
+          <button className={myCutOpening ? "selected" : ""} disabled={myCutOpening} onClick={() => navigateStudioTab("editor")}>▣ {myCutOpening ? "กำลังเปิด MyCut…" : "ตัดต่อ · ส่งออก (MyCut)"}</button>
         </div>
         <div style={{marginTop:"auto"}} className="studioSideLinks">
           <button className={activeProductionTab === "settings" ? "selected" : ""} onClick={() => navigateStudioTab("settings")}>⚙ ตั้งค่า</button>
@@ -1186,7 +1193,7 @@ export default function App() {
           ระยะที่ 1 · ระบบตัดต่อและเล่นวิดีโอในแอป
         </div>
       </header>
-
+      {myCutLocalMessage && <p role="status" className="message">{myCutLocalMessage}</p>}
 
 
       {activeProductionTab === "dashboard" && <section className="compactTabContent studioProjectDashboard">
@@ -1269,7 +1276,7 @@ export default function App() {
         <VoiceStudioPanel projectId={studioSelectedId} episodeId={studioEpisodeId} />
       </section>
 
-      <section className="compactTabContent" hidden={activeProductionTab !== "editor"} aria-label="ขั้นตอนที่ 2 ถึง 7 ผลิตและส่งออกวิดีโอ">
+      <section className="compactTabContent" hidden aria-label="ตัวตัดต่อเดิม (แทนที่ด้วย MyCut)">
       <div className="aiSfxToggleBar">
         <div><strong>🎧 AI เสียงเอฟเฟกต์ (SFX)</strong><p>{aiSfxEnabled ? "เปิดไว้สำหรับการวิเคราะห์ SFX เมื่อระบบพร้อมใช้งาน · ไม่มีการใช้เครดิตอัตโนมัติ" : "ปิดอยู่ · ไม่ต้องวิเคราะห์หรือค้นหา SFX ด้วย AI · เสียงที่เพิ่มเองยังใช้งานได้"}</p></div>
         <label className="aiSfxToggleControl"><input type="checkbox" checked={aiSfxEnabled} onChange={(event) => setAiSfxEnabled(event.target.checked)} /><span>{aiSfxEnabled ? "เปิด" : "ปิด"}</span></label>
