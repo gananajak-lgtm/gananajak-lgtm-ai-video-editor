@@ -44,7 +44,6 @@ export default function App() {
   const [myCutReady, setMyCutReady] = useState(false);
   const [myCutOpening, setMyCutOpening] = useState(false);
   const [myCutLocalMessage, setMyCutLocalMessage] = useState("");
-  const lastSentMyCutEpisodeKey = useRef<string | null>(null);
   useEffect(() => { void window.videoEditor.isLocalMyCutReady().then(setMyCutReady).catch(() => setMyCutReady(false)); }, []);
   const openEpisodeInPersonalMyCut = async () => {
     if (myCutOpening || !studioSelectedId || !studioEpisodeId || !studioVoiceSchedule.length) return;
@@ -92,18 +91,17 @@ export default function App() {
           canSendEpisode = false;
         }
       }
-      const episodeKey = canSendEpisode
-        ? JSON.stringify([studioSelectedId, targetEpisodeId, targetLines, targetImages])
-        : null;
-      if (episodeKey && episodeKey !== lastSentMyCutEpisodeKey.current && studioSelectedId && targetEpisodeId) {
+      if (canSendEpisode && studioSelectedId && targetEpisodeId) {
+        // Always ask the main process to open this EP: its persistent import
+        // index reuses the existing MyCut project, including edits, instead of
+        // creating another copy or leaving the user on MyCut's home screen.
         const imported = await window.videoEditor.sendEpisodeToLocalMyCut(
           studioSelectedId, targetEpisodeId, targetLines.map(line => line.lineId), targetImages
         );
-        lastSentMyCutEpisodeKey.current = episodeKey;
-        setMyCutLocalMessage(`เปิด MyCut พร้อม MP3 ${imported.audioClips} บรรทัดและภาพ ${imported.images} ภาพแล้ว`);
+        setMyCutLocalMessage(`เปิดโปรเจกต์ MyCut ของ EP นี้ · MP3 ${imported.audioClips} บรรทัด · ภาพ ${imported.images} ภาพ`);
       } else {
         await window.videoEditor.openLocalMyCutEditor();
-        setMyCutLocalMessage(canSendEpisode ? "เปิด MyCut พร้อมโปรเจกต์ที่ส่งไว้แล้ว" : "เปิด MyCut แล้ว · EP นี้ยังไม่มี MP3 ที่พร้อมนำเข้า");
+        setMyCutLocalMessage("เปิด MyCut แล้ว · EP นี้ยังไม่มี MP3 ที่พร้อมนำเข้า");
       }
     } catch (error) {
       setMyCutLocalMessage("เปิด MyCut ไม่สำเร็จ: " + String(error));
