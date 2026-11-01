@@ -13,6 +13,7 @@ const FILES_DIR = "mycut-local-resources-1.0.1";
 let bootstrapped = false;
 let reopenMyCutWindow: (() => void) | null = null;
 let hostedMyCutWindow: BrowserWindow | null = null;
+let hostedLaunchPending = false;
 
 function resourcesFolder(): string {
   return path.join(app.getPath("userData"), FILES_DIR, "resources");
@@ -115,13 +116,18 @@ function focusMyCutAsPrimaryWindow(open: () => void, projectId?: string, request
   const onCreated = (_event: Electron.Event, child: BrowserWindow) => {
     if (child === host) return;
     hostedMyCutWindow = child;
-    child.once("closed", () => { if (hostedMyCutWindow === child) hostedMyCutWindow = null; });
+    child.once("ready-to-show", () => { hostedLaunchPending = false; });
+    child.once("closed", () => {
+      if (hostedMyCutWindow === child) hostedMyCutWindow = null;
+      hostedLaunchPending = false;
+    });
     // Failure during HTML/preload initialization must be visible, not a blank
     // MyCut window that leaves users thinking the editor is still loading.
     let launchErrorReported = false;
     const reportLaunchError = (reason: string) => {
       if (launchErrorReported) return;
       launchErrorReported = true;
+      hostedLaunchPending = false;
       if (host && !host.isDestroyed()) { host.show(); host.focus(); }
       void dialog.showMessageBox({
         type: "error",
@@ -147,9 +153,11 @@ function focusMyCutAsPrimaryWindow(open: () => void, projectId?: string, request
       });
     }
   };
+  hostedLaunchPending = true;
   app.once("browser-window-created", onCreated);
   try { open(); }
   catch (error) {
+    hostedLaunchPending = false;
     app.removeListener("browser-window-created", onCreated);
     throw error;
   }
@@ -176,6 +184,9 @@ export async function openLocalMyCutEditor(projectId?: string, host?: BrowserWin
     return;
   }
   if (bootstrapped) {
+    // app.whenReady() creates MyCut asynchronously; avoid launching a second
+    // editor window while its first window is still being initialized.
+    if (hostedLaunchPending) return;
     if (!reopenMyCutWindow) throw new Error("MyCut ยังเริ่มต้นไม่สมบูรณ์");
     focusMyCutAsPrimaryWindow(reopenMyCutWindow, projectId, host);
     return;
