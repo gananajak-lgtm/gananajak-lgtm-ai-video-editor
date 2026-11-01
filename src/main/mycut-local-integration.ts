@@ -82,10 +82,15 @@ function openImportedProjectInMyCut(win: BrowserWindow, projectId: string): void
   const script = `(() => new Promise((resolve, reject) => {
     let attempts = 0;
     const open = () => {
+      // The project grid can be empty or filtered even when the project
+      // exists. Query MyCut's own preload project API, not a CSS card.
       if (typeof openProjectById === "function" &&
-          document.querySelector("#projGrid .proj-card")) {
-        Promise.resolve(openProjectById(${JSON.stringify(projectId)}))
-          .then(() => resolve(true), reject);
+          window.api && typeof window.api.loadProject === "function" &&
+          document.querySelector("#editor")) {
+        window.api.loadProject(${JSON.stringify(projectId)}).then(project => {
+          if (!project) throw new Error("MyCut imported project is missing from local library");
+          return openProjectById(${JSON.stringify(projectId)});
+        }).then(() => resolve(true), reject);
       } else if (++attempts >= 80) {
         reject(new Error("MyCut project list did not load"));
       } else {
