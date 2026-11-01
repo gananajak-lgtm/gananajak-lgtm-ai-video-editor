@@ -64,7 +64,7 @@ export default function App() {
       setMyCutLocalMessage("ส่งตอนเข้า MyCut ไม่สำเร็จ: " + String(error));
     } finally { setMyCutOpening(false); }
   };
-  const openPersonalMyCut = async () => {
+  const openPersonalMyCut = async (requestedEpisode?: { episodeId: string; images: string[] }) => {
     if (myCutOpening) return;
     setMyCutOpening(true);
     setMyCutLocalMessage("");
@@ -74,26 +74,36 @@ export default function App() {
         if (!installed) { setMyCutLocalMessage("ยังไม่ได้เลือกแพ็กเกจ MyCut"); return; }
         setMyCutReady(true);
       }
-      // Send the ready EP automatically on the first launch, without asking the
-      // user to open a hidden export panel. Do not create duplicate MyCut
-      // projects every time the user revisits the editor tab.
-      const canSendEpisode = !!studioSelectedId && !!studioEpisodeId &&
+      // A newly opened EP updates React state asynchronously. Never use the
+      // previous episode's voice schedule or image list for that new EP.
+      const targetEpisodeId = requestedEpisode?.episodeId ?? studioEpisodeId;
+      const targetImages = requestedEpisode?.images ?? images;
+      let targetLines = studioVoiceSchedule.map(line => ({ lineId: line.lineId, audio: studioVoiceFiles[line.lineId]?.outputPath ?? "" }));
+      let canSendEpisode = !!studioSelectedId && !!targetEpisodeId &&
         studioVoiceSchedule.length > 0 &&
         studioVoiceSchedule.length === Object.keys(studioVoiceFiles).length;
+      if (requestedEpisode && studioSelectedId) {
+        try {
+          const manifest = await window.videoEditor.prepareStudioEpisodeMyCutVoiceManifest(studioSelectedId, targetEpisodeId!);
+          targetLines = manifest.lines.map(line => ({ lineId: line.lineId, audio: line.audio }));
+          canSendEpisode = targetLines.length > 0;
+        } catch {
+          targetLines = [];
+          canSendEpisode = false;
+        }
+      }
       const episodeKey = canSendEpisode
-        ? JSON.stringify([studioSelectedId, studioEpisodeId,
-            studioVoiceSchedule.map(item => [item.lineId, studioVoiceFiles[item.lineId]?.outputPath]),
-            images])
+        ? JSON.stringify([studioSelectedId, targetEpisodeId, targetLines, targetImages])
         : null;
-      if (episodeKey && episodeKey !== lastSentMyCutEpisodeKey.current && studioSelectedId && studioEpisodeId) {
+      if (episodeKey && episodeKey !== lastSentMyCutEpisodeKey.current && studioSelectedId && targetEpisodeId) {
         const imported = await window.videoEditor.sendEpisodeToLocalMyCut(
-          studioSelectedId, studioEpisodeId, studioVoiceSchedule.map(item => item.lineId), images
+          studioSelectedId, targetEpisodeId, targetLines.map(line => line.lineId), targetImages
         );
         lastSentMyCutEpisodeKey.current = episodeKey;
-        setMyCutLocalMessage(`นำ MP3 ${imported.audioClips} บรรทัดและภาพ ${imported.images} ภาพเข้า MyCut แล้ว`);
+        setMyCutLocalMessage(`เปิด MyCut พร้อม MP3 ${imported.audioClips} บรรทัดและภาพ ${imported.images} ภาพแล้ว`);
       } else {
         await window.videoEditor.openLocalMyCutEditor();
-        setMyCutLocalMessage(canSendEpisode ? "เปิด MyCut พร้อมโปรเจกต์ที่ส่งไว้แล้ว" : "เปิด MyCut แล้ว · ยังไม่มี MP3 ของ EP ที่พร้อมส่ง");
+        setMyCutLocalMessage(canSendEpisode ? "เปิด MyCut พร้อมโปรเจกต์ที่ส่งไว้แล้ว" : "เปิด MyCut แล้ว · EP นี้ยังไม่มี MP3 ที่พร้อมนำเข้า");
       }
     } catch (error) {
       setMyCutLocalMessage("เปิด MyCut ไม่สำเร็จ: " + String(error));
@@ -1126,8 +1136,8 @@ export default function App() {
       episodeEditorRef.current = { projectId: studioSelectedId, episodeId };
       setEpisodeEditorScope({ projectId: studioSelectedId, episodeId });
       setActiveProductionTab("dashboard");
-      setNotice("เปิดข้อมูล EP แล้ว · กดเมนู ตัดต่อ · ส่งออก เพื่อเข้า MyCut โดยตรง");
-      void openPersonalMyCut();
+      setNotice("เปิดข้อมูล EP แล้ว · กำลังเปิด MyCut ของตอนนี้");
+      void openPersonalMyCut({ episodeId, images: stored?.images ?? [] });
     } catch (error) { setError(String(error)); }
     finally { setStudioBusy(false); }
   };
