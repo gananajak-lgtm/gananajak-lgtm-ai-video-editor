@@ -41,6 +41,27 @@ function formatTime(seconds: number) {
 }
 
 export default function App() {
+  const [myCutReady, setMyCutReady] = useState(false);
+  const [myCutOpening, setMyCutOpening] = useState(false);
+  const [myCutLocalMessage, setMyCutLocalMessage] = useState("");
+  useEffect(() => { void window.videoEditor.isLocalMyCutReady().then(setMyCutReady).catch(() => setMyCutReady(false)); }, []);
+  const openPersonalMyCut = async () => {
+    if (myCutOpening) return;
+    setMyCutOpening(true);
+    setMyCutLocalMessage("");
+    try {
+      if (!myCutReady) {
+        const installed = await window.videoEditor.importLocalMyCutResources();
+        if (!installed) { setMyCutLocalMessage("ยังไม่ได้เลือกแพ็กเกจ MyCut"); return; }
+        setMyCutReady(true);
+      }
+      await window.videoEditor.openLocalMyCutEditor();
+      setMyCutLocalMessage("เปิดหน้าตัดต่อ MyCut 1.0.1 แล้ว");
+    } catch (error) {
+      setMyCutLocalMessage("เปิด MyCut ไม่สำเร็จ: " + String(error));
+    } finally { setMyCutOpening(false); }
+  };
+
   const [projectId, setProjectId] = useState(() => `project-${Date.now()}`);
   const episodeEditorRef = useRef<{ projectId: string; episodeId: string } | null>(null);
   const autosaveGenerationRef = useRef(0);
@@ -1253,6 +1274,13 @@ export default function App() {
         <div className="heroBadge">🎧</div>
       </details>
 
+      <section className="panel" aria-label="MyCut สำหรับใช้งานส่วนตัว">
+        <div className="panelHeader"><div><span className="step">MYCUT 1.0.1</span><h3>ตัวตัดต่อ MyCut จริง</h3><p className="muted">นำเข้า resources(1).zip เพียงครั้งแรก จากนั้นเปิด MyCut ได้จาก AI Video Editor โดยไม่ต้องติดตั้งโปรแกรม MyCut แยก</p></div>
+          <button type="button" className="primary" disabled={myCutOpening} onClick={() => { void openPersonalMyCut(); }}>{myCutOpening ? "กำลังเปิด MyCut…" : myCutReady ? "เปิดตัวตัดต่อ MyCut" : "นำเข้า MyCut และเปิด"}</button>
+        </div>
+        {myCutLocalMessage && <p role="status">{myCutLocalMessage}</p>}
+        <p className="muted">เปิดเป็นหน้าต่างตัดต่อภายในโปรเซส Electron ของแอปนี้ โดยเก็บโปรเจกต์ MyCut แยกจากโปรเจกต์เดิม การย้าย MP3 และภาพเข้า MyCut อัตโนมัติยังอยู่ระหว่างพัฒนา</p>
+      </section>
       <section id="editor-timeline" className="timelinePanel" aria-label="หน้าตัดต่อหลัก">
         <div className="timelineHeader"><div><p className="eyebrow">VIDEO EDITOR</p><h3>ตัดต่อภาพและเสียงในหน้าเดียว</h3><p className="muted">ใช้ไทม์ไลน์นี้แทนแผงภาพรวมเก่า ปรับคลิปและเสียงได้โดยตรง ไม่ต้องส่งออก .mycut ไปเปิดโปรแกรมอื่น</p></div><div className="timelineMeta"><span>{timeline ? `${timeline.clips.length} ภาพ · ${formatTime(timeline.duration)}` : "ยังไม่มีไทม์ไลน์"}</span></div></div>
         <div className="voiceStudioActions">
