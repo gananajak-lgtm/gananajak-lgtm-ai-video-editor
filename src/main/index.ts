@@ -203,7 +203,7 @@ ipcMain.handle("mycut:send-episode", async (_event, projectId: string, episodeId
     if (typeof saved.id !== "string" || !/^[a-z0-9_-]+$/i.test(saved.id)) throw new Error("MyCut Project ID ไม่ถูกต้อง");
     // MyCut 1.0.1's project library uses <project-id>.json.
     await writeFile(path.join(folder, saved.id + ".json"), json, { flag: "wx" });
-    await openLocalMyCutEditor();
+    await openLocalMyCutEditor(saved.id);
     return { id: saved.id, images: imagePaths.length, audioClips: lineIds.length };
   } finally {
     await rm(scratch, { force: true }).catch(() => {});
