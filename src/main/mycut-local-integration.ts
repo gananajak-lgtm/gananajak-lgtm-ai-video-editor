@@ -68,13 +68,30 @@ export async function importMyCutResourcesZip(): Promise<boolean> {
  * it does not modify MyCut's original resources on disk.
  * MyCut opens in its own editor window (same running app, no separate EXE).
  */
+function focusMyCutAsPrimaryWindow(open: () => void): void {
+  const host = BrowserWindow.getFocusedWindow();
+  const onCreated = (_event: Electron.Event, child: BrowserWindow) => {
+    if (!host || host.isDestroyed() || child === host) return;
+    child.once("ready-to-show", () => { if (!host.isDestroyed()) host.hide(); });
+    child.once("closed", () => {
+      if (!host.isDestroyed()) { host.show(); host.focus(); }
+    });
+  };
+  app.once("browser-window-created", onCreated);
+  try { open(); }
+  catch (error) {
+    app.removeListener("browser-window-created", onCreated);
+    throw error;
+  }
+}
+
 export async function openLocalMyCutEditor(): Promise<void> {
   if (!(await isMyCutInstalledLocally())) throw new Error("นำเข้า resources ZIP ของ MyCut 1.0.1 ก่อน");
   const existing = BrowserWindow.getAllWindows().find(win => !win.isDestroyed() && win.getTitle() === "MyCut");
   if (existing) { existing.show(); existing.focus(); return; }
   if (bootstrapped) {
     if (!reopenMyCutWindow) throw new Error("MyCut ยังเริ่มต้นไม่สมบูรณ์");
-    reopenMyCutWindow();
+    focusMyCutAsPrimaryWindow(reopenMyCutWindow);
     return;
   }
   const root = resourcesFolder();
@@ -99,7 +116,9 @@ export async function openLocalMyCutEditor(): Promise<void> {
     // Evaluates only the checksum-verified, user-imported MyCut 1.0.1 main script.
     const compiled = new Function("require", "module", "exports", "__filename", "__dirname", source);
     const moduleLike = { exports: {} };
-    compiled(createRequire(entry), moduleLike, moduleLike.exports, entry, path.dirname(entry));
+    focusMyCutAsPrimaryWindow(() => {
+      compiled(createRequire(entry), moduleLike, moduleLike.exports, entry, path.dirname(entry));
+    });
     const exported = moduleLike.exports as { __openHostedMyCutWindow?: () => void };
     reopenMyCutWindow = exported.__openHostedMyCutWindow ?? null;
   } catch (error) {
