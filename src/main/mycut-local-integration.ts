@@ -40,15 +40,18 @@ export async function importMyCutResourcesZip(): Promise<boolean> {
   const zip = selected.filePaths[0];
   const { stdout } = await execFileAsync("tar.exe", ["-tf", zip], { windowsHide: true, maxBuffer: 1024 * 1024 });
   const names = stdout.split(/\r?\n/).filter(Boolean).map(x => x.replace(/\\/g, "/"));
-  if (!names.includes("resources/app.asar") ||
-      !names.some(x => x.startsWith("resources/app.asar.unpacked/")) ||
-      names.some(x => !x.startsWith("resources/") || x.split("/").includes("..") || x.includes(":"))) {
-    throw new Error("ZIP ไม่ใช่แพ็กเกจ resources ของ MyCut ที่รองรับ");
+  // Accept both the standalone resources ZIP and the full MyCut install ZIP.
+  // Import ONLY resources/, never the user's executable or other installer files.
+  const resources = names.filter(name => name === "resources/" || name.startsWith("resources/"));
+  if (!resources.includes("resources/app.asar") ||
+      !resources.some(name => name.startsWith("resources/app.asar.unpacked/")) ||
+      resources.some(name => name.split("/").includes("..") || name.includes(":"))) {
+    throw new Error("ZIP ไม่ใช่แพ็กเกจ MyCut 1.0.1 ที่รองรับ");
   }
   const base = app.getPath("userData");
   const temp = await mkdtemp(path.join(base, "mycut-import-"));
   try {
-    await execFileAsync("tar.exe", ["-xf", zip, "-C", temp], { windowsHide: true, timeout: 120000 });
+    await execFileAsync("tar.exe", ["-xf", zip, "-C", temp, "resources/"], { windowsHide: true, timeout: 120000 });
     const asar = path.join(temp, "resources", "app.asar");
     const info = await stat(asar);
     if (!info.isFile() || info.size < 100000 || info.size > 100000000) throw new Error("MyCut app.asar ไม่ถูกต้อง");
