@@ -7,7 +7,7 @@ import { createMetaBrokerSession, exchangeMetaBrokerSession, validateMetaBrokerC
 import { explainAffiliateProduct } from "./affiliate-product-search";
 import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell } from "electron";
 import path from "node:path";
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, writeFile, rm } from "node:fs/promises";
 import ffmpegPath from "ffmpeg-static";
 import { resolveBundledFfmpegPath } from "./studio-mp3-decode";
 import { spawn } from "node:child_process";
@@ -185,6 +185,31 @@ ipcMain.handle("affiliate:search-products", async (_event, query:string) => {
 ipcMain.handle("mycut:local-status", async () => isMyCutInstalledLocally());
 ipcMain.handle("mycut:import-resources", async () => importMyCutResourcesZip());
 ipcMain.handle("mycut:open-local-editor", async () => openLocalMyCutEditor());
+ipcMain.handle("mycut:send-episode", async (_event, projectId: string, episodeId: string, lineIds: string[], imagePaths: string[]) => {
+  if (!(await isMyCutInstalledLocally())) throw new Error("กรุณานำเข้า resources(1).zip ของ MyCut ก่อน");
+  if (typeof projectId !== "string" || !projectId || typeof episodeId !== "string" || !episodeId ||
+      !Array.isArray(lineIds) || lineIds.length > 10000 || lineIds.some(id => typeof id !== "string" || !id) ||
+      !Array.isArray(imagePaths) || imagePaths.length > 500 || imagePaths.some(file => typeof file !== "string")) {
+    throw new Error("ข้อมูลตอนสำหรับ MyCut ไม่ถูกต้อง");
+  }
+  const { randomUUID } = await import("node:crypto");
+  const folder = path.join(app.getPath("userData"), "mycut-personal-workspace", "projects");
+  await mkdir(folder, { recursive: true });
+  const scratch = path.join(folder, "new-" + randomUUID() + ".mycut");
+  try {
+    await exportStudioEpisodeToMyCut(projectId, episodeId, lineIds, scratch, imagePaths);
+    const json = await readFile(scratch, "utf8");
+    const saved = JSON.parse(json) as { id?: unknown };
+    if (typeof saved.id !== "string" || !/^[a-z0-9_-]+$/i.test(saved.id)) throw new Error("MyCut Project ID ไม่ถูกต้อง");
+    // MyCut 1.0.1's project library uses <project-id>.json.
+    await writeFile(path.join(folder, saved.id + ".json"), json, { flag: "wx" });
+    await openLocalMyCutEditor();
+    return { id: saved.id, images: imagePaths.length, audioClips: lineIds.length };
+  } finally {
+    await rm(scratch, { force: true }).catch(() => {});
+  }
+});
+
 
 ipcMain.handle("media:select-images", async () => {
   const result = await dialog.showOpenDialog({
