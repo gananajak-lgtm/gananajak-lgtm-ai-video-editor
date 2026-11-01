@@ -11,6 +11,7 @@ const execFileAsync = promisify(execFile);
 const VERIFIED_ASAR_SHA256 = "f7f4f66962deda6002a8073df78533b3f0782fb7c3d3fca0f3b432534b391d7c";
 const FILES_DIR = "mycut-local-resources-1.0.1";
 let bootstrapped = false;
+let reopenMyCutWindow: (() => void) | null = null;
 
 function resourcesFolder(): string {
   return path.join(app.getPath("userData"), FILES_DIR, "resources");
@@ -71,7 +72,11 @@ export async function openLocalMyCutEditor(): Promise<void> {
   if (!(await isMyCutInstalledLocally())) throw new Error("นำเข้า resources ZIP ของ MyCut 1.0.1 ก่อน");
   const existing = BrowserWindow.getAllWindows().find(win => !win.isDestroyed() && win.getTitle() === "MyCut");
   if (existing) { existing.show(); existing.focus(); return; }
-  if (bootstrapped) throw new Error("หน้าต่าง MyCut กำลังเปิดหรือถูกปิดไปแล้ว กรุณารีสตาร์ต AI Video Editor เพื่อเปิดใหม่");
+  if (bootstrapped) {
+    if (!reopenMyCutWindow) throw new Error("MyCut ยังเริ่มต้นไม่สมบูรณ์");
+    reopenMyCutWindow();
+    return;
+  }
   const root = resourcesFolder();
   const entry = path.join(root, "app.asar", "main.js");
   let source = await readFile(entry, "utf8");
@@ -88,14 +93,18 @@ export async function openLocalMyCutEditor(): Promise<void> {
   // Keep the MyCut's personal project files separate from AI Video Editor's.
   const userDir = path.join(app.getPath("userData"), "mycut-personal-workspace");
   source = source.replaceAll('app.getPath("userData")', JSON.stringify(userDir));
+  source += "\\nmodule.exports.__openHostedMyCutWindow = createWindow;";
   bootstrapped = true;
   try {
     // Evaluates only the checksum-verified, user-imported MyCut 1.0.1 main script.
     const compiled = new Function("require", "module", "exports", "__filename", "__dirname", source);
     const moduleLike = { exports: {} };
     compiled(createRequire(entry), moduleLike, moduleLike.exports, entry, path.dirname(entry));
+    const exported = moduleLike.exports as { __openHostedMyCutWindow?: () => void };
+    reopenMyCutWindow = exported.__openHostedMyCutWindow ?? null;
   } catch (error) {
     bootstrapped = false;
+    reopenMyCutWindow = null;
     throw error;
   }
 }
