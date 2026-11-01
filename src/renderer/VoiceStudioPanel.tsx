@@ -273,71 +273,34 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
   const batchProgress = useMemo(() => voiceBatchProgress(productionPlan), [productionPlan]);
   const [acknowledgedQueue, setAcknowledgedQueue] = useState<string | null>(null);
   const currentQueueFingerprint = useMemo(() => voiceApprovalFingerprint(productionPlan), [productionPlan]);
-  const creditApproval = acknowledgedQueue !== null && acknowledgedQueue === currentQueueFingerprint;
   const [voiceGenerating, setVoiceGenerating] = useState(false);
   const voiceGenerationLock = useRef(false);
   const [voiceGenerationStatus, setVoiceGenerationStatus] = useState("");
-  const generateNextApprovedVoiceLine = async () => {
-    if (voiceGenerationLock.current || !activeProjectId || !activeEpisodeId ||
-        !audioCacheMatchesEpisode || !approvalReady) return;
-    const authorization = authorizeVoiceGeneration(productionPlan, acknowledgedQueue, true);
-    if (!authorization.canGenerate || authorization.errors.length) {
-      setVoiceGenerationStatus(authorization.errors.join(" · ") || "คิวไม่พร้อม");
-      return;
-    }
-    const next = authorization.pending[0];
-    if (!next || !next.voiceId) return;
-    voiceGenerationLock.current = true;
-    setVoiceGenerating(true);
-    setVoiceGenerationStatus(`กำลังสร้างเสียงบรรทัด ${next.order + 1} ผ่าน ElevenLabs…`);
-    // A single deliberate click authorizes only one paid line, never the entire queue.
-    setAcknowledgedQueue(null);
-    try {
-      await window.videoEditor.generateStudioVoiceLine({
-        projectId: activeProjectId, episodeId: activeEpisodeId,
-        lineId: next.lineId, fingerprint: next.fingerprint,
-        text: next.text, voiceId: next.voiceId, modelId: next.modelId,
-        jobId: next.id, speaker: next.speaker, emotion: next.emotion,
-        approved: true
-      });
-      const entries = await window.videoEditor.loadStudioEpisodeVoiceAudio(activeProjectId, activeEpisodeId);
-      if (projectIdentity.current === activeProjectId &&
-          JSON.stringify([activeProjectId, activeEpisodeId]) === currentAudioIdentity) {
-        setAudioCache(entries);
-        setVoiceGenerationStatus(`สร้าง MP3 บรรทัด ${next.order + 1} สำเร็จ กรุณาตรวจสอบคิวก่อนอนุมัติบรรทัดต่อไป`);
-      }
-    } catch (error) {
-      setVoiceGenerationStatus(error instanceof Error ? error.message : "สร้างเสียงไม่สำเร็จ กรุณาลองใหม่");
-    } finally {
-      voiceGenerationLock.current = false;
-      setVoiceGenerating(false);
-    }
-  };
   const [batchRunStatus, setBatchRunStatus] = useState<{ done: number; total: number; failed: number } | null>(null);
   const batchCancelRequested = useRef(false);
   const [batchCancelPending, setBatchCancelPending] = useState(false);
   const [batchRunActive, setBatchRunActive] = useState(false);
   const activeEpisodeIdentityRef = useRef(currentAudioIdentity);
   activeEpisodeIdentityRef.current = currentAudioIdentity;
-  const activeQueueFingerprintRef = useRef(currentQueueFingerprint);
-  activeQueueFingerprintRef.current = currentQueueFingerprint;
+  const batchInputsKey = JSON.stringify([lines, resolvedVoiceIds, selectedWorkspaceId, selectedModelId]);
+  const batchInputsKeyRef = useRef(batchInputsKey);
+  batchInputsKeyRef.current = batchInputsKey;
   const generateApprovedVoiceBatch = async () => {
     if (voiceGenerationLock.current || !activeProjectId || !activeEpisodeId ||
         !audioCacheMatchesEpisode || !approvalReady) return;
-    const authorization = authorizeVoiceGeneration(productionPlan, acknowledgedQueue, true);
+    const authorization = authorizeVoiceGeneration(productionPlan, currentQueueFingerprint, true);
     if (!authorization.canGenerate || authorization.errors.length) {
       setVoiceGenerationStatus(authorization.errors.join(" · ") || "คิวไม่พร้อม");
       return;
     }
     const pending = authorization.pending;
     if (!pending.length || pending.some(job => !job.voiceId)) return;
-    const approvedQueueFingerprint = currentQueueFingerprint;
+    const approvedInputsKey = batchInputsKey;
     voiceGenerationLock.current = true;
     batchCancelRequested.current = false;
     setBatchCancelPending(false);
     setVoiceGenerating(true);
     setBatchRunActive(true);
-    setAcknowledgedQueue(null);
     setBatchRunStatus({ done: 0, total: pending.length, failed: 0 });
     let done = 0;
     let failed = 0;
@@ -345,7 +308,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
     try {
       for (const job of pending) {
         // Stop if the user switched projects while the preceding request ran.
-        if (batchCancelRequested.current || projectIdentity.current !== activeProjectId || activeEpisodeIdentityRef.current !== currentAudioIdentity || activeQueueFingerprintRef.current !== approvedQueueFingerprint) break;
+        if (batchCancelRequested.current || projectIdentity.current !== activeProjectId || activeEpisodeIdentityRef.current !== currentAudioIdentity || batchInputsKeyRef.current !== approvedInputsKey) break;
         setVoiceGenerationStatus(`กำลังสร้างบรรทัด ${job.order + 1} (${done + failed + 1}/${pending.length})`);
         try {
           await window.videoEditor.generateStudioVoiceLine({
@@ -370,9 +333,9 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
           } catch { /* Keep the generation result; reload on reopening the episode. */ }
         }
       }
-      const queueChanged = activeQueueFingerprintRef.current !== approvedQueueFingerprint;
+      const queueChanged = batchInputsKeyRef.current !== approvedInputsKey;
       const episodeChanged = activeEpisodeIdentityRef.current !== currentAudioIdentity || projectIdentity.current !== activeProjectId;
-      setVoiceGenerationStatus(`สร้างสำเร็จ ${done}/${pending.length} บรรทัด · ล้มเหลว ${failed}${batchCancelRequested.current ? " · หยุดตามคำสั่งแล้ว" : queueChanged || episodeChanged ? " · หยุดเนื่องจากคิวหรือโปรเจกต์เปลี่ยน" : ""} · งานที่เหลือต้องอนุมัติใหม่${failureDetail ? ` · สาเหตุ: ${failureDetail}` : ""}`);
+      setVoiceGenerationStatus(`สร้างสำเร็จ ${done}/${pending.length} บรรทัด · ล้มเหลว ${failed}${batchCancelRequested.current ? " · หยุดตามคำสั่งแล้ว" : queueChanged || episodeChanged ? " · หยุดเนื่องจากคิวหรือโปรเจกต์เปลี่ยน" : ""} · กดสร้างเสียงทั้งหมดอีกครั้งเพื่อทำงานที่เหลือ${failureDetail ? ` · สาเหตุ: ${failureDetail}` : ""}`);
     } finally {
       voiceGenerationLock.current = false;
       setVoiceGenerating(false);
@@ -381,7 +344,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
   };
   const [queuePreviewOpen, setQueuePreviewOpen] = useState(false);
   useEffect(() => { setAcknowledgedQueue(null); setQueuePreviewOpen(false); }, [productionPlan]);
-  const approvalReady = projectVoicesReady && confirmed && !sourceIsStale &&
+  const approvalReady = projectVoicesReady && !savingProjectVoice && !sourceIsStale &&
     (importedPlanWorkspaceId === null || importedPlanWorkspaceId === selectedWorkspaceId) &&
     (!activeProjectId || !activeEpisodeId || audioCacheMatchesEpisode) &&
     generationPreflight.canGenerate && generationPreflight.errors.length === 0;
@@ -618,7 +581,6 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
       <div><strong>ผลการแยกบท</strong><p className="muted">{lines.length} ช่วง · {speakers.length} ผู้พูด · {reviewCount} จุดรอตรวจสอบ</p><div className="voiceStudioActions"><button onClick={() => setFilter("all")}>ทั้งหมด</button><button onClick={() => setFilter("review")}>รอตรวจสอบ ({reviewCount})</button></div><div className="voiceStudioLines">{lines.filter(line => filter === "all" || line.needsReview).map(line => <div key={line.id} className="voiceStudioLine"><span>{line.kind === "sfx" ? "เอฟเฟกต์" : line.kind === "narration" ? "บรรยาย" : "บทพูด"} {line.needsReview ? "⚠ ตรวจสอบผู้พูด" : ""}</span><textarea rows={2} value={line.text} onChange={event => patch(line.id, { text: event.target.value })}/>{line.kind !== "sfx" && <button onClick={() => previewLine(line)}>{previewLineId === line.id ? "กำลังอ่านตัวอย่าง..." : "ฟังตัวอย่างฟรี (เสียงเครื่อง)"}</button>}{line.kind === "dialogue" && <label>ผู้พูด <input value={line.speaker} onChange={event => patch(line.id, { speaker: event.target.value, needsReview: !event.target.value.trim() || event.target.value === "ไม่ทราบผู้พูด" })}/></label>}<label>อารมณ์ <input value={line.emotion} onChange={event => patch(line.id, { emotion: event.target.value })}/></label></div>)}</div></div>
     </div>
     {lines.length > 0 && <div className="voiceRegistry"><h3>จัดการชื่อผู้พูดทั้งตอน</h3><p className="muted">รวมชื่อที่ AI แยกต่างกัน เช่น สิงห์ และ พรานสิง โดยเปลี่ยนทุกบทพร้อมกัน</p><label>ชื่อเดิม<input value={findSpeaker} onChange={event => setFindSpeaker(event.target.value)} list="voice-speaker-names" placeholder="เช่น สิงห์" /></label><datalist id="voice-speaker-names">{speakers.map(name => <option key={name} value={name} />)}</datalist><label>ชื่อใหม่<input value={replaceSpeaker} onChange={event => setReplaceSpeaker(event.target.value)} placeholder="เช่น พรานสิง" /></label><button disabled={!findSpeaker.trim() || !replaceSpeaker.trim() || findSpeaker.trim() === replaceSpeaker.trim()} onClick={renameSpeaker}>เปลี่ยนชื่อทุกบท</button><h3>คลังเสียงประจำตัวละคร (Voice ID)</h3><button type="button" disabled={loadingVoices} onClick={() => void loadVoices()}>{loadingVoices ? "กำลังโหลดเสียง..." : "ดึงรายชื่อเสียงจาก ElevenLabs"}</button>{voiceLoadError && <p role="alert">{voiceLoadError}</p>}{availableVoices.length > 0 && <p className="muted">พบเสียง {availableVoices.length} รายการ เลือกเสียงให้แต่ละตัวละครได้เลย</p>}<p className="muted">กำหนด ElevenLabs Voice ID สำหรับแต่ละตัวละครและผู้บรรยาย ระบบยังไม่ส่งคำขอสร้างเสียง</p>{allSpeakers.map(speaker => <div key={speaker} className="voiceSpeakerAssignment"><strong>{speaker}</strong><span className="muted">{resolvedVoiceIds[speaker]?.trim() ? "✓ จับคู่เสียงแล้ว" : "⚠ ยังไม่ได้จับคู่เสียง"}</span>{availableVoices.length > 0 && <select aria-label={`เลือกเสียงให้ ${speaker}`} value={availableVoices.some(voice => voice.id === resolvedVoiceIds[speaker]) ? resolvedVoiceIds[speaker] : ""} onChange={event => { if (event.target.value) { setConfirmed(false); if (activeProjectId) { void saveProjectSpeakerVoice(speaker, event.target.value); } else { setVoiceIds(previous => ({ ...previous, [speaker]: event.target.value })); } } }}><option value="">เลือกเสียงจากรายการ</option>{availableVoices.map(voice => <option key={voice.id} value={voice.id}>{voice.name}</option>)}</select>}</div>)}<p className="muted">จุดที่ต้องตรวจสอบ: ผู้พูดไม่ชัดเจน {reviewCount} ช่วง · ยังไม่กำหนด Voice ID {unresolvedVoiceCount} ช่วง</p></div>}
-    {lines.length > 0 && <div className="voiceStudioActions"><button disabled={!projectVoicesReady || savingProjectVoice || reviewCount > 0 || unresolvedVoiceCount > 0} onClick={() => setConfirmed(true)}>ยืนยันบทและเสียงทั้งหมด</button><button disabled={!projectVoicesReady || savingProjectVoice || !confirmed || reviewCount > 0 || unresolvedVoiceCount > 0} onClick={exportPlan}>ส่งออกแผนเสียง JSON</button><span>{confirmed ? "✓ ตรวจบทแล้ว พร้อมส่งออก" : "ต้องตรวจผู้พูดและ Voice ID ก่อนยืนยัน"}</span></div>}
     {lines.length > 0 && <div className="voiceRegistry"><h3>Workspace ElevenLabs (บัญชีจริง)</h3><label>โมเดลสร้างเสียง (ภาษาไทย)<select value={selectedModelId} onChange={event => { setSelectedModelId(event.target.value as "eleven_v4" | "eleven_v3"); setConfirmed(false); setAcknowledgedQueue(null); }}><option value="eleven_v4">Eleven v4 — แนะนำสำหรับเสียงไทย</option><option value="eleven_v3">Eleven v3 — เสียงแสดงอารมณ์</option></select></label><p>ไฟล์เสียง v2 ที่สร้างไว้เดิมจะไม่ถูกลบ การเปลี่ยนโมเดลต้องยืนยันก่อนสร้างใหม่และใช้เครดิต ElevenLabs</p><div className="voiceStudioActions">
       <label>เลือกบัญชี<select value={selectedWorkspaceId} onChange={event => void switchRealWorkspace(event.target.value)}>{realWorkspaces.map(item => <option key={item.id} value={item.id}>{item.name}{item.configured ? "" : " (ยังไม่มีคีย์)"}</option>)}</select></label>
       <button type="button" onClick={() => void syncWorkspaces()}>โหลดรายการบัญชีใหม่</button>
@@ -628,7 +590,32 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
       <p className="muted">บัญชีเดียวกับหน้าตั้งค่า ElevenLabs ไม่มีโปรไฟล์จำลองหรือเครดิตกรอกเอง</p></div>}
     {importedPlanWorkspaceId !== null && importedPlanWorkspaceId !== selectedWorkspaceId && <p role="alert">แผนเสียงที่นำเข้ามาจาก Workspace อื่น กรุณาเลือก Workspace ให้ตรงกับไฟล์และนำเข้าใหม่ก่อนส่งออกคิว</p>}
     {sourceIsStale && <p role="alert">ต้นฉบับถูกแก้ไขหลังวิเคราะห์ กรุณากดวิเคราะห์และแยกบทอีกครั้งก่อนส่งออกคิวเสียง</p>}
-    {lines.length > 0 && <div className="voiceRegistry"><h3>คิวเตรียมสร้างเสียง (ออฟไลน์)</h3><div className="voiceBatchProgress"><label htmlFor="voice-batch-progress">ความคืบหน้าไฟล์เสียงที่มีแล้ว {batchProgress.completed}/{batchProgress.total} บรรทัด ({batchProgress.percent}%)</label><progress id="voice-batch-progress" max={100} value={batchProgress.percent} /><p className="muted">ยังเหลือ {batchProgress.remaining} บรรทัด · กำลังสร้าง {batchProgress.active} · ล้มเหลว {batchProgress.failed} — เป็นสถานะคิวปัจจุบัน ไม่ใช่การสร้างเสียงที่กำลังทำงานจริง</p></div><p className="muted">ตรวจสอบก่อนใช้เครดิต: {generationPreflight.pending.length} บรรทัดต้องสร้างใหม่ · {generationPreflight.reused.length} บรรทัดใช้เสียงเดิม · {generationPreflight.estimatedCharacters.toLocaleString()} ตัวอักษร · {generationPreflight.errors.length ? "คิวยังไม่พร้อม" : generationPreflight.canGenerate ? "รออนุมัติการใช้เครดิต" : "ไม่มีงานสร้างใหม่"}</p><p className="muted">พร้อมสร้าง {productionSummary.ready} บรรทัด · ใช้ MP3 เดิม {reusableCount} บรรทัด · ต้องแก้ไข {productionSummary.blocked} บรรทัด · SFX {productionSummary.sfx} จุด · ประมาณ {productionSummary.estimatedCharacters.toLocaleString()} ตัวอักษรที่รอส่ง ElevenLabs</p><button type="button" onClick={() => setQueuePreviewOpen(open => !open)}>{queuePreviewOpen ? "ซ่อนรายการตรวจสอบคิว" : "ตรวจสอบรายการเสียงรายบรรทัด"}</button>{queuePreviewOpen && <div className="voiceQueuePreview"><p className="muted">รายการนี้เป็นตัวอย่างคิวออฟไลน์ ไม่มีการเรียก ElevenLabs</p><ol>{productionPlan.jobs.map(job => <li key={job.id}><strong>{job.speaker}</strong> · บรรทัด {job.order + 1} · {job.state === "completed" ? "ใช้ MP3 เดิม" : job.state === "ready" ? "รอสร้าง MP3" : "ต้องแก้ไข"} · {job.text.length} ตัวอักษร{job.reason ? ` · ${job.reason}` : ""}<p>{job.text.slice(0, 160)}{job.text.length > 160 ? "…" : ""}</p></li>)}</ol></div>}<label className="voiceCreditApproval"><input type="checkbox" checked={creditApproval} disabled={!approvalReady} onChange={event => setAcknowledgedQueue(event.target.checked ? currentQueueFingerprint : null)} /> รับทราบว่าการสร้างเสียงจริงจะใช้เครดิต ElevenLabs สำหรับ {generationPreflight.estimatedCharacters.toLocaleString()} ตัวอักษร (ขั้นตอนนี้ยังไม่เรียก API)</label><p className="muted">{creditApproval && approvalReady ? "รับทราบคิวปัจจุบันแล้ว — ยังไม่มีคำสั่งสร้างเสียงแบบเสียเครดิต" : "ต้องสั่งสร้างเสียงแบบเสียเครดิตแยกต่างหากเมื่อระบบสร้าง MP3 พร้อมใช้งาน"}</p>{batchRunActive && voiceGenerating && <button type="button" disabled={batchCancelPending} onClick={() => { batchCancelRequested.current = true; setBatchCancelPending(true); }}>หยุดหลังบรรทัดปัจจุบัน</button>}<button type="button" disabled={!creditApproval || !approvalReady || voiceGenerating || !activeProjectId || !activeEpisodeId} onClick={() => { if (window.confirm(`ยืนยันสร้างเสียงทั้งคิว ${generationPreflight.pending.length} บรรทัดด้วย ${selectedModelId} หรือไม่? การดำเนินการนี้ใช้เครดิต ElevenLabs แนะนำให้ทดลองหนึ่งบรรทัดก่อน`)) void generateApprovedVoiceBatch(); }}>สร้าง MP3 ทั้งคิว (แนะนำให้ทดสอบ 1 บรรทัดก่อน)</button>{batchRunStatus && <div className="voiceBatchProgress"><label htmlFor="voice-paid-batch-progress">ความคืบหน้าสร้างเสียงจริง {batchRunStatus.done + batchRunStatus.failed}/{batchRunStatus.total} บรรทัด ({Math.round((batchRunStatus.done + batchRunStatus.failed) / Math.max(1, batchRunStatus.total) * 100)}%)</label><progress id="voice-paid-batch-progress" max={batchRunStatus.total} value={batchRunStatus.done + batchRunStatus.failed} /><p role="status">สำเร็จ {batchRunStatus.done} · ล้มเหลว {batchRunStatus.failed} · ยังไม่เริ่ม {Math.max(0, batchRunStatus.total - batchRunStatus.done - batchRunStatus.failed)}</p></div>}<button type="button" disabled={!creditApproval || !approvalReady || voiceGenerating || !activeProjectId || !activeEpisodeId} onClick={() => { void generateNextApprovedVoiceLine(); }}>{voiceGenerating ? "กำลังสร้าง MP3…" : "สร้าง MP3 บรรทัดถัดไป (ใช้เครดิต ElevenLabs)"}</button>{voiceGenerationStatus && <p role="status">{voiceGenerationStatus}</p>}<button disabled={!projectVoicesReady || !confirmed || sourceIsStale || (importedPlanWorkspaceId !== null && importedPlanWorkspaceId !== selectedWorkspaceId) || productionSummary.blocked > 0 || productionErrors.length > 0 || (!!activeProjectId && !!activeEpisodeId && !audioCacheMatchesEpisode)} onClick={exportProductionPlan}>ส่งออกคิวสร้างเสียง JSON (ไม่เรียก API)</button><button type="button" disabled={!activeProjectId || !activeEpisodeId || !audioCacheMatchesEpisode || voiceGenerating} onClick={() => { void previewMyCutVoiceTiming(); }}>ตรวจสอบลำดับและเวลาเสียง MyCut (ไม่สร้างไฟล์)</button><button type="button" disabled={!activeProjectId || !activeEpisodeId || !audioCacheMatchesEpisode || voiceGenerating} onClick={() => { void exportExistingMyCutVoices(); }}>ส่งออก MP3 ที่สร้างแล้วสำหรับ MyCut (ไม่ใช้เครดิต)</button><button type="button" disabled={!activeProjectId || !activeEpisodeId || !audioCacheMatchesEpisode || voiceGenerating || myCutExportPending} onClick={() => { void exportMyCutProject(); }}>สร้างโปรเจกต์ MyCut จาก MP3 ที่มีแล้ว (.mycut)</button><button type="button" disabled={!activeProjectId || !activeEpisodeId || !audioCacheMatchesEpisode || voiceGenerating || myCutExportPending} onClick={() => { void exportMyCutProject(true); }}>สร้าง MyCut พร้อมภาพต่อเนื่องบน V1 (เลือกภาพเอง)</button><button type="button" disabled={!activeProjectId || !activeEpisodeId || !audioCacheMatchesEpisode || voiceGenerating || myCutExportPending || myCutReviewSelecting} onClick={() => { void selectMyCutReviewImages(); }}>รีวิว Thumbnail ภาพ V1 ก่อนส่งออก</button>{!!activeProjectId && !!activeEpisodeId && !audioCacheMatchesEpisode && <p role="alert">ยังโหลดรายการ MP3 เดิมไม่สำเร็จหรือยังไม่เสร็จ กรุณาเปิดตอนใหม่อีกครั้ง</p>}{productionErrors.length > 0 && <p role="alert">ตรวจสอบคิว: {productionErrors.slice(0, 3).join(" · ")}{productionErrors.length > 3 ? ` และอีก ${productionErrors.length - 3} รายการ` : ""}</p>}<p className="muted">ระบบยังไม่เริ่มสร้างเสียงและไม่หักเครดิต คิวนี้เป็นเพียงข้อมูลสำหรับเชื่อมระบบภายหลัง</p></div>}
+    {lines.length > 0 && <div className="voiceRegistry">
+      <h3>สร้างเสียง ElevenLabs</h3>
+      <p className="muted">ตรวจบทพูดและเสียงตัวละครด้านบน แล้วกดสร้างเสียงทั้งหมดเพียงครั้งเดียว ระบบสร้าง MP3 ที่ยังขาดตามลำดับและใช้ไฟล์ที่สร้างสำเร็จไว้แล้วโดยอัตโนมัติ</p>
+      <p>รอสร้าง {generationPreflight.pending.length} บรรทัด · MP3 เดิม {generationPreflight.reused.length} บรรทัด · คิดเครดิตประมาณ {generationPreflight.estimatedCharacters.toLocaleString()} ตัวอักษร</p>
+      <div className="voiceStudioActions">
+        <button type="button" className="primary" disabled={!approvalReady || voiceGenerating || !activeProjectId || !activeEpisodeId} onClick={() => { void generateApprovedVoiceBatch(); }}>
+          {voiceGenerating ? "กำลังสร้างเสียง…" : "สร้างเสียงทั้งหมด"}
+        </button>
+        {batchRunActive && voiceGenerating && <button type="button" disabled={batchCancelPending} onClick={() => { batchCancelRequested.current = true; setBatchCancelPending(true); }}>หยุดหลังบรรทัดปัจจุบัน</button>}
+      </div>
+      {!approvalReady && <p role="alert">ยังสร้างไม่ได้: {generationPreflight.errors.slice(0,2).join(" · ") || (sourceIsStale ? "วิเคราะห์ข้อความที่แก้ไขอีกครั้ง" : !projectVoicesReady ? "กำลังโหลดคลังเสียง" : !audioCacheMatchesEpisode ? "กำลังโหลด MP3 เดิม" : "ตรวจบทและเสียงตัวละครที่ยังไม่ครบ")}</p>}
+      {batchRunStatus && <div className="voiceBatchProgress"><label htmlFor="voice-paid-batch-progress">ความคืบหน้า {batchRunStatus.done + batchRunStatus.failed}/{batchRunStatus.total} บรรทัด</label><progress id="voice-paid-batch-progress" max={batchRunStatus.total} value={batchRunStatus.done + batchRunStatus.failed}/><p role="status">สำเร็จ {batchRunStatus.done} · ล้มเหลว {batchRunStatus.failed}</p></div>}
+      {voiceGenerationStatus && <p role="status">{voiceGenerationStatus}</p>}
+      <details><summary>เครื่องมือเพิ่มเติม (JSON / MyCut / ตรวจคิว)</summary>
+        <p>มี MP3 แล้ว {batchProgress.completed}/{batchProgress.total} บรรทัด · ต้องแก้ไข {productionSummary.blocked} บรรทัด</p>
+        <button type="button" onClick={() => setQueuePreviewOpen(open => !open)}>{queuePreviewOpen ? "ซ่อนคิว" : "ดูรายการเสียง"}</button>
+        {queuePreviewOpen && <ol>{productionPlan.jobs.map(job => <li key={job.id}>{job.order + 1}. {job.speaker} · {job.state === "completed" ? "สร้างแล้ว" : job.state === "ready" ? "รอสร้าง" : "ต้องตรวจสอบ"}</li>)}</ol>}
+        <div className="voiceStudioActions">
+          <button type="button" disabled={!projectVoicesReady || !confirmed || sourceIsStale || productionSummary.blocked > 0} onClick={exportProductionPlan}>ส่งออกคิว JSON</button>
+          <button type="button" disabled={!activeProjectId || !activeEpisodeId || !audioCacheMatchesEpisode || voiceGenerating} onClick={() => { void previewMyCutVoiceTiming(); }}>ดูเวลาเสียง MyCut</button>
+          <button type="button" disabled={!activeProjectId || !activeEpisodeId || !audioCacheMatchesEpisode || voiceGenerating} onClick={() => { void exportExistingMyCutVoices(); }}>ส่งออก MP3 สำหรับ MyCut</button>
+          <button type="button" disabled={!activeProjectId || !activeEpisodeId || !audioCacheMatchesEpisode || voiceGenerating || myCutExportPending} onClick={() => { void exportMyCutProject(); }}>สร้างโปรเจกต์ MyCut</button>
+          <button type="button" disabled={!activeProjectId || !activeEpisodeId || !audioCacheMatchesEpisode || voiceGenerating || myCutExportPending || myCutReviewSelecting} onClick={() => { void selectMyCutReviewImages(); }}>รีวิวภาพสำหรับ MyCut</button>
+        </div>
+      </details>
+    </div>}
     {myCutReviewOpen && <div className="voiceQueuePreview"><h3>Shot Review ภาพ V1</h3><p className="muted">ใช้ภาพจากเครื่องเท่านั้น · เลื่อนลำดับด้วยปุ่ม ↑ ↓ · ล็อกตำแหน่งเพื่อไม่ให้ภาพอื่นเลื่อนผ่าน · กด Apply เพื่ออนุมัติและส่งออกไฟล์ใหม่ · เวลาคำนวณจาก MP3 และ cue ในไฟล์ .txt ที่อ่านตอนเลือกภาพ · ระบบจะตรวจไฟล์อีกครั้งก่อน Save As</p><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:12}}>{myCutReviewImages.map((item,index) => <div key={item.path} style={{border:"1px solid #888",borderRadius:8,padding:8}}><img src={item.preview ?? ""} alt={`ภาพช็อต ${index+1}`} style={{width:"100%",height:140,objectFit:"contain"}}/><p>{index+1}. {item.path.split(/[\\/]/).pop()}</p><p className="muted">{myCutReviewTimings[index] ? `${myCutReviewTimings[index].start.toFixed(2)}–${myCutReviewTimings[index].end.toFixed(2)} วินาที` : "ยังคำนวณเวลาไม่ได้"}</p><label><input type="checkbox" checked={myCutReviewLocks.includes(index)} onChange={event => setMyCutReviewLocks(previous => event.target.checked ? [...previous,index] : previous.filter(value => value !== index))}/> ล็อกตำแหน่ง</label><div><button type="button" disabled={index===0 || myCutReviewLocks.includes(index) || myCutReviewLocks.includes(index-1)} onClick={() => moveReviewedMyCutImage(index,index-1)}>↑</button><button type="button" disabled={index===myCutReviewImages.length-1 || myCutReviewLocks.includes(index) || myCutReviewLocks.includes(index+1)} onClick={() => moveReviewedMyCutImage(index,index+1)}>↓</button></div></div>)}</div><div className="voiceStudioActions"><button type="button" onClick={() => setMyCutReviewOpen(false)}>ยกเลิกรีวิว</button><button type="button" className="primary" disabled={myCutExportPending || voiceGenerating || !audioCacheMatchesEpisode || !myCutReviewImages.length || myCutReviewTimings.length !== myCutReviewImages.length} onClick={() => { void exportMyCutProject(true,myCutReviewImages.map(item=>item.path)); }}>Apply และส่งออก .mycut ใหม่</button></div></div>}
     {myCutTimingPreviewOpen && <div className="voiceQueuePreview"><h3>ตัวอย่างไทม์ไลน์ A1 ก่อนส่งออก</h3><p className="muted">ใช้ MP3 เดิมเท่านั้น เว้น 0.3 วินาทีระหว่างบรรทัด ภาพ V1 ต้องแสดงต่อเนื่อง · ไม่มีการแก้ไขไฟล์</p><button type="button" onClick={() => setMyCutTimingPreviewOpen(false)}>ปิดตัวอย่าง</button><ol>{myCutTimingPreview.map((shot, index) => <li key={index}><strong>{shot.speaker}</strong> · {shot.start.toFixed(2)}–{shot.end.toFixed(2)} วินาที · {shot.text.slice(0, 120)}{shot.text.length > 120 ? "…" : ""}</li>)}</ol></div>}
     {planMessage && <p role="status" className="muted">{planMessage}</p>}
