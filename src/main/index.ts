@@ -1,6 +1,7 @@
 import { generateStudioVoiceLine } from "./providers/elevenlabs-voice-provider";
 import { listStudioProjects, createStudioProject, createStudioEpisode, deleteStudioProject, deleteStudioEpisode, listStudioTrash, restoreStudioTrash, loadStudioEpisodeEditor, saveStudioEpisodeEditor, loadStudioEpisodeScript, saveStudioEpisodeScript, loadStudioCharacterVoices, saveStudioCharacterVoices, patchStudioCharacterVoice, loadStudioEpisodeVoiceAudio, removeStudioEpisodeVoiceAudio, getStudioVoiceAudioDuration, findReusableStudioEpisodeAudio, prepareStudioEpisodeMyCutVoiceManifest, exportStudioEpisodeToMyCut, suggestMyCutImageOrder } from "./studio-projects";
 import { computeMyCutImageCuts, parseMyCutStoryboardLineCue, buildMyCutShotReview, assertMyCutUniqueSelectedImages } from "../shared/mycut-image-cuts";
+import { isMyCutInstalledLocally, importMyCutResourcesZip, openLocalMyCutEditor } from "./mycut-local-integration";
 import { checkProviderConnection } from "./provider-connection";
 import { createMetaBrokerSession, exchangeMetaBrokerSession, validateMetaBrokerConfig } from "./meta-auth-broker";
 import { explainAffiliateProduct } from "./affiliate-product-search";
@@ -180,6 +181,10 @@ ipcMain.handle("affiliate:search-products", async (_event, query:string) => {
   const queue=await loadAffiliateQueue();
   return searchAffiliateProducts({catalog:queue.products,query,providers:[createTikTokShopShowcaseProvider(loadUsableTikTokShopCreatorCredentials)]});
 });
+
+ipcMain.handle("mycut:local-status", async () => isMyCutInstalledLocally());
+ipcMain.handle("mycut:import-resources", async () => importMyCutResourcesZip());
+ipcMain.handle("mycut:open-local-editor", async () => openLocalMyCutEditor());
 
 ipcMain.handle("media:select-images", async () => {
   const result = await dialog.showOpenDialog({
