@@ -108,8 +108,10 @@ function openImportedProjectInMyCut(win: BrowserWindow, projectId: string): void
   });
 }
 
-function focusMyCutAsPrimaryWindow(open: () => void, projectId?: string): void {
-  const host = BrowserWindow.getFocusedWindow();
+function focusMyCutAsPrimaryWindow(open: () => void, projectId?: string, requestedHost?: BrowserWindow | null): void {
+  // A native Windows file picker can remove focus from the original window.
+  // Prefer the authenticated IPC sender over the currently focused window.
+  const host = requestedHost && !requestedHost.isDestroyed() ? requestedHost : BrowserWindow.getFocusedWindow();
   const onCreated = (_event: Electron.Event, child: BrowserWindow) => {
     if (child === host) return;
     hostedMyCutWindow = child;
@@ -132,13 +134,21 @@ function focusMyCutAsPrimaryWindow(open: () => void, projectId?: string): void {
   }
 }
 
-export async function openLocalMyCutEditor(projectId?: string): Promise<void> {
+export async function openLocalMyCutEditor(projectId?: string, host?: BrowserWindow | null): Promise<void> {
   if (projectId !== undefined && !/^p-[a-f0-9-]{36}$/i.test(projectId)) {
     throw new Error("MyCut project ID ไม่ถูกต้อง");
   }
   if (!(await isMyCutInstalledLocally())) throw new Error("นำเข้า resources ZIP ของ MyCut 1.0.1 ก่อน");
   const existing = hostedMyCutWindow && !hostedMyCutWindow.isDestroyed() ? hostedMyCutWindow : null;
   if (existing) {
+    if (host && !host.isDestroyed() && host !== existing) {
+      // Visiting the editor from a newly focused AI window must hide it too.
+      const restoreHost = () => {
+        if (!host.isDestroyed()) { host.show(); host.focus(); }
+      };
+      existing.once("closed", restoreHost);
+      host.hide();
+    }
     existing.show();
     existing.focus();
     if (projectId) openImportedProjectInMyCut(existing, projectId);
@@ -146,7 +156,7 @@ export async function openLocalMyCutEditor(projectId?: string): Promise<void> {
   }
   if (bootstrapped) {
     if (!reopenMyCutWindow) throw new Error("MyCut ยังเริ่มต้นไม่สมบูรณ์");
-    focusMyCutAsPrimaryWindow(reopenMyCutWindow, projectId);
+    focusMyCutAsPrimaryWindow(reopenMyCutWindow, projectId, host);
     return;
   }
   const root = resourcesFolder();
@@ -173,7 +183,7 @@ export async function openLocalMyCutEditor(projectId?: string): Promise<void> {
     const moduleLike = { exports: {} };
     focusMyCutAsPrimaryWindow(() => {
       compiled(createRequire(entry), moduleLike, moduleLike.exports, entry, path.dirname(entry));
-    }, projectId);
+    }, projectId, host);
     const exported = moduleLike.exports as { __openHostedMyCutWindow?: () => void };
     reopenMyCutWindow = exported.__openHostedMyCutWindow ?? null;
   } catch (error) {
