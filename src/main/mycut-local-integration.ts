@@ -68,14 +68,45 @@ export async function importMyCutResourcesZip(): Promise<boolean> {
  * it does not modify MyCut's original resources on disk.
  * MyCut opens in its own editor window (same running app, no separate EXE).
  */
-function focusMyCutAsPrimaryWindow(open: () => void): void {
+/**
+ * MyCut's renderer defines openProjectById in its classic renderer.js. Wait
+ * until its project grid has loaded before opening the imported episode.
+ * This avoids asking the user to hunt through the MyCut project library.
+ */
+function openImportedProjectInMyCut(win: BrowserWindow, projectId: string): void {
+  const script = `(() => new Promise((resolve, reject) => {
+    let attempts = 0;
+    const open = () => {
+      if (typeof openProjectById === "function" &&
+          document.querySelector("#projGrid .proj-card")) {
+        Promise.resolve(openProjectById(${JSON.stringify(projectId)}))
+          .then(() => resolve(true), reject);
+      } else if (++attempts >= 80) {
+        reject(new Error("MyCut project list did not load"));
+      } else {
+        setTimeout(open, 100);
+      }
+    };
+    open();
+  }))()`;
+  void win.webContents.executeJavaScript(script).catch(error => {
+    console.error("MyCut could not open imported episode", error);
+  });
+}
+
+function focusMyCutAsPrimaryWindow(open: () => void, projectId?: string): void {
   const host = BrowserWindow.getFocusedWindow();
   const onCreated = (_event: Electron.Event, child: BrowserWindow) => {
-    if (!host || host.isDestroyed() || child === host) return;
-    child.once("ready-to-show", () => { if (!host.isDestroyed()) host.hide(); });
-    child.once("closed", () => {
-      if (!host.isDestroyed()) { host.show(); host.focus(); }
-    });
+    if (child === host) return;
+    if (projectId) {
+      child.webContents.once("did-finish-load", () => openImportedProjectInMyCut(child, projectId));
+    }
+    if (host && !host.isDestroyed()) {
+      child.once("ready-to-show", () => { if (!host.isDestroyed()) host.hide(); });
+      child.once("closed", () => {
+        if (!host.isDestroyed()) { host.show(); host.focus(); }
+      });
+    }
   };
   app.once("browser-window-created", onCreated);
   try { open(); }
@@ -85,13 +116,21 @@ function focusMyCutAsPrimaryWindow(open: () => void): void {
   }
 }
 
-export async function openLocalMyCutEditor(): Promise<void> {
+export async function openLocalMyCutEditor(projectId?: string): Promise<void> {
+  if (projectId !== undefined && !/^p-[a-f0-9-]{36}$/i.test(projectId)) {
+    throw new Error("MyCut project ID ไม่ถูกต้อง");
+  }
   if (!(await isMyCutInstalledLocally())) throw new Error("นำเข้า resources ZIP ของ MyCut 1.0.1 ก่อน");
   const existing = BrowserWindow.getAllWindows().find(win => !win.isDestroyed() && win.getTitle() === "MyCut");
-  if (existing) { existing.show(); existing.focus(); return; }
+  if (existing) {
+    existing.show();
+    existing.focus();
+    if (projectId) openImportedProjectInMyCut(existing, projectId);
+    return;
+  }
   if (bootstrapped) {
     if (!reopenMyCutWindow) throw new Error("MyCut ยังเริ่มต้นไม่สมบูรณ์");
-    focusMyCutAsPrimaryWindow(reopenMyCutWindow);
+    focusMyCutAsPrimaryWindow(reopenMyCutWindow, projectId);
     return;
   }
   const root = resourcesFolder();
@@ -118,7 +157,7 @@ export async function openLocalMyCutEditor(): Promise<void> {
     const moduleLike = { exports: {} };
     focusMyCutAsPrimaryWindow(() => {
       compiled(createRequire(entry), moduleLike, moduleLike.exports, entry, path.dirname(entry));
-    });
+    }, projectId);
     const exported = moduleLike.exports as { __openHostedMyCutWindow?: () => void };
     reopenMyCutWindow = exported.__openHostedMyCutWindow ?? null;
   } catch (error) {
