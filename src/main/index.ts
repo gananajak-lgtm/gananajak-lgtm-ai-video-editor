@@ -2,6 +2,7 @@ import { generateStudioVoiceLine } from "./providers/elevenlabs-voice-provider";
 import { listStudioProjects, createStudioProject, createStudioEpisode, deleteStudioProject, deleteStudioEpisode, listStudioTrash, restoreStudioTrash, loadStudioEpisodeEditor, saveStudioEpisodeEditor, loadStudioEpisodeScript, saveStudioEpisodeScript, loadStudioCharacterVoices, saveStudioCharacterVoices, patchStudioCharacterVoice, loadStudioEpisodeVoiceAudio, removeStudioEpisodeVoiceAudio, getStudioVoiceAudioDuration, findReusableStudioEpisodeAudio, prepareStudioEpisodeMyCutVoiceManifest, exportStudioEpisodeToMyCut, suggestMyCutImageOrder } from "./studio-projects";
 import { computeMyCutImageCuts, parseMyCutStoryboardLineCue, buildMyCutShotReview, assertMyCutUniqueSelectedImages } from "../shared/mycut-image-cuts";
 import { isMyCutInstalledLocally, importMyCutResourcesZip, openLocalMyCutEditor } from "./mycut-local-integration";
+import { fingerprintMyCutEpisodeImport, lookupMyCutEpisodeImport, rememberMyCutEpisodeImport } from "./mycut-episode-reuse";
 import { checkProviderConnection } from "./provider-connection";
 import { createMetaBrokerSession, exchangeMetaBrokerSession, validateMetaBrokerConfig } from "./meta-auth-broker";
 import { explainAffiliateProduct } from "./affiliate-product-search";
@@ -193,18 +194,28 @@ ipcMain.handle("mycut:send-episode", async (_event, projectId: string, episodeId
     throw new Error("ข้อมูลตอนสำหรับ MyCut ไม่ถูกต้อง");
   }
   const { randomUUID } = await import("node:crypto");
-  const folder = path.join(app.getPath("userData"), "mycut-personal-workspace", "projects");
+  const localRoot = path.join(app.getPath("userData"), "mycut-personal-workspace");
+  const folder = path.join(localRoot, "projects");
   await mkdir(folder, { recursive: true });
+  const manifest = await prepareStudioEpisodeMyCutVoiceManifest(projectId, episodeId);
+  const fingerprint = await fingerprintMyCutEpisodeImport(projectId, episodeId, lineIds, imagePaths, manifest.lines);
+  const previousId = await lookupMyCutEpisodeImport(localRoot, fingerprint);
+  if (previousId) {
+    // Preserve edits made inside MyCut and avoid duplicate projects on app restart.
+    await openLocalMyCutEditor(previousId);
+    return { id: previousId, images: imagePaths.length, audioClips: lineIds.length || manifest.lines.length };
+  }
   const scratch = path.join(folder, "new-" + randomUUID() + ".mycut");
   try {
     await exportStudioEpisodeToMyCut(projectId, episodeId, lineIds, scratch, imagePaths);
     const json = await readFile(scratch, "utf8");
     const saved = JSON.parse(json) as { id?: unknown };
-    if (typeof saved.id !== "string" || !/^[a-z0-9_-]+$/i.test(saved.id)) throw new Error("MyCut Project ID ไม่ถูกต้อง");
-    // MyCut 1.0.1's project library uses <project-id>.json.
+    if (typeof saved.id !== "string" || !/^p-[a-f0-9-]{36}$/i.test(saved.id)) throw new Error("MyCut Project ID ไม่ถูกต้อง");
     await writeFile(path.join(folder, saved.id + ".json"), json, { flag: "wx" });
+    // Keep the file if the index or hosted UI fails: it belongs to the user.
+    await rememberMyCutEpisodeImport(localRoot, fingerprint, saved.id);
     await openLocalMyCutEditor(saved.id);
-    return { id: saved.id, images: imagePaths.length, audioClips: lineIds.length };
+    return { id: saved.id, images: imagePaths.length, audioClips: lineIds.length || manifest.lines.length };
   } finally {
     await rm(scratch, { force: true }).catch(() => {});
   }
