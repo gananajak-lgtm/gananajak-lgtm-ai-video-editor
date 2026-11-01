@@ -566,3 +566,10 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Commits `d6143873954d4065114a0f3967cf303c158cd210`, `d1c3b5c84b8ba5cd5bb0c2154354f6c6ff7606b4`, `2c43a17edace43c6f136a11647c7324331ce336a`, `afdcb6668212ff786d2beffc6699a9292bba0a9b`.
 - CI #2378 or later must be checked; Windows MyCut GUI and MP4 still **not verified**, despite source-level syntax check and green earlier CI. User package stays local, original project 1019 not modified.
 - NEXT: verify CI typecheck and installer, then perform real Windows test opening the local MyCut GUI from sidebar; test render, MP3/image project loading and switching between projects/EPs. Do not claim full MyCut functionality based only on a green build.
+
+## Session checkpoint — 2026-11-01 (direct MyCut EP opening: preload-backed readiness)
+- Fresh HEAD `62067bb2c140765a2b7b91a7c9226b9e88953097`; CI #2379 **success** at start.
+- Verified actual user-provided MyCut 1.0.1 `renderer.js`: `async function openProjectById(id)` invokes MyCut's preload `api.loadProject(id)`; preload exposes `window.api.loadProject`. Original MyCut homepage uses `#projGrid .proj-card` only when project cards render and are not filtered. The existing bridge erroneously gated opening on card presence; if project list is filtered/empty, it could fail without indicating whether MyCut's project file was actually available.
+- Changed `openImportedProjectInMyCut` to wait for the original renderer's `openProjectById`, preload `window.api.loadProject` and editor DOM, then **confirm the specific project exists via native IPC** before opening it. If the target project is absent, report an explicit error instead of silently opening the wrong episode or waiting on unrelated DOM cards. Commit `e86e6cb9fa6248298d6fe93a2b3ce334584172b6`.
+- This addresses a genuine runtime UI dependency without replacing original MyCut source files or using paid APIs. Windows original GUI and MP4 acceptance still **not executed**; verify latest CI before declaring green. Project 1019 untouched.
+- NEXT: verify CI, investigate MyCut native window lifecycle / missing media on actual Windows installer; complete MP4 acceptance.
