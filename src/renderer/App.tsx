@@ -1300,7 +1300,7 @@ export default function App() {
         {myCutLocalMessage && <p role="status">{myCutLocalMessage}</p>}
         <p className="muted">เปิดเป็นหน้าต่างตัดต่อภายในโปรเซส Electron ของแอปนี้ โดยเก็บโปรเจกต์ MyCut แยกจากโปรเจกต์เดิม เมื่อเลือกตอนและมี MP3 พร้อมแล้ว สามารถส่งเสียงและภาพเข้า MyCut ได้ในคลิกเดียว (ยังต้องทดสอบจริงบน Windows)</p>
       </section>
-      <section id="editor-timeline" className="timelinePanel" aria-label="หน้าตัดต่อหลัก">
+      {!myCutReady && (\n      <section id="editor-timeline" className="timelinePanel" aria-label="หน้าตัดต่อหลัก">
         <div className="timelineHeader"><div><p className="eyebrow">VIDEO EDITOR</p><h3>ตัดต่อภาพและเสียงในหน้าเดียว</h3><p className="muted">ใช้ไทม์ไลน์นี้แทนแผงภาพรวมเก่า ปรับคลิปและเสียงได้โดยตรง ไม่ต้องส่งออก .mycut ไปเปิดโปรแกรมอื่น</p></div><div className="timelineMeta"><span>{timeline ? `${timeline.clips.length} ภาพ · ${formatTime(timeline.duration)}` : "ยังไม่มีไทม์ไลน์"}</span></div></div>
         <div className="voiceStudioActions">
           <button type="button" onClick={chooseImages}>เพิ่มภาพ</button>
@@ -1324,7 +1324,7 @@ export default function App() {
 </section>
         </details>
       </section>
-      <div className="editorThreePane">
+            )}\n      <div className="editorThreePane">
         <div className="editorMediaPane">
           <section id="editor-media" className="grid">
         <article className="panel">
