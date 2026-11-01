@@ -2,8 +2,7 @@ import { app, BrowserWindow, dialog } from "electron";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
-import { access, mkdtemp, readFile, readdir, rename, rm, stat } from "node:fs/promises";
-import os from "node:os";
+import { access, mkdtemp, readFile, rename, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 
