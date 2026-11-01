@@ -185,8 +185,8 @@ ipcMain.handle("affiliate:search-products", async (_event, query:string) => {
 
 ipcMain.handle("mycut:local-status", async () => isMyCutInstalledLocally());
 ipcMain.handle("mycut:import-resources", async () => importMyCutResourcesZip());
-ipcMain.handle("mycut:open-local-editor", async () => openLocalMyCutEditor());
-ipcMain.handle("mycut:send-episode", async (_event, projectId: string, episodeId: string, lineIds: string[], imagePaths: string[]) => {
+ipcMain.handle("mycut:open-local-editor", async (event) => openLocalMyCutEditor(undefined, BrowserWindow.fromWebContents(event.sender)));
+ipcMain.handle("mycut:send-episode", async (event, projectId: string, episodeId: string, lineIds: string[], imagePaths: string[]) => {
   if (!(await isMyCutInstalledLocally())) throw new Error("กรุณานำเข้า resources(1).zip ของ MyCut ก่อน");
   if (typeof projectId !== "string" || !projectId || typeof episodeId !== "string" || !episodeId ||
       !Array.isArray(lineIds) || lineIds.length > 10000 || lineIds.some(id => typeof id !== "string" || !id) ||
@@ -202,7 +202,7 @@ ipcMain.handle("mycut:send-episode", async (_event, projectId: string, episodeId
   const previousId = await lookupMyCutEpisodeImport(localRoot, fingerprint);
   if (previousId) {
     // Preserve edits made inside MyCut and avoid duplicate projects on app restart.
-    await openLocalMyCutEditor(previousId);
+    await openLocalMyCutEditor(previousId, BrowserWindow.fromWebContents(event.sender));
     return { id: previousId, images: imagePaths.length, audioClips: lineIds.length || manifest.lines.length };
   }
   const scratch = path.join(folder, "new-" + randomUUID() + ".mycut");
@@ -214,7 +214,7 @@ ipcMain.handle("mycut:send-episode", async (_event, projectId: string, episodeId
     await writeFile(path.join(folder, saved.id + ".json"), json, { flag: "wx" });
     // Keep the file if the index or hosted UI fails: it belongs to the user.
     await rememberMyCutEpisodeImport(localRoot, fingerprint, saved.id);
-    await openLocalMyCutEditor(saved.id);
+    await openLocalMyCutEditor(saved.id, BrowserWindow.fromWebContents(event.sender));
     return { id: saved.id, images: imagePaths.length, audioClips: lineIds.length || manifest.lines.length };
   } finally {
     await rm(scratch, { force: true }).catch(() => {});
