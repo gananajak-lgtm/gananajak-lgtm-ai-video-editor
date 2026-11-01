@@ -116,6 +116,27 @@ function focusMyCutAsPrimaryWindow(open: () => void, projectId?: string, request
     if (child === host) return;
     hostedMyCutWindow = child;
     child.once("closed", () => { if (hostedMyCutWindow === child) hostedMyCutWindow = null; });
+    // Failure during HTML/preload initialization must be visible, not a blank
+    // MyCut window that leaves users thinking the editor is still loading.
+    let launchErrorReported = false;
+    const reportLaunchError = (reason: string) => {
+      if (launchErrorReported) return;
+      launchErrorReported = true;
+      if (host && !host.isDestroyed()) { host.show(); host.focus(); }
+      void dialog.showMessageBox({
+        type: "error",
+        title: "ไม่สามารถเปิดหน้าตัดต่อ MyCut",
+        message: "MyCut ไม่สามารถโหลดหน้าตัดต่อได้",
+        detail: reason + "\\nกรุณาตรวจสอบไฟล์ MyCut ที่นำเข้า และส่งข้อความข้อผิดพลาดนี้มาตรวจสอบ",
+        buttons: ["ตกลง"]
+      }).catch(() => {});
+    };
+    child.webContents.on("did-fail-load", (_event, code, description, _url, isMainFrame) => {
+      if (isMainFrame && code !== -3) reportLaunchError(description + " (" + code + ")");
+    });
+    child.webContents.once("render-process-gone", (_event, details) => {
+      reportLaunchError("MyCut renderer stopped: " + details.reason);
+    });
     if (projectId) {
       child.webContents.once("did-finish-load", () => openImportedProjectInMyCut(child, projectId));
     }
