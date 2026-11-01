@@ -302,6 +302,9 @@ export type RenderResult = {
 export type ProviderConnectionResult = { provider: "openai" | "elevenlabs"; configured: boolean; connected: boolean; status: "missing_key" | "connected" | "unauthorized" | "rate_limited" | "network_error" | "provider_error" };
 
 export type DesktopApi = {
+  isLocalMyCutReady: () => Promise<boolean>;
+  importLocalMyCutResources: () => Promise<boolean>;
+  openLocalMyCutEditor: () => Promise<void>;
   checkProviderConnection: (provider: "openai" | "elevenlabs") => Promise<ProviderConnectionResult>;
   selectImages: () => Promise<string[]>;
   selectNarration: () => Promise<string | null>;
