@@ -150,7 +150,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
     catch { setVoiceLoadError("โหลดรายชื่อเสียงไม่สำเร็จ กรุณาตรวจสอบสิทธิ์ Voices: Read"); }
     finally { setLoadingVoices(false); }
   };
-  const [confirmed, setConfirmed] = useState(false);
+  const [, setConfirmed] = useState(false);
   const [findSpeaker, setFindSpeaker] = useState("");
   const [replaceSpeaker, setReplaceSpeaker] = useState("");
   const [planMessage, setPlanMessage] = useState("");
@@ -257,7 +257,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
     window.speechSynthesis.speak(utterance);
   };
   const exportPlan = () => {
-    if (!projectVoicesReady || !confirmed || reviewCount > 0 || unresolvedVoiceCount > 0) return;
+    if (!projectVoicesReady || reviewCount > 0 || unresolvedVoiceCount > 0) return;
     const plan = { schemaVersion: 1, title: draftName, createdAt: new Date().toISOString(), workspaceId: selectedWorkspaceId, lines, voiceIds: resolvedVoiceIds };
     const url = URL.createObjectURL(new Blob([JSON.stringify(plan, null, 2)], { type: "application/json" }));
     const anchor = document.createElement("a");
@@ -564,7 +564,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
     }
   };
   const exportProductionPlan = () => {
-    if (!projectVoicesReady || !confirmed || sourceIsStale || (importedPlanWorkspaceId !== null && importedPlanWorkspaceId !== selectedWorkspaceId) || productionSummary.blocked || productionErrors.length || (!!activeProjectId && !!activeEpisodeId && !audioCacheMatchesEpisode)) return;
+    if (!projectVoicesReady || sourceIsStale || (importedPlanWorkspaceId !== null && importedPlanWorkspaceId !== selectedWorkspaceId) || productionSummary.blocked || productionErrors.length || (!!activeProjectId && !!activeEpisodeId && !audioCacheMatchesEpisode)) return;
     const url = URL.createObjectURL(new Blob([JSON.stringify(productionPlan, null, 2)], { type: "application/json" }));
     const anchor = document.createElement("a"); anchor.href = url; anchor.download = "voice-production-queue.json"; anchor.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -606,7 +606,8 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
         <button type="button" onClick={() => setQueuePreviewOpen(open => !open)}>{queuePreviewOpen ? "ซ่อนคิว" : "ดูรายการเสียง"}</button>
         {queuePreviewOpen && <ol>{productionPlan.jobs.map(job => <li key={job.id}>{job.order + 1}. {job.speaker} · {job.state === "completed" ? "สร้างแล้ว" : job.state === "ready" ? "รอสร้าง" : "ต้องตรวจสอบ"}</li>)}</ol>}
         <div className="voiceStudioActions">
-          <button type="button" disabled={!projectVoicesReady || !confirmed || sourceIsStale || productionSummary.blocked > 0} onClick={exportProductionPlan}>ส่งออกคิว JSON</button>
+          <button type="button" disabled={!projectVoicesReady || reviewCount > 0 || unresolvedVoiceCount > 0} onClick={exportPlan}>บันทึกแผนเสียง JSON</button>
+          <button type="button" disabled={!projectVoicesReady || sourceIsStale || productionSummary.blocked > 0} onClick={exportProductionPlan}>ส่งออกคิว JSON</button>
           <button type="button" disabled={!activeProjectId || !activeEpisodeId || !audioCacheMatchesEpisode || voiceGenerating} onClick={() => { void previewMyCutVoiceTiming(); }}>ดูเวลาเสียง MyCut</button>
           <button type="button" disabled={!activeProjectId || !activeEpisodeId || !audioCacheMatchesEpisode || voiceGenerating} onClick={() => { void exportExistingMyCutVoices(); }}>ส่งออก MP3 สำหรับ MyCut</button>
           <button type="button" disabled={!activeProjectId || !activeEpisodeId || !audioCacheMatchesEpisode || voiceGenerating || myCutExportPending} onClick={() => { void exportMyCutProject(); }}>สร้างโปรเจกต์ MyCut</button>
