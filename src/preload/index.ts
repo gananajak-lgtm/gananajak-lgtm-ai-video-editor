@@ -8,6 +8,9 @@ import type {
 } from "../shared/types";
 
 const api: DesktopApi = {
+  isLocalMyCutReady: () => ipcRenderer.invoke("mycut:local-status"),
+  importLocalMyCutResources: () => ipcRenderer.invoke("mycut:import-resources"),
+  openLocalMyCutEditor: () => ipcRenderer.invoke("mycut:open-local-editor"),
   checkProviderConnection: (provider) => ipcRenderer.invoke("ai:check-provider-connection", provider),
   selectImages: () => ipcRenderer.invoke("media:select-images"),
   selectNarration: () => ipcRenderer.invoke("media:select-narration"),
