@@ -12,6 +12,7 @@ const VERIFIED_ASAR_SHA256 = "f7f4f66962deda6002a8073df78533b3f0782fb7c3d3fca0f3
 const FILES_DIR = "mycut-local-resources-1.0.1";
 let bootstrapped = false;
 let reopenMyCutWindow: (() => void) | null = null;
+let hostedMyCutWindow: BrowserWindow | null = null;
 
 function resourcesFolder(): string {
   return path.join(app.getPath("userData"), FILES_DIR, "resources");
@@ -94,6 +95,16 @@ function openImportedProjectInMyCut(win: BrowserWindow, projectId: string): void
   }))()`;
   void win.webContents.executeJavaScript(script).catch(error => {
     console.error("MyCut could not open imported episode", error);
+    if (!win.isDestroyed()) {
+      void dialog.showMessageBox(win, {
+        type: "warning",
+        title: "เปิดตอนใน MyCut ไม่สำเร็จ",
+        message: "เปิด MyCut ได้แล้ว แต่ยังเปิดตอนที่นำเข้าโดยอัตโนมัติไม่ได้",
+        detail: "โปรเจกต์ที่ส่งไว้ยังอยู่ในคลัง MyCut สามารถเปิดจากหน้ารายการได้โดยตรง\\n" +
+          String(error instanceof Error ? error.message : error),
+        buttons: ["ตกลง"]
+      }).catch(() => {});
+    }
   });
 }
 
@@ -101,6 +112,8 @@ function focusMyCutAsPrimaryWindow(open: () => void, projectId?: string): void {
   const host = BrowserWindow.getFocusedWindow();
   const onCreated = (_event: Electron.Event, child: BrowserWindow) => {
     if (child === host) return;
+    hostedMyCutWindow = child;
+    child.once("closed", () => { if (hostedMyCutWindow === child) hostedMyCutWindow = null; });
     if (projectId) {
       child.webContents.once("did-finish-load", () => openImportedProjectInMyCut(child, projectId));
     }
@@ -124,7 +137,7 @@ export async function openLocalMyCutEditor(projectId?: string): Promise<void> {
     throw new Error("MyCut project ID ไม่ถูกต้อง");
   }
   if (!(await isMyCutInstalledLocally())) throw new Error("นำเข้า resources ZIP ของ MyCut 1.0.1 ก่อน");
-  const existing = BrowserWindow.getAllWindows().find(win => !win.isDestroyed() && win.getTitle() === "MyCut");
+  const existing = hostedMyCutWindow && !hostedMyCutWindow.isDestroyed() ? hostedMyCutWindow : null;
   if (existing) {
     existing.show();
     existing.focus();
