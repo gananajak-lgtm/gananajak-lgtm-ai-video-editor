@@ -1253,6 +1253,18 @@ export default function App() {
         <div className="heroBadge">🎧</div>
       </details>
 
+      <section id="editor-timeline" className="timelinePanel" aria-label="หน้าตัดต่อหลัก">
+        <div className="timelineHeader"><div><p className="eyebrow">VIDEO EDITOR</p><h3>ตัดต่อภาพและเสียงในหน้าเดียว</h3><p className="muted">ใช้ไทม์ไลน์นี้แทนแผงภาพรวมเก่า ปรับคลิปและเสียงได้โดยตรง ไม่ต้องส่งออก .mycut ไปเปิดโปรแกรมอื่น</p></div><div className="timelineMeta"><span>{timeline ? `${timeline.clips.length} ภาพ · ${formatTime(timeline.duration)}` : "ยังไม่มีไทม์ไลน์"}</span></div></div>
+        <div className="voiceStudioActions">
+          <button type="button" onClick={chooseImages}>เพิ่มภาพ</button>
+          {timeline && timeline.clips.length === 0 && images.length > 0 && <button type="button" onClick={placeImagesOnAudioTimeline}>วางภาพต่อเนื่องตามเสียง</button>}
+          <button type="button" disabled={!studioSelectedId || !studioEpisodeId || !studioVoiceSchedule.length || studioVoiceSchedule.length !== Object.keys(studioVoiceFiles).length} onClick={() => { void importStudioDialogueToTimeline(); }}>นำ MP3 ลง Timeline</button>
+          <button type="button" className="exportButton" disabled={!timeline || rendering || building || transcribing || missingMedia.length > 0} onClick={() => { void exportVideo(); }}>{rendering ? "กำลังส่งออก MP4…" : "ส่งออก MP4"}</button>
+        </div>
+        {studioImportFeedback && <p role="status">{studioImportFeedback}</p>}
+        {timeline ? <TimelineEditor plan={timeline} onChange={setTimeline} seekRequest={voiceSeekRequest} audioLayers={audioLayers} onAudioLayersChange={setAudioLayers} /> : <p className="muted">นำเข้า MP3 และภาพประกอบเพื่อเริ่มตัดต่อ</p>}
+        {timeline && <details><summary>ตั้งค่าการส่งออกวิดีโอ</summary><ExportSettingsPanel plan={timeline} onChange={setTimeline} /></details>}
+        <details><summary>เครื่องมือเพิ่มเติม: รายการเสียงและจุดเริ่มภาพตามบท</summary>
       <section className="studioTimelineDock" aria-label="ไทม์ไลน์ตัดต่อ">
   <div className="studioTimelineTitle"><strong>🎬 ไทม์ไลน์ตัดต่อ</strong><span>{timeline ? `${timeline.clips.length} คลิป · ${formatTime(timeline.duration)}` : "ยังไม่มีคลิปในไทม์ไลน์"}</span></div>
   <div className="studioTimelineRuler"><span>00:00</span><span>{timeline ? formatTime(timeline.duration / 4) : "00:15"}</span><span>{timeline ? formatTime(timeline.duration / 2) : "00:30"}</span><span>{timeline ? formatTime(timeline.duration * .75) : "00:45"}</span><span>{timeline ? formatTime(timeline.duration) : "01:00"}</span></div>
@@ -1263,7 +1275,9 @@ export default function App() {
   <div className="studioTimelineTrack"><strong>▤ คำบรรยาย</strong><div className="studioTimelineLane">{timeline?.subtitles.length ? timeline.subtitles.map((cue, index) => <span key={cue.id} className="studioTimelineSubtitle" title={cue.text}>{index + 1}</span>) : <em>ยังไม่มีคำบรรยาย</em>}</div></div>
   <p className="studioTimelineHint">นี่คือภาพรวมไทม์ไลน์ · เมื่อสร้างไทม์ไลน์แล้ว ใช้แผงแก้ไขช็อตด้านล่างเพื่อลากสลับคลิปและปรับจุดตัด</p>
 </section>
-<div className="editorThreePane">
+        </details>
+      </section>
+      <div className="editorThreePane">
         <div className="editorMediaPane">
           <section id="editor-media" className="grid">
         <article className="panel">
@@ -1513,45 +1527,6 @@ export default function App() {
         </section>
       )}
 
-      {timeline && (
-        <section id="editor-timeline" className="timelinePanel">
-          <div className="timelineHeader">
-            <div>
-              <p className="eyebrow">FIRST CUT</p>
-              <h3>{timeline.clips.length} automatic clips</h3>
-            </div>
-            <div className="timelineMeta">
-              <span>{timeline.width}×{timeline.height}</span>
-              <span>{timeline.fps} fps</span>
-              <span>{formatTime(timeline.duration)}</span>
-              <span>{timeline.subtitles.length} subtitles</span>
-              <span>{timeline.transitionDuration.toFixed(2)}s transition</span>
-            </div>
-          </div>
-
-          <div className="track">
-            {timeline.clips.slice(0, 24).map((clip, index) => (
-              <div
-                className="clip"
-                key={clip.id}
-                style={{ flexGrow: Math.max(clip.duration, 0.1) }}
-                title={fileName(clip.imagePath)}
-              >
-                <span>{String(index + 1).padStart(2, "0")}</span>
-                <strong>{fileName(clip.imagePath)}</strong>
-                <small>{clip.duration.toFixed(1)}s · {clip.motion}</small>
-              </div>
-            ))}
-          </div>
-
-          <p className="timelineHint">
-            Visual Brain can now replace the fallback sequential edit with a timestamp-aligned shot plan. The baseline button remains available as a safe fallback.
-          </p>
-
-          <ExportSettingsPanel plan={timeline} onChange={setTimeline} />
-          <TimelineEditor plan={timeline} onChange={setTimeline} seekRequest={voiceSeekRequest} audioLayers={audioLayers} onAudioLayersChange={setAudioLayers} />
-        </section>
-      )}
       </section>
     </main>
     </div>
