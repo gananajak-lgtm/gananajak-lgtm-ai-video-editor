@@ -3,7 +3,7 @@ import { parseNovelScript } from "./novel-voice-parser";
 import { assertMyCutVoiceTimeline, moveMyCutReviewShot, assertMyCutUniqueSelectedImages, computeMyCutImageCuts, buildMyCutShotReview } from "../shared/mycut-image-cuts";
 import { readCharacterVoiceLibrary } from "./CharacterVoiceLibrary";
 import type { VoiceLine } from "./novel-voice-parser";
-import { buildVoiceProductionPlan, prepareVoiceGeneration, reusableVoiceCache, authorizeVoiceGeneration, voiceApprovalFingerprint, validateVoiceProductionPlan, voiceBatchProgress, voicePlanSummary } from "./voice-production-plan";
+import { buildVoiceProductionPlan, prepareVoiceGeneration, authorizeVoiceGeneration, voiceApprovalFingerprint, validateVoiceProductionPlan, voiceBatchProgress, voicePlanSummary } from "./voice-production-plan";
 
 export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?: string | null; episodeId?: string | null }) {
   const activeProjectId = projectId ?? null;
@@ -36,7 +36,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
   const [script, setScript] = useState("");
   const [removeBlankLines, setRemoveBlankLines] = useState(false);
   const normalizeBlankLines = (value: string) => value.split(/\r?\n/).filter(line => line.trim().length > 0).join("\n");
-  const MAX_SCRIPT_CHARACTERS = 5000;
+  const MAX_SCRIPT_CHARACTERS = 40000;
   const scriptTooLong = script.length > MAX_SCRIPT_CHARACTERS;
   const [analyzedSource, setAnalyzedSource] = useState<string | null>(null);
   const sourceIsStale = analyzedSource !== null && script !== analyzedSource;
@@ -267,11 +267,9 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
   };
   const productionPlan = useMemo(() => buildVoiceProductionPlan(draftName, lines, resolvedVoiceIds, audioCacheMatchesEpisode ? audioCache : {}, selectedWorkspaceId, selectedModelId), [draftName, lines, voiceIds, projectVoiceIds, activeProjectId, selectedWorkspaceId, selectedModelId, audioCache, audioCacheMatchesEpisode]);
   const productionSummary = useMemo(() => voicePlanSummary(productionPlan), [productionPlan]);
-  const reusableCount = useMemo(() => Object.keys(reusableVoiceCache(productionPlan, audioCacheMatchesEpisode ? audioCache : {})).length, [productionPlan, audioCache, audioCacheMatchesEpisode]);
   const productionErrors = useMemo(() => validateVoiceProductionPlan(productionPlan), [productionPlan]);
   const generationPreflight = useMemo(() => prepareVoiceGeneration(productionPlan), [productionPlan]);
   const batchProgress = useMemo(() => voiceBatchProgress(productionPlan), [productionPlan]);
-  const [acknowledgedQueue, setAcknowledgedQueue] = useState<string | null>(null);
   const currentQueueFingerprint = useMemo(() => voiceApprovalFingerprint(productionPlan), [productionPlan]);
   const [voiceGenerating, setVoiceGenerating] = useState(false);
   const voiceGenerationLock = useRef(false);
@@ -343,7 +341,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
     }
   };
   const [queuePreviewOpen, setQueuePreviewOpen] = useState(false);
-  useEffect(() => { setAcknowledgedQueue(null); setQueuePreviewOpen(false); }, [productionPlan]);
+  useEffect(() => { setQueuePreviewOpen(false); }, [productionPlan]);
   const approvalReady = projectVoicesReady && !savingProjectVoice && !sourceIsStale &&
     (importedPlanWorkspaceId === null || importedPlanWorkspaceId === selectedWorkspaceId) &&
     (!activeProjectId || !activeEpisodeId || audioCacheMatchesEpisode) &&
@@ -581,7 +579,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
       <div><strong>ผลการแยกบท</strong><p className="muted">{lines.length} ช่วง · {speakers.length} ผู้พูด · {reviewCount} จุดรอตรวจสอบ</p><div className="voiceStudioActions"><button onClick={() => setFilter("all")}>ทั้งหมด</button><button onClick={() => setFilter("review")}>รอตรวจสอบ ({reviewCount})</button></div><div className="voiceStudioLines">{lines.filter(line => filter === "all" || line.needsReview).map(line => <div key={line.id} className="voiceStudioLine"><span>{line.kind === "sfx" ? "เอฟเฟกต์" : line.kind === "narration" ? "บรรยาย" : "บทพูด"} {line.needsReview ? "⚠ ตรวจสอบผู้พูด" : ""}</span><textarea rows={2} value={line.text} onChange={event => patch(line.id, { text: event.target.value })}/>{line.kind !== "sfx" && <button onClick={() => previewLine(line)}>{previewLineId === line.id ? "กำลังอ่านตัวอย่าง..." : "ฟังตัวอย่างฟรี (เสียงเครื่อง)"}</button>}{line.kind === "dialogue" && <label>ผู้พูด <input value={line.speaker} onChange={event => patch(line.id, { speaker: event.target.value, needsReview: !event.target.value.trim() || event.target.value === "ไม่ทราบผู้พูด" })}/></label>}<label>อารมณ์ <input value={line.emotion} onChange={event => patch(line.id, { emotion: event.target.value })}/></label></div>)}</div></div>
     </div>
     {lines.length > 0 && <div className="voiceRegistry"><h3>จัดการชื่อผู้พูดทั้งตอน</h3><p className="muted">รวมชื่อที่ AI แยกต่างกัน เช่น สิงห์ และ พรานสิง โดยเปลี่ยนทุกบทพร้อมกัน</p><label>ชื่อเดิม<input value={findSpeaker} onChange={event => setFindSpeaker(event.target.value)} list="voice-speaker-names" placeholder="เช่น สิงห์" /></label><datalist id="voice-speaker-names">{speakers.map(name => <option key={name} value={name} />)}</datalist><label>ชื่อใหม่<input value={replaceSpeaker} onChange={event => setReplaceSpeaker(event.target.value)} placeholder="เช่น พรานสิง" /></label><button disabled={!findSpeaker.trim() || !replaceSpeaker.trim() || findSpeaker.trim() === replaceSpeaker.trim()} onClick={renameSpeaker}>เปลี่ยนชื่อทุกบท</button><h3>คลังเสียงประจำตัวละคร (Voice ID)</h3><button type="button" disabled={loadingVoices} onClick={() => void loadVoices()}>{loadingVoices ? "กำลังโหลดเสียง..." : "ดึงรายชื่อเสียงจาก ElevenLabs"}</button>{voiceLoadError && <p role="alert">{voiceLoadError}</p>}{availableVoices.length > 0 && <p className="muted">พบเสียง {availableVoices.length} รายการ เลือกเสียงให้แต่ละตัวละครได้เลย</p>}<p className="muted">กำหนด ElevenLabs Voice ID สำหรับแต่ละตัวละครและผู้บรรยาย ระบบยังไม่ส่งคำขอสร้างเสียง</p>{allSpeakers.map(speaker => <div key={speaker} className="voiceSpeakerAssignment"><strong>{speaker}</strong><span className="muted">{resolvedVoiceIds[speaker]?.trim() ? "✓ จับคู่เสียงแล้ว" : "⚠ ยังไม่ได้จับคู่เสียง"}</span>{availableVoices.length > 0 && <select aria-label={`เลือกเสียงให้ ${speaker}`} value={availableVoices.some(voice => voice.id === resolvedVoiceIds[speaker]) ? resolvedVoiceIds[speaker] : ""} onChange={event => { if (event.target.value) { setConfirmed(false); if (activeProjectId) { void saveProjectSpeakerVoice(speaker, event.target.value); } else { setVoiceIds(previous => ({ ...previous, [speaker]: event.target.value })); } } }}><option value="">เลือกเสียงจากรายการ</option>{availableVoices.map(voice => <option key={voice.id} value={voice.id}>{voice.name}</option>)}</select>}</div>)}<p className="muted">จุดที่ต้องตรวจสอบ: ผู้พูดไม่ชัดเจน {reviewCount} ช่วง · ยังไม่กำหนด Voice ID {unresolvedVoiceCount} ช่วง</p></div>}
-    {lines.length > 0 && <div className="voiceRegistry"><h3>Workspace ElevenLabs (บัญชีจริง)</h3><label>โมเดลสร้างเสียง (ภาษาไทย)<select value={selectedModelId} onChange={event => { setSelectedModelId(event.target.value as "eleven_v4" | "eleven_v3"); setConfirmed(false); setAcknowledgedQueue(null); }}><option value="eleven_v4">Eleven v4 — แนะนำสำหรับเสียงไทย</option><option value="eleven_v3">Eleven v3 — เสียงแสดงอารมณ์</option></select></label><p>ไฟล์เสียง v2 ที่สร้างไว้เดิมจะไม่ถูกลบ การเปลี่ยนโมเดลต้องยืนยันก่อนสร้างใหม่และใช้เครดิต ElevenLabs</p><div className="voiceStudioActions">
+    {lines.length > 0 && <div className="voiceRegistry"><h3>Workspace ElevenLabs (บัญชีจริง)</h3><label>โมเดลสร้างเสียง (ภาษาไทย)<select value={selectedModelId} onChange={event => { setSelectedModelId(event.target.value as "eleven_v4" | "eleven_v3"); setConfirmed(false); }}><option value="eleven_v4">Eleven v4 — แนะนำสำหรับเสียงไทย</option><option value="eleven_v3">Eleven v3 — เสียงแสดงอารมณ์</option></select></label><p>ไฟล์เสียง v2 ที่สร้างไว้เดิมจะไม่ถูกลบ การเปลี่ยนโมเดลต้องยืนยันก่อนสร้างใหม่และใช้เครดิต ElevenLabs</p><div className="voiceStudioActions">
       <label>เลือกบัญชี<select value={selectedWorkspaceId} onChange={event => void switchRealWorkspace(event.target.value)}>{realWorkspaces.map(item => <option key={item.id} value={item.id}>{item.name}{item.configured ? "" : " (ยังไม่มีคีย์)"}</option>)}</select></label>
       <button type="button" onClick={() => void syncWorkspaces()}>โหลดรายการบัญชีใหม่</button>
       <button type="button" disabled={!selectedWorkspaceId} onClick={() => void refreshRealCredits()}>ตรวจสอบเครดิตจริง</button></div>
