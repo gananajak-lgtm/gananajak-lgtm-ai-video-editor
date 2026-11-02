@@ -27,9 +27,9 @@ export function scopeVoiceLineIds<T extends { id: string }>(lines: T[], namespac
  */
 export function compareVoiceChunkOrder(first: string, second: string): number {
   const key = (id: string): [number, string, number] => {
-    const scoped = id.match(/^(take-[a-z0-9]+-[a-f0-9]{8})-line-(\\d+)$/i);
+    const scoped = id.match(/^(take-[a-z0-9]+-[a-f0-9]{8})-line-(\d+)$/i);
     if (scoped) return [1, scoped[1], Number(scoped[2])];
-    const legacy = id.match(/^line-(\\d+)$/i);
+    const legacy = id.match(/^line-(\d+)$/i);
     if (legacy) return [0, "", Number(legacy[1])];
     // Preserve relative insertion order for historical archived aliases.
     return [2, "", 0];
