@@ -8,14 +8,52 @@ import { buildVoiceProductionPlan, prepareVoiceGeneration, authorizeVoiceGenerat
 export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?: string | null; episodeId?: string | null }) {
   const activeProjectId = projectId ?? null;
   const activeEpisodeId = episodeId ?? null;
-  const [audioCache, setAudioCache] = useState<Record<string, { fingerprint: string; outputPath: string }>>({});
+  const [audioCache, setAudioCache] = useState<Record<string, { fingerprint: string; outputPath: string; speaker?: string; text?: string }>>({});
+  const [savedVoicePlayer, setSavedVoicePlayer] = useState<{ lineId: string; url: string } | null>(null);
+  const [savedVoiceBusy, setSavedVoiceBusy] = useState<string | null>(null);
+  const [savedVoiceError, setSavedVoiceError] = useState("");
+  const [savedVoiceFilter, setSavedVoiceFilter] = useState("");
+  const [savedVoicePage, setSavedVoicePage] = useState(0);
   const [audioCacheReady, setAudioCacheReady] = useState(false);
   const audioCacheIdentity = useRef<string | null>(null);
   const currentAudioIdentity = activeProjectId && activeEpisodeId ? JSON.stringify([activeProjectId, activeEpisodeId]) : null;
   const audioCacheMatchesEpisode = currentAudioIdentity !== null && audioCacheIdentity.current === currentAudioIdentity && audioCacheReady;
+  const savedVoiceEntries = useMemo(() => {
+    const needle = savedVoiceFilter.trim().toLocaleLowerCase();
+    return Object.entries(audioCache)
+      .filter(([lineId, entry]) => entry.outputPath && (!needle ||
+        [lineId, entry.speaker ?? "", entry.text ?? "", entry.outputPath.split(/[\\/]/).pop() ?? ""]
+          .some(part => part.toLocaleLowerCase().includes(needle))))
+      .sort(([first], [second]) => first.localeCompare(second, undefined, { numeric: true }));
+  }, [audioCache, savedVoiceFilter]);
+  const savedVoiceTotalPages = Math.max(1, Math.ceil(savedVoiceEntries.length / 20));
+  const playSavedVoice = async (lineId: string, outputPath: string) => {
+    if (!activeProjectId || !activeEpisodeId || !audioCacheMatchesEpisode) return;
+    if (savedVoicePlayer?.lineId === lineId) { setSavedVoicePlayer(null); return; }
+    setSavedVoiceError("");
+    setSavedVoiceBusy(lineId);
+    const identity = currentAudioIdentity;
+    try {
+      const url = await window.videoEditor.previewStudioVoiceAudio(activeProjectId, activeEpisodeId, outputPath);
+      if (identity === audioCacheIdentity.current) setSavedVoicePlayer({ lineId, url });
+    } catch (error) {
+      if (identity === audioCacheIdentity.current) setSavedVoiceError("เปิดเสียงไม่สำเร็จ: " + String(error));
+    } finally { setSavedVoiceBusy(null); }
+  };
+  const revealSavedVoice = async (outputPath: string) => {
+    if (!activeProjectId || !activeEpisodeId || !audioCacheMatchesEpisode) return;
+    setSavedVoiceError("");
+    try {
+      await window.videoEditor.revealStudioVoiceAudio(activeProjectId, activeEpisodeId, outputPath);
+    } catch (error) { setSavedVoiceError("เปิดโฟลเดอร์ไม่สำเร็จ: " + String(error)); }
+  };
   useEffect(() => {
     let active = true;
     audioCacheIdentity.current = null;
+    setSavedVoicePlayer(null);
+    setSavedVoiceError("");
+    setSavedVoiceFilter("");
+    setSavedVoicePage(0);
     setAudioCache({});
     setAudioCacheReady(false);
     if (!activeProjectId || !activeEpisodeId) return () => { active = false; };
@@ -573,6 +611,39 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
   const allSpeakers = useMemo(() => [...new Set(lines.filter(line => line.kind !== "sfx").map(line => line.speaker))], [lines]);
   return <section className="voiceStudioPanel" id="voice-studio">
     <header><div><p className="eyebrow">AI VOICE STUDIO · ขั้นเตรียมบท</p><h2>แยกบทนิยายและผู้พูด</h2><p className="muted">วางนิยายทั้งตอน ระบบจะแยกคำบรรยายและบทสนทนา พร้อมทำเครื่องหมายจุดที่ยังไม่ทราบผู้พูด ก่อนเชื่อมต่อระบบสร้างเสียง</p></div></header>
+    <section className="voiceRegistry" aria-label="คลัง MP3 ที่สร้างแล้วในตอนนี้">
+      <h3>🎧 ฟังเสียงที่สร้างแล้ว · เปิดโฟลเดอร์ MP3</h3>
+      <p className="muted">ฟังเสียง ElevenLabs ที่บันทึกไว้จริงได้ทันที หรือเปิด Windows Explorer โดยเลือกไฟล์ให้พร้อมคัดลอก ไม่เรียก API และไม่ใช้เครดิตเพิ่ม</p>
+      {!activeProjectId || !activeEpisodeId ? <p>เลือกโปรเจกต์และ EP ก่อนเพื่อดูไฟล์เสียงของตอนนั้น</p>
+        : !audioCacheMatchesEpisode ? <p role="status">กำลังอ่านไฟล์เสียงที่บันทึกไว้ใน EP…</p>
+        : <>
+          <div className="voiceStudioActions">
+            <strong>ไฟล์ MP3 ที่บันทึกไว้ {Object.values(audioCache).filter(entry => entry.outputPath).length} ไฟล์</strong>
+            <label>ค้นหาไฟล์เสียง <input aria-label="ค้นหา MP3 ที่สร้างแล้ว" value={savedVoiceFilter} onChange={event => { setSavedVoiceFilter(event.target.value); setSavedVoicePage(0); }} placeholder="บรรทัด / ตัวละคร / เนื้อหา" /></label>
+            {savedVoiceEntries.length > 0 && <button type="button" onClick={() => { void revealSavedVoice(savedVoiceEntries[0][1].outputPath); }}>📂 เปิดโฟลเดอร์เสียงของ EP</button>}
+          </div>
+          {savedVoiceEntries.length === 0 ? <p className="muted">{savedVoiceFilter ? "ไม่พบไฟล์ที่ตรงกับคำค้น" : "ยังไม่มี MP3 ที่สร้างไว้ในตอนนี้ เมื่อสร้างเสียงเสร็จ ไฟล์จะปรากฏที่นี่อัตโนมัติ"}</p>
+            : <div className="voiceStudioLines">
+              {savedVoiceEntries.slice(savedVoicePage * 20, (savedVoicePage + 1) * 20).map(([lineId, entry]) =>
+                <div className="voiceStudioLine" key={lineId}>
+                  <strong>{lineId} · {entry.speaker || "เสียงพากย์"}</strong>
+                  {entry.text && <p className="muted">{entry.text.slice(0, 160)}{entry.text.length > 160 ? "…" : ""}</p>}
+                  <small className="muted">{entry.outputPath.split(/[\\/]/).pop()}</small>
+                  <div className="voiceStudioActions">
+                    <button type="button" disabled={savedVoiceBusy === lineId} onClick={() => { void playSavedVoice(lineId, entry.outputPath); }}>{savedVoiceBusy === lineId ? "กำลังเปิดเสียง…" : savedVoicePlayer?.lineId === lineId ? "■ ปิดเสียง" : "▶ ฟัง MP3"}</button>
+                    <button type="button" onClick={() => { void revealSavedVoice(entry.outputPath); }}>📂 เปิดตำแหน่งไฟล์</button>
+                  </div>
+                  {savedVoicePlayer?.lineId === lineId && <audio key={savedVoicePlayer.url} src={savedVoicePlayer.url} controls autoPlay preload="metadata" onEnded={() => setSavedVoicePlayer(null)} onError={() => setSavedVoiceError("เล่นไฟล์ MP3 นี้ไม่สำเร็จ")} aria-label={`ฟังเสียงบรรทัด ${lineId}`} />}
+                </div>)}
+            </div>}
+          {savedVoiceTotalPages > 1 && <div className="voiceStudioActions">
+            <button type="button" disabled={savedVoicePage === 0} onClick={() => setSavedVoicePage(page => Math.max(0, page - 1))}>ก่อนหน้า</button>
+            <span>หน้า {Math.min(savedVoicePage + 1, savedVoiceTotalPages)} / {savedVoiceTotalPages}</span>
+            <button type="button" disabled={savedVoicePage + 1 >= savedVoiceTotalPages} onClick={() => setSavedVoicePage(page => Math.min(savedVoiceTotalPages - 1, page + 1))}>ถัดไป</button>
+          </div>}
+        </>}
+      {savedVoiceError && <p role="alert">{savedVoiceError}</p>}
+    </section>
     <div className="voiceStudioActions"><label>ชื่อตอน <input value={draftName} onChange={event => { setDraftName(event.target.value); setConfirmed(false); }} /></label><label>เปิดแผนเสียงเดิม <input type="file" accept=".json,application/json" onChange={event => { void importPlan(event.target.files?.[0]); event.target.value = ""; }} /></label></div>
     <div className="voiceStudioGrid">
       <div><label htmlFor="voice-novel-input">ต้นฉบับนิยาย</label><textarea id="voice-novel-input" rows={12} aria-describedby="voice-script-character-count" value={script} onChange={event => { setScript(event.target.value); setConfirmed(false); }} placeholder={'สิงห์หยุดเดิน\n"หยุดก่อน" สิงห์กระซิบ\n[พูด: พรานอิน | อารมณ์: หวาดระแวง] ข้าได้ยินเสียง'} /><label style={{display:"flex",alignItems:"center",gap:8,margin:"8px 0"}}><input type="checkbox" checked={removeBlankLines} onChange={event => setRemoveBlankLines(event.target.checked)} />ลบบรรทัดว่างก่อนวิเคราะห์ (ไม่ลบข้อความ)</label><button type="button" disabled={!script.trim() || !removeBlankLines || normalizeBlankLines(script) === script} onClick={() => { setScript(normalizeBlankLines(script)); setConfirmed(false); }}>ลบบรรทัดว่างในกล่องข้อความ</button><button className="primary" disabled={!script.trim() || scriptTooLong} onClick={() => { setLines(parseNovelScript(script)); setImportedPlanWorkspaceId(null); setAnalyzedSource(script); setFilter("all"); setConfirmed(false); }}>วิเคราะห์และแยกบท</button><p id="voice-script-character-count" role={scriptTooLong ? "alert" : undefined} className="muted">{script.length.toLocaleString()} / {MAX_SCRIPT_CHARACTERS.toLocaleString()} ตัวอักษร{scriptTooLong ? " — เกินขีดจำกัด กรุณาแบ่งต้นฉบับเป็นช่วงก่อนวิเคราะห์ (ระบบจะไม่ตัดข้อความอัตโนมัติ)" : ""}</p><p className="muted">กฎกำกับ: [บรรยาย | อารมณ์: ลึกลับ], [พูด: พรานสิง | อารมณ์: กระซิบ], [SFX: เสียงฝน] · คำกำกับไม่ถูกนำไปเป็นบทพูด</p></div>
