@@ -527,6 +527,14 @@ ipcMain.handle("studio:preview-voice-audio", async (_event, projectId: string, e
   if (!verified) throw new Error("Dialogue MP3 is missing or invalid");
   return createPlaybackUrl(verified);
 });
+ipcMain.handle("studio:reveal-voice-audio", async (_event, projectId: string, episodeId: string, relativePath: string) => {
+  // Resolve under the correct episode, verify the existing MP3 and only then
+  // reveal that exact file. Never accept an arbitrary renderer-provided path.
+  const verified = await findReusableStudioEpisodeAudio(projectId, episodeId, relativePath);
+  if (!verified) throw new Error("ไม่พบไฟล์ MP3 ที่สร้างไว้ใน EP นี้");
+  shell.showItemInFolder(verified);
+});
+
 ipcMain.handle("studio:load-character-voices", (_event, projectId: string) => loadStudioCharacterVoices(projectId));
 ipcMain.handle("studio:save-character-voices", (_event, projectId: string, voices: Record<string, string>) => saveStudioCharacterVoices(projectId, voices));
 ipcMain.handle("studio:patch-character-voice", (_event, projectId: string, character: string, voiceId: string | null) => patchStudioCharacterVoice(projectId, character, voiceId));
