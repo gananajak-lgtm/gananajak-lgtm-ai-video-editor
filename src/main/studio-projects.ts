@@ -3,7 +3,7 @@ import { app } from "electron";
 import { mkdir, readFile, writeFile, rename, readdir, access, unlink } from "node:fs/promises";
 import { readProjectFile, writeProject } from "./project-json";
 import { assertStudioEpisodeIdentity } from "../shared/studio-episode-identity";
-import { mergeVoiceAudioWithoutLoss } from "../shared/studio-voice-preservation";
+import { compareVoiceChunkOrder, mergeVoiceAudioWithoutLoss } from "../shared/studio-voice-preservation";
 import { resolveBundledFfmpegPath } from "./studio-mp3-decode";
 import type { ProjectDocument } from "../shared/types";
 import path from "node:path";
@@ -563,12 +563,9 @@ export async function prepareStudioEpisodeMyCutVoiceManifest(projectId: string, 
     if (!Number.isFinite(duration) || duration <= 0) continue;
     lines.push({ lineId, audio, duration, speaker: entry.speaker ?? "ผู้บรรยาย", text: entry.text ?? "" });
   }
-  // Preserve declared generation order if available; never sort by a random line UUID.
-  lines.sort((a, b) => {
-    const aOrder = Number(a.lineId.match(/(?:^|[-_])line[-_](\\d+)$/i)?.[1]);
-    const bOrder = Number(b.lineId.match(/(?:^|[-_])line[-_](\\d+)$/i)?.[1]);
-    return Number.isFinite(aOrder) && Number.isFinite(bOrder) ? aOrder - bOrder : 0;
-  });
+  // Never interleave line-1 from chunk 2 with line-1 from chunk 1.
+  // Each take groups its own lines; legacy aliases retain their insertion order.
+  lines.sort((a, b) => compareVoiceChunkOrder(a.lineId, b.lineId));
   return {
     title: `${project.title} — ${episode.title}`,
     width: 1080,
