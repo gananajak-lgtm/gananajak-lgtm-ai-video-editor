@@ -228,6 +228,20 @@ export async function saveStudioEpisodeScript(projectId: string, episodeId: stri
   if (!episode) throw new Error("Episode not found");
   const directory = path.join(episode.folder, "script");
   await mkdir(directory, { recursive: true });
+  // Preserve the previous script revision before replacing source.txt. A user
+  // pasting the second 5k-character chunk must never irreversibly erase text.
+  const sourcePath = path.join(directory, "source.txt");
+  let prior: string | null = null;
+  try { prior = await readFile(sourcePath, "utf8"); }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+  if (prior !== null && prior !== script) {
+    const history = path.join(directory, "history");
+    await mkdir(history, { recursive: true });
+    const backup = path.join(history, "source-" + Date.now().toString(36) + "-" + randomUUID() + ".txt");
+    await writeFile(backup, prior, { flag: "wx" });
+  }
   const temp = path.join(directory, "source-" + randomUUID() + ".tmp");
   await writeFile(temp, script, { flag: "wx" });
   const { rename } = await import("node:fs/promises");
