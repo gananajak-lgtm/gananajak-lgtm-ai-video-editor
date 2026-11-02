@@ -14,6 +14,23 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
   const [savedVoiceError, setSavedVoiceError] = useState("");
   const [savedVoiceFilter, setSavedVoiceFilter] = useState("");
   const [savedVoicePage, setSavedVoicePage] = useState(0);
+  const [savedVoiceRefreshing, setSavedVoiceRefreshing] = useState(false);
+  const refreshSavedVoices = async () => {
+    if (!activeProjectId || !activeEpisodeId || savedVoiceRefreshing) return;
+    const identity = currentAudioIdentity;
+    setSavedVoiceRefreshing(true);
+    setSavedVoiceError("");
+    try {
+      const entries = await window.videoEditor.loadStudioEpisodeVoiceAudio(activeProjectId, activeEpisodeId);
+      if (identity === JSON.stringify([projectIdentity.current, activeEpisodeId])) {
+        audioCacheIdentity.current = identity;
+        setAudioCache(entries);
+        setAudioCacheReady(true);
+        setSavedVoicePlayer(null);
+      }
+    } catch (error) { if (identity === audioCacheIdentity.current) setSavedVoiceError("โหลดรายการ MP3 ไม่สำเร็จ: " + String(error)); }
+    finally { setSavedVoiceRefreshing(false); }
+  };
   const [audioCacheReady, setAudioCacheReady] = useState(false);
   const audioCacheIdentity = useRef<string | null>(null);
   const currentAudioIdentity = activeProjectId && activeEpisodeId ? JSON.stringify([activeProjectId, activeEpisodeId]) : null;
@@ -619,6 +636,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
         : <>
           <div className="voiceStudioActions">
             <strong>ไฟล์ MP3 ที่บันทึกไว้ {Object.values(audioCache).filter(entry => entry.outputPath).length} ไฟล์</strong>
+            <button type="button" disabled={savedVoiceRefreshing} onClick={() => { void refreshSavedVoices(); }}>{savedVoiceRefreshing ? "กำลังโหลด MP3…" : "↻ โหลดไฟล์เสียงใหม่"}</button>
             <label>ค้นหาไฟล์เสียง <input aria-label="ค้นหา MP3 ที่สร้างแล้ว" value={savedVoiceFilter} onChange={event => { setSavedVoiceFilter(event.target.value); setSavedVoicePage(0); }} placeholder="บรรทัด / ตัวละคร / เนื้อหา" /></label>
             {savedVoiceEntries.length > 0 && <button type="button" onClick={() => { void revealSavedVoice(savedVoiceEntries[0][1].outputPath); }}>📂 เปิดโฟลเดอร์เสียงของ EP</button>}
           </div>
