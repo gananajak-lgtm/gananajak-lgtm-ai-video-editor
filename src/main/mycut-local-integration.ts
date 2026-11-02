@@ -2,9 +2,15 @@ import { app, BrowserWindow, dialog } from "electron";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
-import { access, mkdtemp, readFile, rename, rm, stat } from "node:fs/promises";
+import { access, mkdtemp, readFile, rename, rm } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
+
+// Electron transparently treats *.asar as a virtual directory through node:fs.
+// Use original-fs ONLY for inspecting and hashing the archive file itself.
+// The regular patched fs is still needed for reading main.js inside app.asar.
+const archiveFs = require("original-fs") as typeof import("node:fs");
+const EXPECTED_ASAR_BYTES = 403880;
 
 const execFileAsync = promisify(execFile);
 // The user provided these MyCut 1.0.1 resources. Do not bundle or publish them.
@@ -22,9 +28,11 @@ function resourcesFolder(): string {
 export async function isMyCutInstalledLocally(): Promise<boolean> {
   try {
     const folder = resourcesFolder();
-    await access(path.join(folder, "app.asar"));
     await access(path.join(folder, "app.asar.unpacked"));
-    const hash = createHash("sha256").update(await readFile(path.join(folder, "app.asar"))).digest("hex");
+    const archive = path.join(folder, "app.asar");
+    const info = archiveFs.statSync(archive);
+    if (!info.isFile() || info.size !== EXPECTED_ASAR_BYTES) return false;
+    const hash = createHash("sha256").update(archiveFs.readFileSync(archive)).digest("hex");
     return hash === VERIFIED_ASAR_SHA256;
   } catch { return false; }
 }
@@ -55,10 +63,16 @@ export async function importMyCutResourcesZip(): Promise<boolean> {
   try {
     await execFileAsync("tar.exe", ["-xf", zip, "-C", temp, "resources/"], { windowsHide: true, timeout: 120000 });
     const asar = path.join(temp, "resources", "app.asar");
-    const info = await stat(asar);
-    if (!info.isFile() || info.size < 100000 || info.size > 100000000) throw new Error("MyCut app.asar ไม่ถูกต้อง");
-    const hash = createHash("sha256").update(await readFile(asar)).digest("hex");
-    if (hash !== VERIFIED_ASAR_SHA256) throw new Error("แพ็กเกจ MyCut ไม่ตรงกับ resources(1).zip ที่ตรวจสอบไว้");
+    // Electron's patched stat() reports a valid app.asar as a directory.
+    // Inspect the raw archive via original-fs instead of fs/promises.
+    const info = archiveFs.statSync(asar);
+    if (!info.isFile() || info.size !== EXPECTED_ASAR_BYTES) {
+      throw new Error(`MyCut app.asar ขนาดไม่ตรง (พบ ${info.size} ไบต์; ต้องเป็น ${EXPECTED_ASAR_BYTES} ไบต์)`);
+    }
+    const hash = createHash("sha256").update(archiveFs.readFileSync(asar)).digest("hex");
+    if (hash !== VERIFIED_ASAR_SHA256) {
+      throw new Error("MyCut app.asar SHA-256 ไม่ตรงกับแพ็กเกจ MyCut 1.0.1 ที่ตรวจสอบไว้");
+    }
     const root = path.join(base, FILES_DIR);
     await rename(temp, root);
     return true;
