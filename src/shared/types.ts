@@ -333,6 +333,7 @@ export type DesktopApi = {
   getStudioVoiceAudioDuration: (projectId: string, episodeId: string, relativePath: string) => Promise<number>;
   resolveStudioVoiceAudio: (projectId: string, episodeId: string, relativePath: string) => Promise<string>;
   previewStudioVoiceAudio: (projectId: string, episodeId: string, relativePath: string) => Promise<string>;
+  revealStudioVoiceAudio: (projectId: string, episodeId: string, relativePath: string) => Promise<void>;
   loadStudioCharacterVoices: (projectId: string) => Promise<Record<string, string>>;
   saveStudioCharacterVoices: (projectId: string, voices: Record<string, string>) => Promise<void>;
   patchStudioCharacterVoice: (projectId: string, character: string, voiceId: string | null) => Promise<Record<string, string>>;
