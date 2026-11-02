@@ -39,6 +39,7 @@ const api: DesktopApi = {
   getStudioVoiceAudioDuration: (projectId, episodeId, relativePath) => ipcRenderer.invoke("studio:voice-audio-duration", projectId, episodeId, relativePath),
   resolveStudioVoiceAudio: (projectId, episodeId, relativePath) => ipcRenderer.invoke("studio:resolve-voice-audio", projectId, episodeId, relativePath),
   previewStudioVoiceAudio: (projectId, episodeId, relativePath) => ipcRenderer.invoke("studio:preview-voice-audio", projectId, episodeId, relativePath),
+  revealStudioVoiceAudio: (projectId, episodeId, relativePath) => ipcRenderer.invoke("studio:reveal-voice-audio", projectId, episodeId, relativePath),
   loadStudioCharacterVoices: (projectId) => ipcRenderer.invoke("studio:load-character-voices", projectId),
   saveStudioCharacterVoices: (projectId, voices) => ipcRenderer.invoke("studio:save-character-voices", projectId, voices),
   patchStudioCharacterVoice: (projectId, character, voiceId) => ipcRenderer.invoke("studio:patch-character-voice", projectId, character, voiceId),
