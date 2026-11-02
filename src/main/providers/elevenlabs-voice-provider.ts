@@ -1,7 +1,7 @@
-import { copyFile, mkdir, rename, rm, writeFile } from "node:fs/promises";
-import { constants } from "node:fs";
+import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { hasPlausibleMp3Header } from "../studio-mp3-header";
+import { persistGeneratedMp3Exclusively } from "../studio-voice-safe-write";
 import { checkMp3Decoding, isDecodableMp3 } from "../studio-mp3-decode";
 import path from "node:path";
 import type { AssetJob, GeneratedAsset } from "../../shared/content-factory";
@@ -56,7 +56,7 @@ async function generateStudioVoiceLineUnchecked(
     const decoded = await checkMp3Decoding(temporaryPath);
     if (!decoded.valid) throw new Error(`ElevenLabs MP3 validation failed: ${decoded.reason}`);
     // COPYFILE_EXCL refuses to overwrite existing audio, including on Windows.
-    await copyFile(temporaryPath, destination.absolutePath, constants.COPYFILE_EXCL);
+    await persistGeneratedMp3Exclusively(temporaryPath, destination.absolutePath);
     await registerStudioEpisodeVoiceAudio(projectId, episodeId, lineId, fingerprint, destination.relativePath, { ...metadata, text });
     return { outputPath: destination.relativePath };
   } finally {
