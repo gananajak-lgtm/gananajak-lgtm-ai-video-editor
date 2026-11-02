@@ -73,6 +73,12 @@ const segmented = parseNovelScript(longNarration);
 assert.ok(segmented.length > 1);
 assert.ok(segmented.every(line => line.kind === "narration" && line.text.length <= 240));
 assert.equal(segmented.map(line => line.text).join(" "), longNarration);
+const longDialogueText = "เรื่องราวยังไม่จบ ".repeat(420).trim();
+const dialogueChunks = parseNovelScript("[พูด: พรานสิง] " + longDialogueText);
+assert.ok(dialogueChunks.length > 1, "Long character dialogue must split into several paid requests");
+assert.ok(dialogueChunks.every(line => line.kind === "dialogue" && line.speaker === "พรานสิง" && line.text.length <= 240));
+assert.equal(dialogueChunks.map(line => line.text).join(" "), longDialogueText);
+
 
 const labeled = parseNovelScript("[ผู้บรรยาย]\nป่ามืด\n\n[พรานสิง]\nอิน เอ็งได้ยินไหม\n\n[พรานอิน | อารมณ์: หวาดระแวง]\nได้ยินพี่\n\n[SFX] เสียงกิ่งไม้หัก");
 assert.equal(labeled.length, 4);
