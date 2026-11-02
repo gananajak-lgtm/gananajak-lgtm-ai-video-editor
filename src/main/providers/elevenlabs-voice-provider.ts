@@ -1,4 +1,5 @@
-import { mkdir, rename, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, rename, rm, writeFile } from "node:fs/promises";
+import { constants } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { hasPlausibleMp3Header } from "../studio-mp3-header";
 import { checkMp3Decoding, isDecodableMp3 } from "../studio-mp3-decode";
@@ -29,9 +30,12 @@ async function generateStudioVoiceLineUnchecked(
   }
   if (modelId !== "eleven_v3" && modelId !== "eleven_v4") throw new Error("Select Eleven v3 or Eleven v4 for Thai Studio voice generation");
   const { resolveStudioEpisodeVoiceOutput, registerStudioEpisodeVoiceAudio, loadStudioEpisodeVoiceAudio } = await import("../studio-projects");
-  const destination = await resolveStudioEpisodeVoiceOutput(projectId, episodeId, lineId);
   const existing = (await loadStudioEpisodeVoiceAudio(projectId, episodeId))[lineId];
   if (existing?.fingerprint === fingerprint) return { outputPath: existing.outputPath };
+  // Use a brand-new filename for EVERY paid request, even when an older UI
+  // submits line-1 again. Never replace a previous take's physical MP3.
+  const uniqueFileId = `${lineId.slice(0, 70)}-${randomUUID().replace(/-/g, "")}`;
+  const destination = await resolveStudioEpisodeVoiceOutput(projectId, episodeId, uniqueFileId);
   const apiKey = await getElevenLabsApiKey();
   if (!apiKey) throw new Error("ElevenLabs API key is not configured");
   const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
@@ -51,7 +55,8 @@ async function generateStudioVoiceLineUnchecked(
     await writeFile(temporaryPath, audio, { flag: "wx" });
     const decoded = await checkMp3Decoding(temporaryPath);
     if (!decoded.valid) throw new Error(`ElevenLabs MP3 validation failed: ${decoded.reason}`);
-    await rename(temporaryPath, destination.absolutePath);
+    // COPYFILE_EXCL refuses to overwrite existing audio, including on Windows.
+    await copyFile(temporaryPath, destination.absolutePath, constants.COPYFILE_EXCL);
     await registerStudioEpisodeVoiceAudio(projectId, episodeId, lineId, fingerprint, destination.relativePath, { ...metadata, text });
     return { outputPath: destination.relativePath };
   } finally {
