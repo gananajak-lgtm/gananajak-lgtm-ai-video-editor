@@ -3,6 +3,7 @@ import { app } from "electron";
 import { mkdir, readFile, writeFile, rename, readdir, access, unlink } from "node:fs/promises";
 import { readProjectFile, writeProject } from "./project-json";
 import { assertStudioEpisodeIdentity } from "../shared/studio-episode-identity";
+import { mergeVoiceAudioWithoutLoss } from "../shared/studio-voice-preservation";
 import { resolveBundledFfmpegPath } from "./studio-mp3-decode";
 import type { ProjectDocument } from "../shared/types";
 import path from "node:path";
@@ -532,10 +533,13 @@ export async function registerStudioEpisodeVoiceAudio(
       throw new Error("Generated MP3 must exist and decode before registration");
     }
     const existing = await loadStudioEpisodeVoiceAudio(projectId, episodeId);
-    await saveStudioEpisodeVoiceAudio(projectId, episodeId, {
-      ...existing,
-      [lineId]: { fingerprint, outputPath: relativePath, ...validVoiceMetadata(metadata) }
-    });
+    const next = { fingerprint, outputPath: relativePath, ...validVoiceMetadata(metadata) };
+    // Legacy clients may reuse "line-1" for their second 5k-character chunk.
+    // Archive the prior manifest entry under a unique key instead of losing it.
+    const merged = mergeVoiceAudioWithoutLoss(
+      existing, lineId, next, "saved-" + randomUUID().replace(/-/g, "")
+    );
+    await saveStudioEpisodeVoiceAudio(projectId, episodeId, merged);
   });
   voiceManifestQueues.set(key, pending);
   try { await pending; }
