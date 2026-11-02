@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mergeVoiceAudioWithoutLoss, scopeVoiceLineIds } from "./studio-voice-preservation";
+import { compareVoiceChunkOrder, mergeVoiceAudioWithoutLoss, scopeVoiceLineIds } from "./studio-voice-preservation";
 
 test("a second 5000-character chunk cannot reuse the first chunk's line keys", () => {
   const first = scopeVoiceLineIds([{ id: "line-1" }, { id: "line-2" }], "take-mh2q0000-1234abcd");
@@ -31,4 +31,15 @@ test("identical completed line is not duplicated and archive collisions fail clo
       { fingerprint: "different", outputPath: "dialogue/other.mp3" }, "saved-new"),
     /Invalid voice archive key/
   );
+});
+
+test("MyCut keeps multiple chunks sequential without interleaving line-1", () => {
+  const ids = ["take-mh2q0002-1234abcd-line-2", "take-mh2q0001-1234abcd-line-2",
+    "take-mh2q0002-1234abcd-line-1", "take-mh2q0001-1234abcd-line-1",
+    "line-2", "line-1"];
+  assert.deepEqual(ids.sort(compareVoiceChunkOrder), [
+    "line-1", "line-2",
+    "take-mh2q0001-1234abcd-line-1", "take-mh2q0001-1234abcd-line-2",
+    "take-mh2q0002-1234abcd-line-1", "take-mh2q0002-1234abcd-line-2"
+  ]);
 });
