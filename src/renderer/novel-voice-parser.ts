@@ -22,7 +22,7 @@ export function parseNovelScript(script: string): VoiceLine[] {
     if (!trimmed) return;
     // Keep narration manageable for TTS without rewriting or dropping source text.
     const segments: string[] = [];
-    if (kind !== "narration" || trimmed.length <= 240) segments.push(trimmed);
+    if (kind === "sfx" || trimmed.length <= 240) segments.push(trimmed);
     else {
       let remaining = trimmed;
       while (remaining.length > 240) {
