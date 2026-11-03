@@ -78,12 +78,19 @@ export default function App() {
       const targetEpisodeId = requestedEpisode?.episodeId ?? studioEpisodeId;
       const targetImages = requestedEpisode?.images ?? images;
       if (studioSelectedId && targetEpisodeId) {
-        const plan = await window.videoEditor.planStudioMyCutArrangement(studioSelectedId, targetEpisodeId, targetImages, requestedEpisode?.analyzeWithAi ?? false);
+        let plan = await window.videoEditor.planStudioMyCutArrangement(studioSelectedId, targetEpisodeId, targetImages, requestedEpisode?.analyzeWithAi ?? false);
+        if (!plan.ready && plan.scriptCharacters > 0 && plan.unmatchedLineIds.length > 0 &&
+            window.confirm(`ระบบจับคู่ MP3 กับบทได้ ${plan.matchedCount}/${plan.totalAudio} ไฟล์ ต้องการให้ OpenAI ฟังและถอดเสียงอีก ${plan.unmatchedLineIds.length} ไฟล์เพื่อช่วยเรียงหรือไม่? อาจมีค่าใช้จ่าย และผลที่ถอดแล้วจะถูกแคชไว้`)) {
+          setMyCutLocalMessage(`กำลังให้ AI ฟัง MP3 ที่ยังจับคู่ไม่ได้ ${plan.unmatchedLineIds.length} ไฟล์…`);
+          plan = await window.videoEditor.planStudioMyCutArrangement(
+            studioSelectedId, targetEpisodeId, targetImages, requestedEpisode?.analyzeWithAi ?? false, true
+          );
+        }
         if (plan.ready) {
           const imported = await window.videoEditor.sendEpisodeToLocalMyCut(
             studioSelectedId, targetEpisodeId, plan.orderedLineIds, plan.imagePaths
           );
-          setMyCutLocalMessage(`จัดเสียงตามบทแล้ว ${imported.audioClips} คลิป · ภาพ ${imported.images} ภาพ (จับคู่คำบรรยายภาพได้ ${plan.imageMatches}) · เปิด MyCut แล้ว`);
+          setMyCutLocalMessage(`จัดเสียงตามบทแล้ว ${imported.audioClips} คลิป · ภาพ ${imported.images} ภาพ (จับคู่ภาพ ${plan.imageMatches} · AI ถอดเสียง ${plan.audioAiTranscribed} ไฟล์) · เปิด MyCut แล้ว`);
         } else {
           // Never silently guess the missing or ambiguous clips' placement.
           await window.videoEditor.openLocalMyCutEditor();
