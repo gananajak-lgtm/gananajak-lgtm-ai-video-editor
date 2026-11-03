@@ -305,7 +305,7 @@ export type DesktopApi = {
   isLocalMyCutReady: () => Promise<boolean>;
   importLocalMyCutResources: () => Promise<boolean>;
   openLocalMyCutEditor: () => Promise<void>;
-  planStudioMyCutArrangement: (projectId: string, episodeId: string, images: string[]) => Promise<{ orderedLineIds: string[]; unmatchedLineIds: string[]; matchedCount: number; totalAudio: number; scriptCharacters: number; imagePaths: string[]; imageMatches: number; ready: boolean }>;
+  planStudioMyCutArrangement: (projectId: string, episodeId: string, images: string[], analyzeWithAi?: boolean) => Promise<{ orderedLineIds: string[]; unmatchedLineIds: string[]; matchedCount: number; totalAudio: number; scriptCharacters: number; imagePaths: string[]; imageMatches: number; usedVisualAi: boolean; ready: boolean }>;
 
   sendEpisodeToLocalMyCut: (projectId: string, episodeId: string, lineIds: string[], imagePaths: string[]) => Promise<{ id: string; images: number; audioClips: number }>;
   checkProviderConnection: (provider: "openai" | "elevenlabs") => Promise<ProviderConnectionResult>;
