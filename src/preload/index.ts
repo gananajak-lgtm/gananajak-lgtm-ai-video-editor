@@ -11,6 +11,8 @@ const api: DesktopApi = {
   isLocalMyCutReady: () => ipcRenderer.invoke("mycut:local-status"),
   importLocalMyCutResources: () => ipcRenderer.invoke("mycut:import-resources"),
   openLocalMyCutEditor: () => ipcRenderer.invoke("mycut:open-local-editor"),
+  planStudioMyCutArrangement: (projectId, episodeId, images) => ipcRenderer.invoke("mycut:plan-episode-arrangement", projectId, episodeId, images),
+
   sendEpisodeToLocalMyCut: (projectId, episodeId, lineIds, imagePaths) => ipcRenderer.invoke("mycut:send-episode", projectId, episodeId, lineIds, imagePaths),
   checkProviderConnection: (provider) => ipcRenderer.invoke("ai:check-provider-connection", provider),
   selectImages: () => ipcRenderer.invoke("media:select-images"),
