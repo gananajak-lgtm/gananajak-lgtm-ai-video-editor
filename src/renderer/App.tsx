@@ -73,39 +73,42 @@ export default function App() {
         if (!installed) { setMyCutLocalMessage("ยังไม่ได้เลือกแพ็กเกจ MyCut"); return; }
         setMyCutReady(true);
       }
-      // A newly opened EP updates React state asynchronously. Never use the
-      // previous episode's voice schedule or image list for that new EP.
+      // Read the persisted EP's full script and verified audio text from main,
+      // not the previous EP's renderer state or the order of TTS requests.
       const targetEpisodeId = requestedEpisode?.episodeId ?? studioEpisodeId;
       const targetImages = requestedEpisode?.images ?? images;
-      let targetLines = studioVoiceSchedule.map(line => ({ lineId: line.lineId, audio: studioVoiceFiles[line.lineId]?.outputPath ?? "" }));
-      let canSendEpisode = !!studioSelectedId && !!targetEpisodeId &&
-        studioVoiceSchedule.length > 0 &&
-        studioVoiceSchedule.length === Object.keys(studioVoiceFiles).length;
-      if (requestedEpisode && studioSelectedId) {
-        try {
-          const manifest = await window.videoEditor.prepareStudioEpisodeMyCutVoiceManifest(studioSelectedId, targetEpisodeId!);
-          targetLines = manifest.lines.map(line => ({ lineId: line.lineId, audio: line.audio }));
-          canSendEpisode = targetLines.length > 0;
-        } catch {
-          targetLines = [];
-          canSendEpisode = false;
+      if (studioSelectedId && targetEpisodeId) {
+        const plan = await window.videoEditor.planStudioMyCutArrangement(studioSelectedId, targetEpisodeId, targetImages);
+        if (plan.ready) {
+          const imported = await window.videoEditor.sendEpisodeToLocalMyCut(
+            studioSelectedId, targetEpisodeId, plan.orderedLineIds, plan.imagePaths
+          );
+          setMyCutLocalMessage(`จัดเสียงตามบทแล้ว ${imported.audioClips} คลิป · ภาพ ${imported.images} ภาพ (จับคู่คำบรรยายภาพได้ ${plan.imageMatches}) · เปิด MyCut แล้ว`);
+        } else {
+          // Never silently guess the missing or ambiguous clips' placement.
+          await window.videoEditor.openLocalMyCutEditor();
+          setMyCutLocalMessage(`เปิด MyCut แล้ว แต่ยังไม่จัดเสียงอัตโนมัติ: เทียบบทได้ ${plan.matchedCount}/${plan.totalAudio} เสียง · ไม่พบข้อความ/จับคู่ไม่ชัด ${plan.unmatchedLineIds.length} เสียง · ตรวจว่าบท EP ที่บันทึกเป็นต้นฉบับฉบับเต็ม และ MP3 มีข้อความกำกับครบ`);
         }
-      }
-      if (canSendEpisode && studioSelectedId && targetEpisodeId) {
-        // Always ask the main process to open this EP: its persistent import
-        // index reuses the existing MyCut project, including edits, instead of
-        // creating another copy or leaving the user on MyCut's home screen.
-        const imported = await window.videoEditor.sendEpisodeToLocalMyCut(
-          studioSelectedId, targetEpisodeId, targetLines.map(line => line.lineId), targetImages
-        );
-        setMyCutLocalMessage(`เปิดโปรเจกต์ MyCut ของ EP นี้ · MP3 ${imported.audioClips} บรรทัด · ภาพ ${imported.images} ภาพ`);
       } else {
         await window.videoEditor.openLocalMyCutEditor();
-        setMyCutLocalMessage("เปิด MyCut แล้ว · EP นี้ยังไม่มี MP3 ที่พร้อมนำเข้า");
+        setMyCutLocalMessage("เปิด MyCut แล้ว · เลือกโปรเจกต์และ EP ก่อนให้ระบบเรียงเสียงตามบท");
       }
     } catch (error) {
       setMyCutLocalMessage("เปิด MyCut ไม่สำเร็จ: " + String(error));
     } finally { setMyCutOpening(false); }
+  };
+
+  const importImagesAndArrangeMyCut = async () => {
+    if (myCutOpening || !studioSelectedId || !studioEpisodeId) {
+      setMyCutLocalMessage("เลือก EP ที่ต้องการจัดภาพก่อน");
+      return;
+    }
+    try {
+      const selected = await window.videoEditor.selectImages();
+      if (!selected.length) return;
+      setImages(selected);
+      await openPersonalMyCut({ episodeId: studioEpisodeId, images: selected });
+    } catch (error) { setMyCutLocalMessage("เลือกภาพไม่สำเร็จ: " + String(error)); }
   };
 
   const [projectId, setProjectId] = useState(() => `project-${Date.now()}`);
@@ -1234,6 +1237,11 @@ export default function App() {
           <h3>ตอนทั้งหมด (EP)</h3>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}><input aria-label="ชื่อตอนใหม่" placeholder="พิมพ์ชื่อตอน เช่น EP02" value={studioNewEpisode} onChange={e=>setStudioNewEpisode(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); void addStudioEpisode(); } }} /><button type="button" disabled={studioBusy || studioScriptBusy || !studioNewEpisode.trim()} onClick={() => void addStudioEpisode()}>+ เพิ่ม EP</button></div><p>พิมพ์ชื่อตอนก่อนกดเพิ่ม EP · ระบบจะเปิดบทตอนใหม่ให้ทันที</p>
           {selectedStudioProject.episodes.map(ep => <div key={ep.id} className="studioProjectRow"><strong>{ep.title}</strong><small>{ep.folder}</small><button type="button" disabled={studioScriptBusy} onClick={() => void openStudioEpisode(ep.id)}>{studioEpisodeId === ep.id ? "เปิดอยู่" : "เปิดบท EP"}</button><button type="button" disabled={studioScriptBusy} onClick={() => { void openStudioEpisode(ep.id).then(() => setActiveProductionTab("script")); }}>สร้างเสียงตอนนี้ →</button><button type="button" disabled={studioBusy || studioScriptBusy} onClick={() => { void openEpisodeEditor(ep.id); }}>🎬 เปิดไทม์ไลน์ EP</button><button type="button" disabled={studioBusy || studioScriptBusy} onClick={() => { void deleteEpisode(ep.id, ep.title); }}>🗑️ ลบ EP</button></div>)}
+          {studioEpisodeId && <div className="voiceStudioActions">
+            <button type="button" disabled={myCutOpening || studioScriptBusy || studioScriptDirty} onClick={() => { void openPersonalMyCut(); }}>🎙 เรียง MP3 ตามบทและเปิด MyCut</button>
+            <button type="button" disabled={myCutOpening || studioScriptBusy || studioScriptDirty} onClick={() => { void importImagesAndArrangeMyCut(); }}>🖼 เลือกภาพและจัดตามช่วงเสียง</button>
+            <p className="muted">ใช้บท EP ที่บันทึกและข้อความกำกับ MP3 เพื่อจับคู่ตำแหน่ง หากจับคู่ไม่ครบจะไม่เดาสลับเสียง · การวิเคราะห์ภาพจากตัวภาพจริงยังไม่ได้เปิดใช้</p>
+          </div>}
           {studioEpisodeId && <section aria-label="แก้ไขบท EP">
             <h3>บทละคร: {selectedStudioProject.episodes.find(ep => ep.id === studioEpisodeId)?.title}</h3>
             <p>{studioScriptDirty ? "● มีการแก้ไขที่ยังไม่ได้บันทึก" : "บันทึกแล้ว"}</p>
