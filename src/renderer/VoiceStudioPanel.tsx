@@ -364,7 +364,11 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
         // Keep the master EP script complete across separate 5k/40k text
         // batches BEFORE any paid API request. Reject a save error rather
         // than generating audio that cannot later be aligned to the story.
-        await window.videoEditor.appendStudioEpisodeVoiceScriptChunk(activeProjectId, activeEpisodeId, script);
+        // Imported JSON plans can legitimately contain the approved voice
+        // lines without a populated script textarea. Preserve that source
+        // too, rather than blocking paid generation of an imported plan.
+        const sourceChunk = script.trim() || lines.filter(line => line.kind !== "sfx").map(line => line.text).join("\n");
+        await window.videoEditor.appendStudioEpisodeVoiceScriptChunk(activeProjectId, activeEpisodeId, sourceChunk);
       } catch (error) {
         setVoiceGenerationStatus("ยังไม่ได้สร้างเสียง: บันทึกบท EP สำหรับเรียงเสียงไม่สำเร็จ · " + String(error));
         return;
