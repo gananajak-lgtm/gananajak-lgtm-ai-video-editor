@@ -248,6 +248,30 @@ export async function saveStudioEpisodeScript(projectId: string, episodeId: stri
   await rename(temp, path.join(directory, "source.txt"));
 }
 
+// VoiceStudio supports generating one script chunk at a time. Keep an
+// append-only master script for later MP3 alignment, without overwriting a
+// previous chunk or duplicating a chunk when the button is retried.
+const voiceScriptAppendQueue = new Map<string, Promise<void>>();
+export async function appendStudioEpisodeVoiceScriptChunk(projectId: string, episodeId: string, chunk: string): Promise<void> {
+  if (typeof chunk !== "string" || !chunk.trim() || chunk.length > 40000) throw new Error("Invalid voice script chunk");
+  const key = JSON.stringify([projectId, episodeId]);
+  const previousJob = voiceScriptAppendQueue.get(key) ?? Promise.resolve();
+  const pending = previousJob.catch(() => {}).then(async () => {
+    const existing = await loadStudioEpisodeScript(projectId, episodeId);
+    const normalized = chunk.trim();
+    // No destructive rewrite: only add new content. Re-analysis of identical
+    // script text must not repeat the words in the episode's master script.
+    if (existing.includes(normalized)) return;
+    const joined = existing.trim() ? existing.trimEnd() + "\n\n" + normalized : normalized;
+    await saveStudioEpisodeScript(projectId, episodeId, joined);
+  });
+  voiceScriptAppendQueue.set(key, pending);
+  try { await pending; }
+  finally {
+    if (voiceScriptAppendQueue.get(key) === pending) voiceScriptAppendQueue.delete(key);
+  }
+}
+
 export async function loadStudioCharacterVoices(projectId: string): Promise<Record<string, string>> {
   const project = (await readIndex()).find(item => item.id === projectId);
   if (!project) throw new Error("Project not found");
