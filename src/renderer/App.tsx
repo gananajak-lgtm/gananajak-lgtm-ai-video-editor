@@ -63,7 +63,7 @@ export default function App() {
       setMyCutLocalMessage("ส่งตอนเข้า MyCut ไม่สำเร็จ: " + String(error));
     } finally { setMyCutOpening(false); }
   };
-  const openPersonalMyCut = async (requestedEpisode?: { episodeId: string; images: string[] }) => {
+  const openPersonalMyCut = async (requestedEpisode?: { episodeId: string; images: string[]; analyzeWithAi?: boolean }) => {
     if (myCutOpening) return;
     setMyCutOpening(true);
     setMyCutLocalMessage("");
@@ -78,7 +78,7 @@ export default function App() {
       const targetEpisodeId = requestedEpisode?.episodeId ?? studioEpisodeId;
       const targetImages = requestedEpisode?.images ?? images;
       if (studioSelectedId && targetEpisodeId) {
-        const plan = await window.videoEditor.planStudioMyCutArrangement(studioSelectedId, targetEpisodeId, targetImages);
+        const plan = await window.videoEditor.planStudioMyCutArrangement(studioSelectedId, targetEpisodeId, targetImages, requestedEpisode?.analyzeWithAi ?? false);
         if (plan.ready) {
           const imported = await window.videoEditor.sendEpisodeToLocalMyCut(
             studioSelectedId, targetEpisodeId, plan.orderedLineIds, plan.imagePaths
@@ -98,7 +98,7 @@ export default function App() {
     } finally { setMyCutOpening(false); }
   };
 
-  const importImagesAndArrangeMyCut = async () => {
+  const importImagesAndArrangeMyCut = async (analyzeWithAi = false) => {
     if (myCutOpening || !studioSelectedId || !studioEpisodeId) {
       setMyCutLocalMessage("เลือก EP ที่ต้องการจัดภาพก่อน");
       return;
@@ -106,8 +106,9 @@ export default function App() {
     try {
       const selected = await window.videoEditor.selectImages();
       if (!selected.length) return;
+      if (analyzeWithAi && !window.confirm(`ให้ OpenAI วิเคราะห์ภาพ ${selected.length} ภาพ เพื่อเทียบกับบทหรือไม่? การวิเคราะห์ภาพอาจมีค่าใช้จ่าย และจะใช้ผลที่แคชไว้หากมี`)) return;
       setImages(selected);
-      await openPersonalMyCut({ episodeId: studioEpisodeId, images: selected });
+      await openPersonalMyCut({ episodeId: studioEpisodeId, images: selected, analyzeWithAi });
     } catch (error) { setMyCutLocalMessage("เลือกภาพไม่สำเร็จ: " + String(error)); }
   };
 
@@ -1240,7 +1241,8 @@ export default function App() {
           {studioEpisodeId && <div className="voiceStudioActions">
             <button type="button" disabled={myCutOpening || studioScriptBusy || studioScriptDirty} onClick={() => { void openPersonalMyCut(); }}>🎙 เรียง MP3 ตามบทและเปิด MyCut</button>
             <button type="button" disabled={myCutOpening || studioScriptBusy || studioScriptDirty} onClick={() => { void importImagesAndArrangeMyCut(); }}>🖼 เลือกภาพและจัดตามช่วงเสียง</button>
-            <p className="muted">ใช้บท EP ที่บันทึกและข้อความกำกับ MP3 เพื่อจับคู่ตำแหน่ง หากจับคู่ไม่ครบจะไม่เดาสลับเสียง · การวิเคราะห์ภาพจากตัวภาพจริงยังไม่ได้เปิดใช้</p>
+            <button type="button" disabled={myCutOpening || studioScriptBusy || studioScriptDirty} onClick={() => { void importImagesAndArrangeMyCut(true); }}>🧠 AI ดูภาพและเรียงตามบท (ใช้เครดิต OpenAI)</button>
+            <p className="muted">ใช้บท EP ที่บันทึกและข้อความกำกับ MP3 เพื่อจับคู่ตำแหน่ง หากจับคู่ไม่ครบจะไม่เดาสลับเสียง · หากต้องการจับคู่จากเนื้อหาภาพจริง ให้เลือก AI ดูภาพ (อาจมีค่าใช้จ่าย)</p>
           </div>}
           {studioEpisodeId && <section aria-label="แก้ไขบท EP">
             <h3>บทละคร: {selectedStudioProject.episodes.find(ep => ep.id === studioEpisodeId)?.title}</h3>
