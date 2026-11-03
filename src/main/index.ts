@@ -187,12 +187,13 @@ ipcMain.handle("affiliate:search-products", async (_event, query:string) => {
 ipcMain.handle("mycut:local-status", async () => isMyCutInstalledLocally());
 ipcMain.handle("mycut:import-resources", async () => importMyCutResourcesZip());
 ipcMain.handle("mycut:open-local-editor", async (event) => openLocalMyCutEditor(undefined, BrowserWindow.fromWebContents(event.sender)));
-ipcMain.handle("mycut:plan-episode-arrangement", async (_event, projectId: string, episodeId: string, imagePaths: string[], analyzeWithAi = false) => {
-  if (typeof analyzeWithAi !== "boolean" || (analyzeWithAi && imagePaths.length > 250)) throw new Error("AI image analysis supports up to 250 selected images per run");
+ipcMain.handle("mycut:plan-episode-arrangement", async (_event, projectId: string, episodeId: string, imagePaths: string[], analyzeWithAi = false, listenWithAi = false) => {
+  if (typeof analyzeWithAi !== "boolean" || typeof listenWithAi !== "boolean") throw new Error("Invalid AI analysis option");
   if (!Array.isArray(imagePaths) || imagePaths.length > 500 ||
       imagePaths.some(file => typeof file !== "string" || !file || file.length > 2000)) {
     throw new Error("Invalid episode image selection");
   }
+  if (analyzeWithAi && imagePaths.length > 250) throw new Error("AI image analysis supports at most 250 images per run");
   const [script, manifest, saved] = await Promise.all([
     loadStudioEpisodeScript(projectId, episodeId),
     prepareStudioEpisodeMyCutVoiceManifest(projectId, episodeId),
@@ -203,7 +204,24 @@ ipcMain.handle("mycut:plan-episode-arrangement", async (_event, projectId: strin
     text: saved[line.lineId]?.text ?? line.text ?? "",
     speaker: line.speaker
   }));
-  const alignment = alignSavedVoicesToScript(script, voiceItems);
+  let alignment = alignSavedVoicesToScript(script, voiceItems);
+  let audioAiTranscribed = 0;
+  if (listenWithAi && script.trim() && alignment.unmatchedLineIds.length > 0) {
+    // A paid audio transcription is explicitly confirmed in the renderer.
+    // Never re-synthesize voice; the existing MP3s remain untouched.
+    if (alignment.unmatchedLineIds.length > 250) throw new Error("AI listening supports up to 250 unmatched MP3s per run");
+    const { readOrTranscribeVerifiedVoice } = await import("./studio-audio-asr-cache");
+    const linesById = new Map(manifest.lines.map(line => [line.lineId, line]));
+    const missing = new Set(alignment.unmatchedLineIds);
+    for (const voice of voiceItems) {
+      if (!missing.has(voice.lineId)) continue;
+      const line = linesById.get(voice.lineId);
+      if (!line) continue;
+      voice.text = await readOrTranscribeVerifiedVoice(line.audio);
+      audioAiTranscribed++;
+    }
+    alignment = alignSavedVoicesToScript(script, voiceItems);
+  }
   // Do NOT silently replace the old sequence when the original source is
   // absent or the same sentence occurs in multiple places.
   const orderedLineIds = alignment.complete ? alignment.orderedLineIds : [];
@@ -244,6 +262,7 @@ ipcMain.handle("mycut:plan-episode-arrangement", async (_event, projectId: strin
     scriptCharacters: script.length,
     imagePaths: orderedImages,
     imageMatches,
+    audioAiTranscribed,
     usedVisualAi: analyzeWithAi && imagePaths.length > 0 && alignment.complete,
     ready: alignment.complete
   };
