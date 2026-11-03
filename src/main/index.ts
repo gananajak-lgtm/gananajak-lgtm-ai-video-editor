@@ -1,5 +1,5 @@
 import { generateStudioVoiceLine } from "./providers/elevenlabs-voice-provider";
-import { listStudioProjects, createStudioProject, createStudioEpisode, deleteStudioProject, deleteStudioEpisode, listStudioTrash, restoreStudioTrash, loadStudioEpisodeEditor, saveStudioEpisodeEditor, loadStudioEpisodeScript, saveStudioEpisodeScript, loadStudioCharacterVoices, saveStudioCharacterVoices, patchStudioCharacterVoice, loadStudioEpisodeVoiceAudio, removeStudioEpisodeVoiceAudio, getStudioVoiceAudioDuration, findReusableStudioEpisodeAudio, prepareStudioEpisodeMyCutVoiceManifest, exportStudioEpisodeToMyCut, suggestMyCutImageOrder } from "./studio-projects";
+import { listStudioProjects, createStudioProject, createStudioEpisode, deleteStudioProject, deleteStudioEpisode, listStudioTrash, restoreStudioTrash, loadStudioEpisodeEditor, saveStudioEpisodeEditor, loadStudioEpisodeScript, saveStudioEpisodeScript, appendStudioEpisodeVoiceScriptChunk, loadStudioCharacterVoices, saveStudioCharacterVoices, patchStudioCharacterVoice, loadStudioEpisodeVoiceAudio, removeStudioEpisodeVoiceAudio, getStudioVoiceAudioDuration, findReusableStudioEpisodeAudio, prepareStudioEpisodeMyCutVoiceManifest, exportStudioEpisodeToMyCut, suggestMyCutImageOrder } from "./studio-projects";
 import { computeMyCutImageCuts, parseMyCutStoryboardLineCue, buildMyCutShotReview, assertMyCutUniqueSelectedImages } from "../shared/mycut-image-cuts";
 import { isMyCutInstalledLocally, importMyCutResourcesZip, openLocalMyCutEditor } from "./mycut-local-integration";
 import { fingerprintMyCutEpisodeImport, lookupMyCutEpisodeImport, rememberMyCutEpisodeImport } from "./mycut-episode-reuse";
@@ -419,6 +419,7 @@ ipcMain.handle("studio:load-episode-editor", (_event, projectId: string, episode
 ipcMain.handle("studio:save-episode-editor", (_event, projectId: string, episodeId: string, document: ProjectDocument) => saveStudioEpisodeEditor(projectId, episodeId, document));
 ipcMain.handle("studio:load-episode-script", (_event, projectId: string, episodeId: string) => loadStudioEpisodeScript(projectId, episodeId));
 ipcMain.handle("studio:save-episode-script", (_event, projectId: string, episodeId: string, script: string) => saveStudioEpisodeScript(projectId, episodeId, script));
+ipcMain.handle("studio:append-voice-script-chunk", (_event, projectId: string, episodeId: string, chunk: string) => appendStudioEpisodeVoiceScriptChunk(projectId, episodeId, chunk));
 ipcMain.handle("studio:generate-voice-line", async (_event, request: {
   projectId: string; episodeId: string; lineId: string; fingerprint: string;
   text: string; voiceId: string; modelId: string; approved: boolean;
