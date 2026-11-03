@@ -3,6 +3,7 @@ import { listStudioProjects, createStudioProject, createStudioEpisode, deleteStu
 import { computeMyCutImageCuts, parseMyCutStoryboardLineCue, buildMyCutShotReview, assertMyCutUniqueSelectedImages } from "../shared/mycut-image-cuts";
 import { isMyCutInstalledLocally, importMyCutResourcesZip, openLocalMyCutEditor } from "./mycut-local-integration";
 import { fingerprintMyCutEpisodeImport, lookupMyCutEpisodeImport, rememberMyCutEpisodeImport } from "./mycut-episode-reuse";
+import { alignSavedVoicesToScript } from "../shared/studio-script-audio-alignment";
 import { checkProviderConnection } from "./provider-connection";
 import { createMetaBrokerSession, exchangeMetaBrokerSession, validateMetaBrokerConfig } from "./meta-auth-broker";
 import { explainAffiliateProduct } from "./affiliate-product-search";
@@ -186,6 +187,56 @@ ipcMain.handle("affiliate:search-products", async (_event, query:string) => {
 ipcMain.handle("mycut:local-status", async () => isMyCutInstalledLocally());
 ipcMain.handle("mycut:import-resources", async () => importMyCutResourcesZip());
 ipcMain.handle("mycut:open-local-editor", async (event) => openLocalMyCutEditor(undefined, BrowserWindow.fromWebContents(event.sender)));
+ipcMain.handle("mycut:plan-episode-arrangement", async (_event, projectId: string, episodeId: string, imagePaths: string[]) => {
+  if (!Array.isArray(imagePaths) || imagePaths.length > 500 ||
+      imagePaths.some(file => typeof file !== "string" || !file || file.length > 2000)) {
+    throw new Error("Invalid episode image selection");
+  }
+  const [script, manifest, saved] = await Promise.all([
+    loadStudioEpisodeScript(projectId, episodeId),
+    prepareStudioEpisodeMyCutVoiceManifest(projectId, episodeId),
+    loadStudioEpisodeVoiceAudio(projectId, episodeId)
+  ]);
+  const voiceItems = manifest.lines.map(line => ({
+    lineId: line.lineId,
+    text: saved[line.lineId]?.text ?? line.text ?? "",
+    speaker: line.speaker
+  }));
+  const alignment = alignSavedVoicesToScript(script, voiceItems);
+  // Do NOT silently replace the old sequence when the original source is
+  // absent or the same sentence occurs in multiple places.
+  const orderedLineIds = alignment.complete ? alignment.orderedLineIds : [];
+  let orderedImages = [...imagePaths];
+  let imageMatches = 0;
+  if (alignment.complete && imagePaths.length > 0) {
+    const byId = new Map(manifest.lines.map(line => [line.lineId, line]));
+    const descriptions: Record<string, string> = {};
+    for (const image of imagePaths) {
+      try {
+        const description = await readFile(image + ".txt", "utf8");
+        descriptions[image] = description.slice(0, 8192);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      }
+    }
+    const suggestions = suggestMyCutImageOrder(
+      imagePaths, orderedLineIds.map(id => ({ text: byId.get(id)?.text ?? "" })), descriptions
+    );
+    imageMatches = suggestions.filter(item => item.matched).length;
+    orderedImages = suggestions.map(item => item.image);
+  }
+  return {
+    orderedLineIds,
+    unmatchedLineIds: alignment.unmatchedLineIds,
+    matchedCount: alignment.matched.length,
+    totalAudio: voiceItems.length,
+    scriptCharacters: script.length,
+    imagePaths: orderedImages,
+    imageMatches,
+    ready: alignment.complete
+  };
+});
+
 ipcMain.handle("mycut:send-episode", async (event, projectId: string, episodeId: string, lineIds: string[], imagePaths: string[]) => {
   if (!(await isMyCutInstalledLocally())) throw new Error("กรุณานำเข้า resources(1).zip ของ MyCut ก่อน");
   if (typeof projectId !== "string" || !projectId || typeof episodeId !== "string" || !episodeId ||
