@@ -33,6 +33,7 @@ const api: DesktopApi = {
   saveStudioEpisodeEditor: (projectId, episodeId, document) => ipcRenderer.invoke("studio:save-episode-editor", projectId, episodeId, document),
   loadStudioEpisodeScript: (projectId, episodeId) => ipcRenderer.invoke("studio:load-episode-script", projectId, episodeId),
   saveStudioEpisodeScript: (projectId, episodeId, script) => ipcRenderer.invoke("studio:save-episode-script", projectId, episodeId, script),
+  appendStudioEpisodeVoiceScriptChunk: (projectId, episodeId, chunk) => ipcRenderer.invoke("studio:append-voice-script-chunk", projectId, episodeId, chunk),
   generateStudioVoiceLine: (request) => ipcRenderer.invoke("studio:generate-voice-line", request),
   loadStudioEpisodeVoiceAudio: (projectId, episodeId) => ipcRenderer.invoke("studio:load-voice-audio", projectId, episodeId),
   exportStudioEpisodeToMyCut: (projectId, episodeId, orderedLineIds, withImages, selectedImages, expectedAudioHashes) => ipcRenderer.invoke("studio:export-mycut", projectId, episodeId, orderedLineIds, withImages, selectedImages, expectedAudioHashes),
