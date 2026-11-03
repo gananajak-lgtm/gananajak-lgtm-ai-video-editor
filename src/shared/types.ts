@@ -327,6 +327,7 @@ export type DesktopApi = {
   saveStudioEpisodeEditor: (projectId: string, episodeId: string, document: ProjectDocument) => Promise<void>;
   loadStudioEpisodeScript: (projectId: string, episodeId: string) => Promise<string>;
   saveStudioEpisodeScript: (projectId: string, episodeId: string, script: string) => Promise<void>;
+  appendStudioEpisodeVoiceScriptChunk: (projectId: string, episodeId: string, chunk: string) => Promise<void>;
   generateStudioVoiceLine: (request: { projectId: string; episodeId: string; lineId: string; fingerprint: string; text: string; voiceId: string; modelId: string; approved: boolean; jobId?: string; speaker?: string; emotion?: string }) => Promise<{ outputPath: string }>;
   loadStudioEpisodeVoiceAudio: (projectId: string, episodeId: string) => Promise<Record<string, { fingerprint: string; outputPath: string; jobId?: string; speaker?: string; emotion?: string; text?: string }>>;
   exportStudioEpisodeToMyCut: (projectId: string, episodeId: string, orderedLineIds: string[], withImages?: boolean, selectedImages?: string[], expectedAudioHashes?: string[]) => Promise<{ path: string; audioClips: number; duration: number } | null>;
