@@ -360,6 +360,15 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
     let failed = 0;
     let failureDetail = "";
     try {
+      try {
+        // Keep the master EP script complete across separate 5k/40k text
+        // batches BEFORE any paid API request. Reject a save error rather
+        // than generating audio that cannot later be aligned to the story.
+        await window.videoEditor.appendStudioEpisodeVoiceScriptChunk(activeProjectId, activeEpisodeId, script);
+      } catch (error) {
+        setVoiceGenerationStatus("ยังไม่ได้สร้างเสียง: บันทึกบท EP สำหรับเรียงเสียงไม่สำเร็จ · " + String(error));
+        return;
+      }
       for (const job of pending) {
         // Stop if the user switched projects while the preceding request ran.
         if (batchCancelRequested.current || projectIdentity.current !== activeProjectId || activeEpisodeIdentityRef.current !== currentAudioIdentity || batchInputsKeyRef.current !== approvedInputsKey) break;
