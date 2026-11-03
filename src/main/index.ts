@@ -187,7 +187,8 @@ ipcMain.handle("affiliate:search-products", async (_event, query:string) => {
 ipcMain.handle("mycut:local-status", async () => isMyCutInstalledLocally());
 ipcMain.handle("mycut:import-resources", async () => importMyCutResourcesZip());
 ipcMain.handle("mycut:open-local-editor", async (event) => openLocalMyCutEditor(undefined, BrowserWindow.fromWebContents(event.sender)));
-ipcMain.handle("mycut:plan-episode-arrangement", async (_event, projectId: string, episodeId: string, imagePaths: string[]) => {
+ipcMain.handle("mycut:plan-episode-arrangement", async (_event, projectId: string, episodeId: string, imagePaths: string[], analyzeWithAi = false) => {
+  if (typeof analyzeWithAi !== "boolean" || (analyzeWithAi && imagePaths.length > 250)) throw new Error("AI image analysis supports up to 250 selected images per run");
   if (!Array.isArray(imagePaths) || imagePaths.length > 500 ||
       imagePaths.some(file => typeof file !== "string" || !file || file.length > 2000)) {
     throw new Error("Invalid episode image selection");
@@ -219,6 +220,16 @@ ipcMain.handle("mycut:plan-episode-arrangement", async (_event, projectId: strin
         if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       }
     }
+    if (analyzeWithAi) {
+      // Paid vision analysis happens ONLY after a separate explicit user
+      // confirmation; existing descriptor cache avoids repeat analyses.
+      const { analyzeImages } = await import("./visual/imageAnalyzer");
+      const analyzed = await analyzeImages(imagePaths);
+      for (const image of analyzed) {
+        const parts = [image.summary, ...image.characters, ...image.actions, ...image.setting, ...image.mood];
+        descriptions[image.filePath] = parts.join(" ");
+      }
+    }
     const suggestions = suggestMyCutImageOrder(
       imagePaths, orderedLineIds.map(id => ({ text: byId.get(id)?.text ?? "" })), descriptions
     );
@@ -233,6 +244,7 @@ ipcMain.handle("mycut:plan-episode-arrangement", async (_event, projectId: strin
     scriptCharacters: script.length,
     imagePaths: orderedImages,
     imageMatches,
+    usedVisualAi: analyzeWithAi && imagePaths.length > 0 && alignment.complete,
     ready: alignment.complete
   };
 });
