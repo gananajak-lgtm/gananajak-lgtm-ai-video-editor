@@ -593,14 +593,24 @@ export async function prepareStudioEpisodeMyCutVoiceManifest(projectId: string, 
   const episode = project?.episodes.find(item => item.id === episodeId);
   if (!project || !episode) throw new Error("Episode not found");
   const entries = await loadStudioEpisodeVoiceAudio(projectId, episodeId);
-  const lines: Array<{ lineId: string; audio: string; duration: number; speaker: string; text: string }> = [];
-  for (const [lineId, entry] of Object.entries(entries)) {
-    const audio = await findReusableStudioEpisodeAudio(projectId, episodeId, entry.outputPath);
-    if (!audio) continue;
-    const duration = await getStudioVoiceAudioDuration(projectId, episodeId, entry.outputPath);
-    if (!Number.isFinite(duration) || duration <= 0) continue;
-    lines.push({ lineId, audio, duration, speaker: entry.speaker ?? "ผู้บรรยาย", text: entry.text ?? "" });
-  }
+  // Bounded parallel probing: a long EP may contain 600+ MP3s. Do not serialize
+  // all ffprobe calls, but never spawn an unbounded process per audio file.
+  const audioEntries = Object.entries(entries);
+  const inspected: Array<{ lineId: string; audio: string; duration: number; speaker: string; text: string } | null> = new Array(audioEntries.length).fill(null);
+  let nextAudioIndex = 0;
+  const worker = async () => {
+    while (nextAudioIndex < audioEntries.length) {
+      const index = nextAudioIndex++;
+      const [lineId, entry] = audioEntries[index];
+      const audio = await findReusableStudioEpisodeAudio(projectId, episodeId, entry.outputPath);
+      if (!audio) continue;
+      const duration = await getStudioVoiceAudioDuration(projectId, episodeId, entry.outputPath);
+      if (!Number.isFinite(duration) || duration <= 0) continue;
+      inspected[index] = { lineId, audio, duration, speaker: entry.speaker ?? "ผู้บรรยาย", text: entry.text ?? "" };
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(6, audioEntries.length) }, () => worker()));
+  const lines = inspected.filter((line): line is NonNullable<typeof line> => line !== null);
   // Never interleave line-1 from chunk 2 with line-1 from chunk 1.
   // Each take groups its own lines; legacy aliases retain their insertion order.
   lines.sort((a, b) => compareVoiceChunkOrder(a.lineId, b.lineId));
