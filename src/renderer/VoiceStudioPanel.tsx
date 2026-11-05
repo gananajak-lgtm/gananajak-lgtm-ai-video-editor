@@ -440,10 +440,10 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
       const rows = ordered.map((line, index) => {
         const start = position;
         const end = start + line.duration;
-        position = end + (index === ordered.length - 1 ? 0 : 0.3);
+        position = end + (index === ordered.length - 1 ? 0 : 0.8);
         return { speaker: line.speaker, text: line.text, start, end };
       });
-      assertMyCutVoiceTimeline(rows.map(row => row.start), ordered.map(line => line.duration), position, 0.3);
+      assertMyCutVoiceTimeline(rows.map(row => row.start), ordered.map(line => line.duration), position, 0.8);
       setMyCutTimingPreview(rows);
       setMyCutTimingPreviewOpen(true);
       setPlanMessage("แสดงตัวอย่างเวลา A1 จาก MP3 ที่ตรวจสอบแล้ว ไม่มีการสร้างไฟล์หรือใช้เครดิต");
@@ -464,7 +464,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
     let end = 0;
     myCutReviewVoiceDurations.forEach((duration, index) => {
       starts.push(end);
-      end += duration + (index === myCutReviewVoiceDurations.length - 1 ? 0 : 0.3);
+      end += duration + (index === myCutReviewVoiceDurations.length - 1 ? 0 : 0.8);
     });
     try {
       const cuts = computeMyCutImageCuts(starts, end, myCutReviewImages.length, myCutReviewImages.map(image => image.cue));
@@ -541,7 +541,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
         let total = 0;
         myCutReviewVoiceDurations.forEach((duration, index) => {
           starts.push(total);
-          total += duration + (index === myCutReviewVoiceDurations.length - 1 ? 0 : 0.3);
+          total += duration + (index === myCutReviewVoiceDurations.length - 1 ? 0 : 0.8);
         });
         computeMyCutImageCuts(starts, total, proposed.length, proposed.map(image => image.cue));
       }
@@ -627,7 +627,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
       anchor.download = "mycut-voice-manifest.json";
       anchor.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-      setPlanMessage(`ส่งออกรายการ MP3 สำหรับ MyCut ${manifest.lines.length} บรรทัดแล้ว (เสียงพัก 0.3 วินาที) ยังไม่ได้สร้าง .mycut หรือใช้เครดิต AI`);
+      setPlanMessage(`ส่งออกรายการ MP3 สำหรับ MyCut ${manifest.lines.length} บรรทัดแล้ว (เสียงพัก 0.8 วินาที) ยังไม่ได้สร้าง .mycut หรือใช้เครดิต AI`);
     } catch (error) {
       setPlanMessage(`ส่งออก MyCut ไม่สำเร็จ: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -719,7 +719,7 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
       </details>
     </div>}
     {myCutReviewOpen && <div className="voiceQueuePreview"><h3>Shot Review ภาพ V1</h3><p className="muted">ใช้ภาพจากเครื่องเท่านั้น · เลื่อนลำดับด้วยปุ่ม ↑ ↓ · ล็อกตำแหน่งเพื่อไม่ให้ภาพอื่นเลื่อนผ่าน · กด Apply เพื่ออนุมัติและส่งออกไฟล์ใหม่ · เวลาคำนวณจาก MP3 และ cue ในไฟล์ .txt ที่อ่านตอนเลือกภาพ · ระบบจะตรวจไฟล์อีกครั้งก่อน Save As</p><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:12}}>{myCutReviewImages.map((item,index) => <div key={item.path} style={{border:"1px solid #888",borderRadius:8,padding:8}}><img src={item.preview ?? ""} alt={`ภาพช็อต ${index+1}`} style={{width:"100%",height:140,objectFit:"contain"}}/><p>{index+1}. {item.path.split(/[\\/]/).pop()}</p><p className="muted">{myCutReviewTimings[index] ? `${myCutReviewTimings[index].start.toFixed(2)}–${myCutReviewTimings[index].end.toFixed(2)} วินาที` : "ยังคำนวณเวลาไม่ได้"}</p><label><input type="checkbox" checked={myCutReviewLocks.includes(index)} onChange={event => setMyCutReviewLocks(previous => event.target.checked ? [...previous,index] : previous.filter(value => value !== index))}/> ล็อกตำแหน่ง</label><div><button type="button" disabled={index===0 || myCutReviewLocks.includes(index) || myCutReviewLocks.includes(index-1)} onClick={() => moveReviewedMyCutImage(index,index-1)}>↑</button><button type="button" disabled={index===myCutReviewImages.length-1 || myCutReviewLocks.includes(index) || myCutReviewLocks.includes(index+1)} onClick={() => moveReviewedMyCutImage(index,index+1)}>↓</button></div></div>)}</div><div className="voiceStudioActions"><button type="button" onClick={() => setMyCutReviewOpen(false)}>ยกเลิกรีวิว</button><button type="button" className="primary" disabled={myCutExportPending || voiceGenerating || !audioCacheMatchesEpisode || !myCutReviewImages.length || myCutReviewTimings.length !== myCutReviewImages.length} onClick={() => { void exportMyCutProject(true,myCutReviewImages.map(item=>item.path)); }}>Apply และส่งออก .mycut ใหม่</button></div></div>}
-    {myCutTimingPreviewOpen && <div className="voiceQueuePreview"><h3>ตัวอย่างไทม์ไลน์ A1 ก่อนส่งออก</h3><p className="muted">ใช้ MP3 เดิมเท่านั้น เว้น 0.3 วินาทีระหว่างบรรทัด ภาพ V1 ต้องแสดงต่อเนื่อง · ไม่มีการแก้ไขไฟล์</p><button type="button" onClick={() => setMyCutTimingPreviewOpen(false)}>ปิดตัวอย่าง</button><ol>{myCutTimingPreview.map((shot, index) => <li key={index}><strong>{shot.speaker}</strong> · {shot.start.toFixed(2)}–{shot.end.toFixed(2)} วินาที · {shot.text.slice(0, 120)}{shot.text.length > 120 ? "…" : ""}</li>)}</ol></div>}
+    {myCutTimingPreviewOpen && <div className="voiceQueuePreview"><h3>ตัวอย่างไทม์ไลน์ A1 ก่อนส่งออก</h3><p className="muted">ใช้ MP3 เดิมเท่านั้น เว้น 0.8 วินาทีระหว่างบรรทัด ภาพ V1 ต้องแสดงต่อเนื่อง · ไม่มีการแก้ไขไฟล์</p><button type="button" onClick={() => setMyCutTimingPreviewOpen(false)}>ปิดตัวอย่าง</button><ol>{myCutTimingPreview.map((shot, index) => <li key={index}><strong>{shot.speaker}</strong> · {shot.start.toFixed(2)}–{shot.end.toFixed(2)} วินาที · {shot.text.slice(0, 120)}{shot.text.length > 120 ? "…" : ""}</li>)}</ol></div>}
     {planMessage && <p role="status" className="muted">{planMessage}</p>}
     <p className="muted">การฟังตัวอย่างใช้เสียงสังเคราะห์ของระบบปฏิบัติการ ไม่ใช่เสียง ElevenLabs และอาจไม่รองรับภาษาไทยบนบางเครื่อง</p>
     <p className="muted">ขั้นนี้เป็นการแยกบทด้วยกฎและตรวจทานด้วยคน ยังไม่เรียก AI วิเคราะห์บริบทเชิงลึกหรือ ElevenLabs และยังไม่คิดเครดิตสร้างเสียง</p>
