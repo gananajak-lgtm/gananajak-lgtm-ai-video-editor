@@ -13,6 +13,7 @@ import { assertSerializedMyCutTimeline } from "./mycut-serialized-validation";
 import { writeVerifiedMyCutProject } from "./mycut-verified-write";
 import { hasPlausibleMp3Header } from "./studio-mp3-header";
 import { isDecodableMp3 } from "./studio-mp3-decode";
+import { buildCombinedNarration } from "./studio-narration-render";
 
 export type StudioEpisode = { id: string; title: string; folder: string; createdAt: string };
 export type StudioProject = { id: string; title: string; folder: string; createdAt: string; episodes: StudioEpisode[] };
@@ -667,7 +668,7 @@ export function suggestMyCutImageOrder(
 
 /** Write a new MyCut project directly from existing MP3 assets; never generate paid audio. */
 export async function exportStudioEpisodeToMyCut(
-  projectId: string, episodeId: string, orderedLineIds: string[], destination: string, imagePaths: string[] = [], expectedAudioHashes?: string[]
+  projectId: string, episodeId: string, orderedLineIds: string[], destination: string, imagePaths: string[] = [], expectedAudioHashes?: string[], compactAudio = false
 ): Promise<{ path: string; audioClips: number; duration: number }> {
   if (!Array.isArray(orderedLineIds) || orderedLineIds.length > 10000 ||
       orderedLineIds.some(value => typeof value !== "string" || !value || value.length > 250) ||
@@ -693,16 +694,24 @@ export async function exportStudioEpisodeToMyCut(
   const lineStarts: number[] = [];
   selected.forEach((line, index) => {
     lineStarts.push(cursor);
-    const mediaId = "m-" + randomUUID();
-    media.push({ id: mediaId, path: line.audio, name: path.basename(line.audio),
-      kind: "audio", dur: 0, w: 0, h: 0, hasAudio: false });
-    clips.push({ ...defaults, id: "c-" + randomUUID(), kind: "audio",
-      mediaId, path: line.audio, name: `${line.speaker} · ${index + 1}`,
-      w: 0, h: 0, hasAudio: true, srcDur: line.duration,
-      track: "A1", start: cursor, in: 0, dur: line.duration, thumb: null });
     cursor += line.duration + (index === selected.length - 1 ? 0 : 0.8);
   });
   assertMyCutVoiceTimeline(lineStarts, selected.map(line => line.duration), cursor, 0.8);
+  const audioItems = compactAudio
+    ? await buildCombinedNarration(selected, path.dirname(selected[0].audio), 0.8)
+    : selected.map((line, index) => ({
+        audio: line.audio, start: lineStarts[index], duration: line.duration,
+        lineIds: [line.lineId]
+      }));
+  audioItems.forEach((item, index) => {
+    const mediaId = "m-" + randomUUID();
+    media.push({ id: mediaId, path: item.audio, name: path.basename(item.audio),
+      kind: "audio", dur: 0, w: 0, h: 0, hasAudio: false });
+    clips.push({ ...defaults, id: "c-" + randomUUID(), kind: "audio",
+      mediaId, path: item.audio, name: compactAudio ? `เสียงรวม ${index + 1}` : `${selected[index].speaker} · ${index + 1}`,
+      w: 0, h: 0, hasAudio: true, srcDur: item.duration,
+      track: "A1", start: item.start, in: 0, dur: item.duration, thumb: null });
+  });
   // Fill V1 for the entire voice timeline, including the 0.8-second speech pauses.
   // The user selects images explicitly; no scene matching or paid AI call occurs here.
   if (!Array.isArray(imagePaths) || imagePaths.length > 500 ||
@@ -770,5 +779,5 @@ export async function exportStudioEpisodeToMyCut(
   }
   assertSerializedMyCutTimeline(project as unknown as Parameters<typeof assertSerializedMyCutTimeline>[0]);
   await writeVerifiedMyCutProject(destination, project as unknown as Parameters<typeof assertSerializedMyCutTimeline>[0]);
-  return { path: destination, audioClips: selected.length, duration: cursor };
+  return { path: destination, audioClips: audioItems.length, duration: cursor };
 }
