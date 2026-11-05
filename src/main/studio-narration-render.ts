@@ -4,8 +4,53 @@ import { constants } from "node:fs";
 import { copyFile, mkdir, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import ffmpegPath from "ffmpeg-static";
+import ffprobePath from "ffprobe-static";
 import { resolveBundledFfmpegPath } from "./studio-mp3-decode";
 import { planNarrationSegments, type SegmentSource } from "./studio-narration-segments";
+
+/** Verify the physically encoded MP3, not only the planned duration. */
+async function inspectCombinedDuration(file: string): Promise<number> {
+  if (!ffprobePath?.path) throw new Error("FFprobe unavailable");
+  const executable = resolveBundledFfmpegPath(ffprobePath.path);
+  return new Promise<number>((resolve, reject) => {
+    const child = spawn(executable, [
+      "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", file
+    ], { windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
+    let output = "";
+    let stderr = "";
+    let finished = false;
+    const finish = (error?: Error, seconds?: number) => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timeout);
+      if (error) reject(error); else resolve(seconds!);
+    };
+    const timeout = setTimeout(() => {
+      child.kill();
+      finish(new Error("Combined MP3 duration probe timed out"));
+    }, 30000);
+    child.stdout.on("data", chunk => { output = (output + String(chunk)).slice(-1000); });
+    child.stderr.on("data", chunk => { stderr = (stderr + String(chunk)).slice(-1000); });
+    child.on("error", error => finish(error));
+    child.on("close", code => {
+      if (code !== 0) return finish(new Error("Could not inspect combined MP3: " + stderr));
+      const seconds = Number(output.trim());
+      if (!Number.isFinite(seconds) || seconds <= 0) return finish(new Error("Invalid combined MP3 duration"));
+      finish(undefined, seconds);
+    });
+  });
+}
+
+async function verifyCombinedDuration(file: string, expected: number): Promise<void> {
+  const actual = await inspectCombinedDuration(file);
+  if (actual > 180 || Math.abs(actual - expected) > 2.5) {
+    throw new Error(
+      "Combined MP3 duration does not match plan: " +
+      actual.toFixed(3) + "s actual, " + expected.toFixed(3) + "s planned. " +
+      "Original MP3s are safe; no MyCut project was written."
+    );
+  }
+}
 
 export type CombinedNarration = { audio: string; start: number; duration: number; lineIds: string[] };
 const active = new Map<string, Promise<CombinedNarration[]>>();
@@ -34,7 +79,10 @@ export async function buildCombinedNarration(
       work = (async () => {
         try {
           const existing = await stat(target);
-          if (existing.isFile() && existing.size > 0) return [];
+          if (existing.isFile() && existing.size > 0) {
+            await verifyCombinedDuration(target, segment.duration);
+            return [];
+          }
         } catch (error) {
           if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
         }
@@ -70,6 +118,7 @@ export async function buildCombinedNarration(
           });
           const merged = await stat(temporary);
           if (!merged.isFile() || !merged.size) throw new Error("Empty combined narration");
+          await verifyCombinedDuration(temporary, segment.duration);
           await copyFile(temporary, target, constants.COPYFILE_EXCL).catch(async error => {
             if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
           });
@@ -82,6 +131,7 @@ export async function buildCombinedNarration(
       active.set(target, work);
     }
     await work;
+    await verifyCombinedDuration(target, segment.duration);
     results.push({ audio: target, start: segment.start, duration: segment.duration, lineIds: segment.sources.map(line => line.lineId) });
   }
   return results;
