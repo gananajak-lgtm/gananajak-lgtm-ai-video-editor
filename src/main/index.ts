@@ -3,6 +3,7 @@ import { listStudioProjects, createStudioProject, createStudioEpisode, deleteStu
 import { computeMyCutImageCuts, parseMyCutStoryboardLineCue, buildMyCutShotReview, assertMyCutUniqueSelectedImages } from "../shared/mycut-image-cuts";
 import { isMyCutInstalledLocally, importMyCutResourcesZip, openLocalMyCutEditor } from "./mycut-local-integration";
 import { fingerprintMyCutEpisodeImport, lookupMyCutEpisodeImport, rememberMyCutEpisodeImport } from "./mycut-episode-reuse";
+import { buildCombinedNarration } from "./studio-narration-render";
 import { alignSavedVoicesToScript } from "../shared/studio-script-audio-alignment";
 import { checkProviderConnection } from "./provider-connection";
 import { createMetaBrokerSession, exchangeMetaBrokerSession, validateMetaBrokerConfig } from "./meta-auth-broker";
@@ -289,7 +290,7 @@ ipcMain.handle("mycut:send-episode", async (event, projectId: string, episodeId:
   }
   const scratch = path.join(folder, "new-" + randomUUID() + ".mycut");
   try {
-    await exportStudioEpisodeToMyCut(projectId, episodeId, lineIds, scratch, imagePaths);
+    await exportStudioEpisodeToMyCut(projectId, episodeId, lineIds, scratch, imagePaths, undefined, true);
     const json = await readFile(scratch, "utf8");
     const saved = JSON.parse(json) as { id?: unknown };
     if (typeof saved.id !== "string" || !/^p-[a-f0-9-]{36}$/i.test(saved.id)) throw new Error("MyCut Project ID ไม่ถูกต้อง");
@@ -297,7 +298,7 @@ ipcMain.handle("mycut:send-episode", async (event, projectId: string, episodeId:
     // Keep the file if the index or hosted UI fails: it belongs to the user.
     await rememberMyCutEpisodeImport(localRoot, fingerprint, saved.id);
     await openLocalMyCutEditor(saved.id, BrowserWindow.fromWebContents(event.sender));
-    return { id: saved.id, images: imagePaths.length, audioClips: lineIds.length || manifest.lines.length };
+    return { id: saved.id, images: imagePaths.length, audioClips: JSON.parse(json).clips.filter((clip: {track: string}) => clip.track === "A1").length };
   } finally {
     await rm(scratch, { force: true }).catch(() => {});
   }
@@ -437,6 +438,12 @@ ipcMain.handle("studio:generate-voice-line", async (_event, request: {
 ipcMain.handle("studio:remove-voice-audio", (_event, projectId: string, episodeId: string, lineId: string) => removeStudioEpisodeVoiceAudio(projectId, episodeId, lineId));
 ipcMain.handle("studio:load-voice-audio", (_event, projectId: string, episodeId: string) => loadStudioEpisodeVoiceAudio(projectId, episodeId));
 ipcMain.handle("studio:prepare-mycut-voice-manifest", (_event, projectId: string, episodeId: string) => prepareStudioEpisodeMyCutVoiceManifest(projectId, episodeId));
+ipcMain.handle("studio:build-narration-segments", async (_event, projectId: string, episodeId: string) => {
+  const manifest = await prepareStudioEpisodeMyCutVoiceManifest(projectId, episodeId);
+  if (!manifest.lines.length) return { segments: 0, lines: 0 };
+  const built = await buildCombinedNarration(manifest.lines, path.dirname(manifest.lines[0].audio), 0.8);
+  return { segments: built.length, lines: manifest.lines.length };
+});
 ipcMain.handle("studio:export-mycut", async (_event, projectId: string, episodeId: string, orderedLineIds: string[], withImages = false, selectedImages?: string[], expectedAudioHashes?: string[]) => {
   // Validate untrusted IPC input before opening any native selection or approval dialog.
   if (!Array.isArray(orderedLineIds) || orderedLineIds.length > 10000 ||
