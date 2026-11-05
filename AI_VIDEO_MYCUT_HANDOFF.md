@@ -637,3 +637,9 @@ Do not request users to repeat all project history. Read this document, inspect 
 - Added `studio-narration-render.test.ts` to generate two real local MP3 tones, FFmpeg-merge with a 0.8-second pause, decode the combined file, verify both original MP3 buffers remain identical, and verify repeat imports reuse the cached output. Included in `test:mycut`.
 - Commits: `3e061f4463829d480cff434ea559dda552c7556f`, `1135c0ec2d8f1c409307d0b6d31f97b7121a09e4`, `aba5b9a307a9ed48f3831713575253b5818d20d7`, `0d20a8631cd3569d6288ef71771d5b96eb2b6596`.
 - CI #2444 Validate **success**, Windows packaging in progress when checked. New CI #2445 for the added real FFmpeg merge test **in progress** and not yet accepted. Avoid announcing installed Windows MyCut acceptance.
+
+## 2026-11-05 continuation — hard duration validation for merged narration
+- Rechecked CI #2445 and #2446: both had successful Validate and Windows Package jobs. This is only automated coverage, not real end-user MyCut playback or MP4 acceptance with 600+ voices.
+- Found a release-safety gap: merged MP3 was accepted using *planned* duration only, even though actual encoded MP3 can differ. Updated `src/main/studio-narration-render.ts` with FFprobe inspection for both newly built and reused cached MP3, rejecting non-decodable duration, encoded duration above 180 seconds, or discrepancy >2.5 s. No source MP3 deletion; failure blocks project export. Source commit `959c41ec4ed8f988a781360b985f0c191e7acdcf`.
+- Updated `src/main/studio-narration-render.test.ts` to probe actual merged audio and check physical duration reflects two voice files plus 0.8 s silence (within encoder tolerance). Commit `0431d1a711a7489c8b1bb9b17eb5c8893cea530d`.
+- CI #2448 initiated; check Validate and Windows Package results before claiming success. After that, Windows GUI test must use real 600-file episode to verify no freeze, exact pauses, image timing and MP4 export; CI synthetic 2-file merge alone does not prove that.
