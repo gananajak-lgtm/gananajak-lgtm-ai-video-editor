@@ -474,7 +474,7 @@ ipcMain.handle("studio:export-mycut", async (_event, projectId: string, episodeI
       })
     : suggestion.lines.map(line => line.duration);
   const total = selectedDurations.reduce((sum, duration) => sum + duration, 0) +
-    Math.max(0, selectedDurations.length - 1) * 0.3;
+    Math.max(0, selectedDurations.length - 1) * 0.8;
   // A thumbnail-review Apply is the authoritative user-selected order.
   // Never propose another automatic reorder after that explicit decision.
   if (imagePaths.length > 1 && selectedImages === undefined) {
@@ -537,7 +537,7 @@ ipcMain.handle("studio:export-mycut", async (_event, projectId: string, episodeI
     let cursor = 0;
     selectedDurations.forEach((duration, index) => {
       lineStarts.push(cursor);
-      cursor += duration + (index === selectedDurations.length - 1 ? 0 : 0.3);
+      cursor += duration + (index === selectedDurations.length - 1 ? 0 : 0.8);
     });
     const cues: Array<number | null> = [];
     for (const image of imagePaths) {
@@ -568,7 +568,7 @@ ipcMain.handle("studio:export-mycut", async (_event, projectId: string, episodeI
     type: "question",
     title: "Review MyCut timeline before export",
     message: "Confirm new MyCut project?",
-    detail: `${selectedDurations.length} voice lines on A1 (0.3s pauses)\n${imagePaths.length} images on continuous V1\nDuration: ${total.toFixed(2)} seconds\n\nImage order:\n${imageSummary}\n\nNo TTS credits. Existing projects will not be overwritten.`,
+    detail: `${selectedDurations.length} voice lines on A1 (0.8s pauses)\n${imagePaths.length} images on continuous V1\nDuration: ${total.toFixed(2)} seconds\n\nImage order:\n${imageSummary}\n\nNo TTS credits. Existing projects will not be overwritten.`,
     buttons: ["Cancel", "Confirm export"],
     defaultId: 0,
     cancelId: 0,
