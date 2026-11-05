@@ -16,6 +16,7 @@ export async function buildCombinedNarration(
 ): Promise<CombinedNarration[]> {
   if (!lines.length) return [];
   if (typeof ffmpegPath !== "string" || !ffmpegPath) throw new Error("FFmpeg unavailable");
+  const executable = resolveBundledFfmpegPath(ffmpegPath);
   const plan = planNarrationSegments(lines, gapSeconds, 178, 80);
   const destination = path.join(episodeAudioFolder, "segments");
   await mkdir(destination, { recursive: true });
@@ -60,7 +61,7 @@ export async function buildCombinedNarration(
           for (const voice of segment.sources) args.push("-i", voice.audio);
           args.push("-filter_complex_script", filterFile, "-map", "[out]", "-ar", "44100", "-ac", "2", "-codec:a", "libmp3lame", "-b:a", "128k", temporary);
           await new Promise<void>((resolve, reject) => {
-            const child = spawn(resolveBundledFfmpegPath(ffmpegPath), args, { windowsHide: true, stdio: ["ignore", "ignore", "pipe"] });
+            const child = spawn(executable, args, { windowsHide: true, stdio: ["ignore", "ignore", "pipe"] });
             let errors = "";
             const timeout = setTimeout(() => { child.kill(); reject(new Error("Narration merge timed out")); }, 180000);
             child.stderr.on("data", data => { errors = (errors + String(data)).slice(-3000); });
