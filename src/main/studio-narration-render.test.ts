@@ -34,6 +34,11 @@ test("merge two real MP3 files with 0.8s silence; preserve originals and reuse i
     assert.equal(result.length,1);
     assert.deepEqual(result[0].lineIds,["a","b"]);
     assert.ok(result[0].duration<180);
+    // The physical MP3 contains both tones and the actual 0.8s pause.
+    // Re-encoding can add small encoder delay, but must not drop the pause.
+    const { probeDuration } = await import("./video/probe");
+    const physicalDuration = await probeDuration(result[0].audio);
+    assert.ok(physicalDuration >= 2.0 && physicalDuration <= 2.5, `Unexpected merged duration: ${physicalDuration}`);
     assert.equal((await checkMp3Decoding(result[0].audio)).valid,true);
     assert.deepEqual(await readFile(a),prior[0]);
     assert.deepEqual(await readFile(b),prior[1]);
