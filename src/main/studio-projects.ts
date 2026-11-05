@@ -619,7 +619,7 @@ export async function prepareStudioEpisodeMyCutVoiceManifest(projectId: string, 
     width: 1080,
     height: 1920,
     fps: 30,
-    gapSeconds: 0.3,
+    gapSeconds: 0.8,
     lines,
     visuals: [],
     note: "Only existing verified MP3 assets. Add frames before export to avoid blank video."
@@ -700,10 +700,10 @@ export async function exportStudioEpisodeToMyCut(
       mediaId, path: line.audio, name: `${line.speaker} · ${index + 1}`,
       w: 0, h: 0, hasAudio: true, srcDur: line.duration,
       track: "A1", start: cursor, in: 0, dur: line.duration, thumb: null });
-    cursor += line.duration + (index === selected.length - 1 ? 0 : 0.3);
+    cursor += line.duration + (index === selected.length - 1 ? 0 : 0.8);
   });
-  assertMyCutVoiceTimeline(lineStarts, selected.map(line => line.duration), cursor, 0.3);
-  // Fill V1 for the entire voice timeline, including the 0.3-second speech pauses.
+  assertMyCutVoiceTimeline(lineStarts, selected.map(line => line.duration), cursor, 0.8);
+  // Fill V1 for the entire voice timeline, including the 0.8-second speech pauses.
   // The user selects images explicitly; no scene matching or paid AI call occurs here.
   if (!Array.isArray(imagePaths) || imagePaths.length > 500 ||
       imagePaths.some(file => typeof file !== "string" || !file ||
