@@ -7,7 +7,7 @@ const validProjectId = (id: string): boolean => /^p-[a-f0-9-]{36}$/i.test(id);
 
 export async function fingerprintMyCutEpisodeImport(
   projectId: string, episodeId: string, lineIds: string[], images: string[],
-  lines: MediaLine[]
+  lines: MediaLine[], formatVersion = "legacy"
 ): Promise<string> {
   const byId = new Map(lines.map(line => [line.lineId, line]));
   const ordered = lineIds.length ? lineIds.map(id => {
@@ -24,7 +24,7 @@ export async function fingerprintMyCutEpisodeImport(
       return [path.resolve(file), item.size, item.mtimeMs];
     })
   );
-  const payload = [projectId, episodeId, ordered.map(x => [x.lineId, x.duration]), files];
+  const payload = [formatVersion, projectId, episodeId, ordered.map(x => [x.lineId, x.duration]), files];
   return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
 }
 
