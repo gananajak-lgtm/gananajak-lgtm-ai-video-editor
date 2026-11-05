@@ -631,3 +631,9 @@ Do not request users to repeat all project history. Read this document, inspect 
 - New `studio:build-narration-segments` IPC and preload/types, invoked after voice generation batch completes; reports count or error, no ElevenLabs requests. A future build must verify actual Windows FFmpeg operation and timing against source/merged files before describing runtime as accepted.
 - First CI #2440 typecheck failed for nullable ffmpeg-static path captured in closure; corrected by `b54a0450537de9d76d6480b1886c6aeb60198ed1`. Check the next CI run and any further errors. **Not yet GUI-tested or MP4-export-verified.**
 - Safety: source MP3 untouched, existing MyCut projects never overwritten; MyCut may still show an older cached project created with individual clips until a source change or explicit fresh import. Need add integration tests with genuine generated media, hard-duration probe, and further performance optimization if large-EP probing is still slow.
+
+### 2026-11-05 follow-on: compact import migration and actual FFmpeg test
+- Updated `fingerprintMyCutEpisodeImport` with optional format-version salt; native send uses `compact-0.8-v1` so an older cached MyCut project with hundreds of clips is **never mistaken** for the new compact one; old projects and edits remain present.
+- Added `studio-narration-render.test.ts` to generate two real local MP3 tones, FFmpeg-merge with a 0.8-second pause, decode the combined file, verify both original MP3 buffers remain identical, and verify repeat imports reuse the cached output. Included in `test:mycut`.
+- Commits: `3e061f4463829d480cff434ea559dda552c7556f`, `1135c0ec2d8f1c409307d0b6d31f97b7121a09e4`, `aba5b9a307a9ed48f3831713575253b5818d20d7`, `0d20a8631cd3569d6288ef71771d5b96eb2b6596`.
+- CI #2444 Validate **success**, Windows packaging in progress when checked. New CI #2445 for the added real FFmpeg merge test **in progress** and not yet accepted. Avoid announcing installed Windows MyCut acceptance.
