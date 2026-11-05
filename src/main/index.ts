@@ -281,7 +281,7 @@ ipcMain.handle("mycut:send-episode", async (event, projectId: string, episodeId:
   const folder = path.join(localRoot, "projects");
   await mkdir(folder, { recursive: true });
   const manifest = await prepareStudioEpisodeMyCutVoiceManifest(projectId, episodeId);
-  const fingerprint = await fingerprintMyCutEpisodeImport(projectId, episodeId, lineIds, imagePaths, manifest.lines);
+  const fingerprint = await fingerprintMyCutEpisodeImport(projectId, episodeId, lineIds, imagePaths, manifest.lines, "compact-0.8-v1");
   const previousId = await lookupMyCutEpisodeImport(localRoot, fingerprint);
   if (previousId) {
     // Preserve edits made inside MyCut and avoid duplicate projects on app restart.
