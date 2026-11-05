@@ -60,3 +60,19 @@ test("video filter supports compact visual input bindings without dummy inputs",
   assert.match(result.filters[0],/\[1:v\]/);
   assert.doesNotMatch(result.filters[0],/\[2:v\]/);
 });
+
+test("two scene holds retain exact lengths without transition overlap", () => {
+  const value = plan({
+    duration: 8, narration: "", transitionDuration: 0,
+    clips: [
+      { id: "scene-1", imagePath: "/tmp/first.png", start: 0, duration: 3, motion: "hold" },
+      { id: "scene-2", imagePath: "/tmp/second.png", start: 3, duration: 5, motion: "hold" }
+    ]
+  });
+  const result = createVideoFilter(value, null);
+  const graph = result.filters.join(";");
+  assert.match(graph, /trim=duration=3\.000/);
+  assert.match(graph, /trim=duration=5\.000/);
+  assert.match(graph, /concat=n=2:v=1:a=0/);
+  assert.doesNotMatch(graph, /xfade=/);
+});

@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import ffmpegPath from "ffmpeg-static";
+import { resolveBundledFfmpegPath } from "../studio-mp3-decode";
 import type {
   AudioLayer,
   RenderProgress,
@@ -279,7 +280,7 @@ function createAudioFilter(
       3
     )}:duration=${fixed(
       plan.duration
-    )},asetpts=PTS-STARTPTS,volume=1[narr]`
+    )},asetpts=PTS-STARTPTS,volume=1,apad=whole_dur=${fixed(plan.duration)},atrim=duration=${fixed(plan.duration)}[narr]`
   ];
 
   const labels = ["[narr]"];
@@ -313,7 +314,7 @@ function createAudioFilter(
     filters.push("[narr]anull[aout]");
   } else {
     filters.push(
-      `${labels.join("")}amix=inputs=${labels.length}:duration=first:normalize=0,alimiter=limit=0.95,atrim=duration=${fixed(
+      `${labels.join("")}amix=inputs=${labels.length}:duration=longest:normalize=0,alimiter=limit=0.95,atrim=duration=${fixed(
         plan.duration
       )}[aout]`
     );
@@ -383,7 +384,7 @@ function runFfmpeg(
       return;
     }
 
-    const process = spawn(ffmpegPath, args);
+    const process = spawn(resolveBundledFfmpegPath(ffmpegPath), args);
     let stderr = "";
     let progressBuffer = "";
     let lastPercent = -1;
@@ -486,7 +487,13 @@ export async function renderTimeline(
     }
 
     const narrationInput = nextInput;
-    args.push("-i", plan.narration);
+    // Dialogue-first Studio timelines deliberately have no narration file.
+    // Supply a finite silent input so audio mixing retains stable input indexes.
+    if (plan.narration?.trim()) {
+      args.push("-i", plan.narration);
+    } else {
+      args.push("-f", "lavfi", "-t", fixed(plan.duration), "-i", "anullsrc=r=48000:cl=stereo");
+    }
 
     const activeLayers = (plan.audioLayers ?? []).filter(
       (layer) =>

@@ -31,8 +31,60 @@ jobs:
           node-version: 22
       - run: npm install --no-audit --no-fund
       - run: npm run typecheck
+      - run: npm run test:mycut
+      - run: npm run test:voice-studio
       - run: npm run test:content
       - run: npm run test:broker:postgres
         env:
           META_BROKER_TEST_DATABASE_URL: postgresql://broker:broker@127.0.0.1:5432/broker_test
       - run: npm run build
+      - run: npm run smoke:render
+
+  windows-package:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run test:mycut
+      - run: npm run build
+      - run: npm run dist:win
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - name: Windows FFmpeg MP4 smoke
+        run: npm run smoke:render
+      - name: Verify Windows installer exists
+        shell: pwsh
+        run: |
+          $installers = @(Get-ChildItem -Path release -Filter "Gananajak-AI-Video-Editor-Setup-*.exe" -File)
+          if ($installers.Count -eq 0) { throw "Windows installer was not generated" }
+          foreach ($installer in $installers) {
+            if ($installer.Length -lt 1000000) { throw "Installer unexpectedly small: $($installer.Name)" }
+            Write-Host "Installer built: $($installer.Name) ($($installer.Length) bytes)"
+          }
+      - name: Generate Windows installer SHA-256 manifest
+        shell: pwsh
+        run: |
+          $installers = @(Get-ChildItem -Path release -Filter "Gananajak-AI-Video-Editor-Setup-*.exe" -File)
+          $lines = foreach ($installer in $installers) {
+            $hash = (Get-FileHash -Path $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($installer.Name)"
+          }
+          $lines | Set-Content -Path release/SHA256SUMS.txt -Encoding ascii
+      - name: Upload Windows installer checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: Gananajak-AI-Video-Editor-Windows-SHA256
+          path: release/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload Windows installer for acceptance testing
+        uses: actions/upload-artifact@v4
+        with:
+          name: Gananajak-AI-Video-Editor-Windows-Setup
+          path: release/Gananajak-AI-Video-Editor-Setup-*.exe
+          if-no-files-found: error
+          retention-days: 7

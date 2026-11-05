@@ -1,6 +1,7 @@
 import { app, dialog } from "electron";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { readProjectFile, writeProject } from "./project-json";
 import type {
   MediaRelink,
   ProjectDocument,
@@ -10,7 +11,6 @@ import type {
 } from "../shared/types";
 
 const AUTOSAVE_FILE = "autosave.aivproj";
-const SCHEMA_VERSION = 1;
 const MAX_RELINK_SCAN_FILES = 50_000;
 
 function autosavePath() {
@@ -25,35 +25,6 @@ function safeProjectName(title: string) {
     .slice(0, 80);
 
   return cleaned || "story-project";
-}
-
-function isProjectDocument(value: unknown): value is ProjectDocument {
-  if (!value || typeof value !== "object") return false;
-
-  const project = value as Partial<ProjectDocument>;
-  return (
-    project.schemaVersion === SCHEMA_VERSION &&
-    typeof project.id === "string" &&
-    typeof project.title === "string" &&
-    typeof project.createdAt === "string" &&
-    typeof project.updatedAt === "string" &&
-    Array.isArray(project.images) &&
-    (project.narration === null || typeof project.narration === "string") &&
-    Array.isArray(project.audioLayers)
-  );
-}
-
-async function readProjectFile(filePath: string) {
-  const raw = await fs.readFile(filePath, "utf8");
-  const parsed = JSON.parse(raw) as unknown;
-
-  if (!isProjectDocument(parsed)) {
-    throw new Error(
-      "This project file is invalid or was created by an unsupported editor version."
-    );
-  }
-
-  return parsed;
 }
 
 function mediaPaths(project: ProjectDocument) {
@@ -107,11 +78,6 @@ async function loadResult(
     filePath,
     missingMedia: await findMissingMedia(project)
   };
-}
-
-async function writeProject(filePath: string, project: ProjectDocument) {
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, JSON.stringify(project, null, 2), "utf8");
 }
 
 function replacePath(value: string | null, from: string, to: string) {

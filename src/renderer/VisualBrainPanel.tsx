@@ -87,12 +87,10 @@ export default function VisualBrainPanel({
     <section className="visualBrainPanel">
       <div className="visualBrainHeader">
         <div>
-          <p className="eyebrow">VISUAL BRAIN</p>
-          <h3>Understand images, match scenes, then cut the timeline</h3>
+          <p className="eyebrow">ระบบวิเคราะห์ภาพ</p>
+          <h3>วิเคราะห์ภาพ จับคู่ฉาก และจัดไทม์ไลน์</h3>
           <p className="muted">
-            Each image is analyzed for visible characters, actions, setting,
-            mood, and framing. The results are cached locally, then matched to
-            grouped story scenes and converted into deliberate shots.
+            ระบบวิเคราะห์ตัวละคร การกระทำ สถานที่ อารมณ์ และองค์ประกอบภาพ เก็บผลไว้ในเครื่องเพื่อจับคู่กับฉากและจัดเป็นช็อต
           </p>
         </div>
 
@@ -102,25 +100,24 @@ export default function VisualBrainPanel({
           onClick={buildVisualPlan}
         >
           {building
-            ? "Analyzing images + planning shots..."
+            ? "กำลังวิเคราะห์ภาพและวางช็อต..."
             : plan
-              ? "Rebuild Visual Brain plan"
-              : "Build Visual Brain plan"}
+              ? "สร้างแผนภาพใหม่"
+              : "สร้างแผนภาพและช็อต"}
         </button>
       </div>
 
       <div className="visualStats">
-        <span>{images.length} story images</span>
-        <span>{editingPlan?.scenes.length ?? 0} grouped scenes</span>
-        <span>{plan?.descriptors.length ?? 0} analyzed images</span>
-        <span>{plan?.shots.length ?? 0} planned shots</span>
-        <span>{transcript?.segments.length ?? 0} subtitle cues</span>
+        <span>{images.length} ภาพประกอบ</span>
+        <span>{editingPlan?.scenes.length ?? 0} ฉากที่จัดกลุ่ม</span>
+        <span>{plan?.descriptors.length ?? 0} ภาพที่วิเคราะห์แล้ว</span>
+        <span>{plan?.shots.length ?? 0} ช็อตที่วางแผน</span>
+        <span>{transcript?.segments.length ?? 0} จุดคำบรรยาย</span>
       </div>
 
       {!editingPlan && (
         <div className="visualWaiting">
-          Build the Editing Brain plan first so Visual Brain has stable scene
-          blocks to work from.
+          กรุณาสร้างแผนตัดต่อก่อน เพื่อให้ระบบมีข้อมูลฉากสำหรับจับคู่ภาพ
         </div>
       )}
 
@@ -130,8 +127,8 @@ export default function VisualBrainPanel({
         <div className="visualResults">
           <div className="descriptorPreview">
             <div className="brainSectionTitle">
-              <strong>Image understanding</strong>
-              <small>Cached until the source image changes</small>
+              <strong>ผลวิเคราะห์ภาพ</strong>
+              <small>เก็บผลไว้จนกว่าภาพต้นฉบับจะเปลี่ยน</small>
             </div>
 
             {plan.descriptors.slice(0, 12).map((descriptor) => (

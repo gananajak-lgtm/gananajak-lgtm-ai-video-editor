@@ -83,29 +83,29 @@ export default function EditingBrainPanel({
     <section className="editingBrainPanel">
       <div className="editingBrainHeader">
         <div>
-          <p className="eyebrow">EDITING BRAIN</p>
-          <h3>Scene grouping + automatic sound-effect placement</h3>
+          <p className="eyebrow">ระบบวางแผนตัดต่อ</p>
+          <h3>จัดกลุ่มฉากและวางเอฟเฟกต์เสียงอัตโนมัติ</h3>
           <p className="muted">
-            Continuous narration is grouped into longer story scenes so the editor does not cut on every sentence. SFX cues are detected from narration timestamps and matched to your local sound library.
+            จัดบทบรรยายเป็นฉากต่อเนื่องเพื่อไม่ให้ตัดภาพทุกประโยค พร้อมค้นหาจังหวะเอฟเฟกต์เสียงและจับคู่กับคลังเสียงในเครื่อง
           </p>
         </div>
         <div className="editingBrainActions">
-          <button onClick={importSfxLibrary}>Import SFX library</button>
+          <button onClick={importSfxLibrary}>นำเข้าคลังเอฟเฟกต์</button>
           <button
             className="primary"
             disabled={!transcript || building}
             onClick={buildPlan}
           >
-            {building ? "Planning edit..." : "Build Editing Brain plan"}
+            {building ? "กำลังวางแผน..." : "สร้างแผนตัดต่อ"}
           </button>
         </div>
       </div>
 
       <div className="brainStats">
-        <span>{sfxLibrary.length} SFX files</span>
-        <span>{plan?.scenes.length ?? 0} grouped scenes</span>
-        <span>{plan?.sfxCues.length ?? 0} detected cues</span>
-        <span>{matchedCount} matched sounds</span>
+        <span>{sfxLibrary.length} ไฟล์เอฟเฟกต์</span>
+        <span>{plan?.scenes.length ?? 0} ฉากที่จัดกลุ่ม</span>
+        <span>{plan?.sfxCues.length ?? 0} จุดเอฟเฟกต์ที่พบ</span>
+        <span>{matchedCount} เสียงที่จับคู่แล้ว</span>
       </div>
 
       {sfxLibrary.length > 0 && (
@@ -115,7 +115,7 @@ export default function EditingBrainPanel({
               {fileName(asset.filePath)}
             </span>
           ))}
-          {sfxLibrary.length > 8 && <span>+{sfxLibrary.length - 8} more</span>}
+          {sfxLibrary.length > 8 && <span>+{sfxLibrary.length - 8} เพิ่มเติม</span>}
         </div>
       )}
 
@@ -125,8 +125,8 @@ export default function EditingBrainPanel({
         <div className="brainResults">
           <div className="scenePreview">
             <div className="brainSectionTitle">
-              <strong>Story scenes</strong>
-              <small>Minimum shot target: 3.5s</small>
+              <strong>ฉากในเรื่อง</strong>
+              <small>ระยะเวลาช็อตขั้นต่ำ 3.5 วินาที</small>
             </div>
 
             {plan.scenes.slice(0, 12).map((scene) => (
@@ -174,7 +174,7 @@ export default function EditingBrainPanel({
       )}
 
       <p className="timelineHint">
-        This is the first automatic editing layer. The next Visual Brain step will use these grouped scenes to decide which image to hold, when to cut, and which image best matches each scene.
+        This is the first automatic editing layer. The next Visual Brain step will use these ฉากที่จัดกลุ่ม to decide which image to hold, when to cut, and which image best matches each scene.
       </p>
     </section>
   );

@@ -28,9 +28,9 @@ export default function QuickPreviewPanel({
   const [previewing, setPreviewing] = useState(false);
   const [progress, setProgress] = useState<RenderProgress | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
-  const [playerTime, setPlayerTime] = useState(0);
-  const [playerDuration, setPlayerDuration] = useState(0);
+  const [playbackUrl, setเล่นbackUrl] = useState<string | null>(null);
+  const [playerTime, setเล่นerTime] = useState(0);
+  const [playerDuration, setเล่นerDuration] = useState(0);
   const [playing, setPlaying] = useState(false);
 
   const maxStart = Math.max(0, plan.duration - 1);
@@ -65,14 +65,14 @@ export default function QuickPreviewPanel({
         effectiveDuration
       );
 
-      setPlaybackUrl(result.playbackUrl ?? null);
-      setPlayerTime(0);
-      setPlayerDuration(effectiveDuration);
+      setเล่นbackUrl(result.playbackUrl ?? null);
+      setเล่นerTime(0);
+      setเล่นerDuration(effectiveDuration);
       setPlaying(false);
       setMessage(
         result.playbackUrl
-          ? "Preview ready inside the editor."
-          : `Preview rendered: ${result.outputPath}`
+          ? "พรีวิวพร้อมเล่นในแอปแล้ว"
+          : `สร้างพรีวิวแล้ว: ${result.outputPath}`
       );
     } catch (error) {
       setMessage(
@@ -93,10 +93,10 @@ export default function QuickPreviewPanel({
     );
 
     if (video) video.currentTime = next;
-    setPlayerTime(next);
+    setเล่นerTime(next);
   };
 
-  const togglePlayback = async () => {
+  const toggleเล่นback = async () => {
     const video = videoRef.current;
     if (!video) return;
 
@@ -111,8 +111,8 @@ export default function QuickPreviewPanel({
     <section className="quickPreviewPanel">
       <div className="quickPreviewHeader">
         <div>
-          <p className="eyebrow">QUICK PREVIEW</p>
-          <h3>Render and scrub the part you want to inspect</h3>
+          <p className="eyebrow">พรีวิวฉบับย่อ</p>
+          <h3>สร้างพรีวิวเฉพาะช่วงที่ต้องการตรวจสอบ</h3>
           <p className="muted">
             Preview uses Draft quality, caps the longest side at 960 px, and
             limits frame rate to 30 fps. It keeps the real narration position,
@@ -126,14 +126,14 @@ export default function QuickPreviewPanel({
           onClick={renderPreview}
         >
           {previewing
-            ? `Rendering ${Math.round((progress?.progress ?? 0) * 100)}%...`
-            : "Render preview"}
+            ? `กำลังสร้าง ${Math.round((progress?.progress ?? 0) * 100)}%...`
+            : "สร้างพรีวิว"}
         </button>
       </div>
 
       <div className="quickPreviewControls">
         <label>
-          Start
+          เริ่มต้น
           <input
             type="range"
             min="0"
@@ -146,20 +146,20 @@ export default function QuickPreviewPanel({
         </label>
 
         <label>
-          Preview length
+          ความยาวพรีวิว
           <select
             value={duration}
             onChange={(event) => setDuration(Number(event.target.value))}
           >
-            <option value={10}>10 seconds</option>
-            <option value={20}>20 seconds</option>
-            <option value={30}>30 seconds</option>
-            <option value={60}>60 seconds</option>
+            <option value={10}>10 วินาที</option>
+            <option value={20}>20 วินาที</option>
+            <option value={30}>30 วินาที</option>
+            <option value={60}>60 วินาที</option>
           </select>
         </label>
 
-        <div className="quickPreviewRange">
-          <span>Range</span>
+        <div className="quickPreviewช่วงเวลา">
+          <span>ช่วงเวลา</span>
           <strong>
             {formatTime(start)} → {formatTime(start + effectiveDuration)}
           </strong>
@@ -180,7 +180,7 @@ export default function QuickPreviewPanel({
       )}
 
       {playbackUrl && (
-        <div className="inAppPlayer">
+        <div className="inAppเล่นer">
           <video
             ref={videoRef}
             src={playbackUrl}
@@ -190,11 +190,11 @@ export default function QuickPreviewPanel({
               const nextDuration = Number.isFinite(event.currentTarget.duration)
                 ? event.currentTarget.duration
                 : effectiveDuration;
-              setPlayerDuration(nextDuration);
-              setPlayerTime(event.currentTarget.currentTime);
+              setเล่นerDuration(nextDuration);
+              setเล่นerTime(event.currentTarget.currentTime);
             }}
             onTimeUpdate={(event) =>
-              setPlayerTime(event.currentTarget.currentTime)
+              setเล่นerTime(event.currentTarget.currentTime)
             }
             onPlay={() => setPlaying(true)}
             onPause={() => setPlaying(false)}
@@ -203,13 +203,13 @@ export default function QuickPreviewPanel({
 
           <div className="playerScrubRow">
             <button onClick={() => seek(playerTime - 5)}>−5s</button>
-            <button className="primary" onClick={togglePlayback}>
-              {playing ? "Pause" : "Play"}
+            <button className="primary" onClick={toggleเล่นback}>
+              {playing ? "หยุดชั่วคราว" : "เล่น"}
             </button>
             <button onClick={() => seek(playerTime + 5)}>+5s</button>
 
             <input
-              aria-label="Preview scrubber"
+              aria-label="แถบเลื่อนพรีวิว"
               type="range"
               min="0"
               max={Math.max(0.1, playerDuration || effectiveDuration)}
