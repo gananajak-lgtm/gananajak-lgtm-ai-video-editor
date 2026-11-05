@@ -402,6 +402,15 @@ export default function VoiceStudioPanel({ projectId, episodeId }: { projectId?:
       }
       const queueChanged = batchInputsKeyRef.current !== approvedInputsKey;
       const episodeChanged = activeEpisodeIdentityRef.current !== currentAudioIdentity || projectIdentity.current !== activeProjectId;
+      if (done > 0 && !episodeChanged && !queueChanged) {
+        try {
+          setVoiceGenerationStatus("กำลังรวม MP3 เป็นชุดละไม่เกิน 3 นาที (พักเสียง 0.8 วินาที)…");
+          const combined = await window.videoEditor.buildStudioNarrationSegments(activeProjectId, activeEpisodeId);
+          setPlanMessage(`รวมไฟล์เสียงสำเร็จ ${combined.segments} ชุด จาก ${combined.lines} บรรทัด · เก็บ MP3 ต้นฉบับครบ`);
+        } catch (error) {
+          setPlanMessage("สร้าง MP3 สำเร็จ แต่รวมเสียงยังไม่สำเร็จ: " + String(error));
+        }
+      }
       setVoiceGenerationStatus(`สร้างสำเร็จ ${done}/${pending.length} บรรทัด · ล้มเหลว ${failed}${batchCancelRequested.current ? " · หยุดตามคำสั่งแล้ว" : queueChanged || episodeChanged ? " · หยุดเนื่องจากคิวหรือโปรเจกต์เปลี่ยน" : ""} · กดสร้างเสียงทั้งหมดอีกครั้งเพื่อทำงานที่เหลือ${failureDetail ? ` · สาเหตุ: ${failureDetail}` : ""}`);
     } finally {
       voiceGenerationLock.current = false;
