@@ -761,7 +761,7 @@ export default function App() {
     })();
     return () => { active = false; };
   }, [studioSelectedId, studioEpisodeId, studioVoiceFiles]);
-  const [studioDialogueGap, setStudioDialogueGap] = useState(0.3);
+  const [studioDialogueGap, setStudioDialogueGap] = useState(0.8);
   const studioVoiceSchedule = scheduleDialogueClips(
     Object.entries(studioVoiceFiles)
       .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
